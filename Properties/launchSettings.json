@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PiAgentGui (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "PiAgentGui (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
