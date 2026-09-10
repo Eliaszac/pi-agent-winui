@@ -57,6 +57,22 @@ public sealed class ProjectPersistenceTests
     }
 
     [TestMethod]
+    public async Task CopiedConversationPersistsAndRejectsDuplicateIdentityOrMissingSource()
+    {
+        var repository = new JsonProjectRepository(options);
+        var project = await new ProjectService(repository).CreateAsync("Example", workingDirectory);
+        var source = await repository.AddConversationAsync(project.Id);
+        var copy = source with { Id = Guid.NewGuid(), Title = "Example · clone", IsTitleManual = true };
+        await repository.AddConversationCopyAsync(project.Id, source.Id, copy);
+        var saved = (await new JsonProjectRepository(options).GetAllAsync()).Single().Conversations;
+        Assert.AreEqual(2, saved.Count);
+        Assert.AreEqual(copy, saved[1]);
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => repository.AddConversationCopyAsync(project.Id, source.Id, copy));
+        await Assert.ThrowsExceptionAsync<KeyNotFoundException>(() => repository.AddConversationCopyAsync(project.Id, Guid.NewGuid(), copy with { Id = Guid.NewGuid() }));
+        Assert.AreEqual(2, (await repository.GetAllAsync()).Single().Conversations.Count);
+    }
+
+    [TestMethod]
     public async Task ProjectAndNestedMetadataSurviveReopeningAndDocumentDisposal()
     {
         var repository = new JsonProjectRepository(options);

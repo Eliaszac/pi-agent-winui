@@ -54,7 +54,8 @@ public sealed class PiTranscript
             var entry = new ChatEntry(id, PiJson.Text(packet, "toolName"), text, details,
                 type == "tool_execution_end" ? (PiJson.Flag(packet, "isError") ? "Failed" : "Completed") : "Running", true,
                 FileChange: type == "tool_execution_end" && !PiJson.Flag(packet, "isError")
-                    ? FileChangeParser.Parse(PiJson.Text(packet, "toolName"), args, PiJson.Field(result, "details")) : null);
+                    ? FileChangeParser.Parse(PiJson.Text(packet, "toolName"), args, PiJson.Field(result, "details")) : null,
+                ToolTokens: type == "tool_execution_end" ? PiTokenUsage.Read(PiJson.Field(result, "usage")) ?? previous?.ToolTokens : null);
             entries[id] = entry;
             return entry;
         }
@@ -99,7 +100,8 @@ public sealed class PiTranscript
             }, role is "toolResult" or "bashExecution", IsUser: role == "user", IsAssistant: role == "assistant",
             IsComplete: role != "assistant" || !starting,
             FileChange: role == "toolResult" && !PiJson.Flag(message, "isError")
-                ? FileChangeParser.Parse(PiJson.Text(message, "toolName"), toolInput, PiJson.Field(message, "details")) ?? previous?.FileChange : null);
+                ? FileChangeParser.Parse(PiJson.Text(message, "toolName"), toolInput, PiJson.Field(message, "details")) ?? previous?.FileChange : null,
+            ToolTokens: role == "toolResult" ? PiTokenUsage.Read(PiJson.Field(message, "usage")) ?? previous?.ToolTokens : null);
         entries[id] = entry;
         if (role == "assistant" && !starting) { activeAssistant = null; textBlocks.Clear(); }
         return entry;

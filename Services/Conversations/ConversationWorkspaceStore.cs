@@ -5,12 +5,17 @@ namespace PiAgentGui.Services.Conversations;
 
 /// <summary>Owns one workspace per saved identity. Selection does not control process lifetime.</summary>
 public sealed class ConversationWorkspaceStore(
-    Func<Project, ConversationDraft, IConversationSession> sessionFactory, IUiDispatcher dispatcher) : IAsyncDisposable
+    Func<Project, ConversationDraft, IConversationSession> sessionFactory, IUiDispatcher dispatcher, bool previewCompacting = false) : IAsyncDisposable
 {
     private readonly Dictionary<(Guid Project, Guid Conversation), ConversationViewModel> workspaces = [];
     private bool disposed;
     public event Action<Guid, Guid, string>? SessionNameChanged;
     public event Action<Guid, Guid, string>? ExplicitSessionNameChanged;
+    public Func<ConversationViewModel, bool, Task>? CopyRequested { get; set; }
+    public void InvalidateProviderModels()
+    {
+        foreach (var workspace in workspaces.Values.ToArray()) workspace.InvalidateProviderModels();
+    }
 
     public ConversationViewModel GetOrCreate(Project project, ConversationDraft conversation)
     {
@@ -18,9 +23,11 @@ public sealed class ConversationWorkspaceStore(
         var key = (project.Id, conversation.Id);
         if (!workspaces.TryGetValue(key, out var workspace))
         {
-            workspace = new ConversationViewModel(sessionFactory(project, conversation), dispatcher);
+            workspace = new ConversationViewModel(sessionFactory(project, conversation), dispatcher, previewCompacting);
             workspace.SessionNameChanged += name => SessionNameChanged?.Invoke(project.Id, conversation.Id, name);
             workspace.ExplicitSessionNameChanged += name => ExplicitSessionNameChanged?.Invoke(project.Id, conversation.Id, name);
+            workspace.DuplicateConversation = open => CopyRequested?.Invoke(workspace, open)
+                ?? throw new InvalidOperationException("Conversation copying is unavailable.");
             workspaces.Add(key, workspace);
         }
         return workspace;

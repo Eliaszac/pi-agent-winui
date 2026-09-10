@@ -7,6 +7,7 @@ public sealed record ConversationUpdate
     public IReadOnlyList<ChatEntry>? History { get; init; }
     public string? Status { get; init; }
     public bool? IsRunning { get; init; }
+    public bool? IsCompacting { get; init; }
     public bool? IsConnected { get; init; }
     public string? Error { get; init; }
     public string? Warning { get; init; }
@@ -23,5 +24,6 @@ public sealed record ConversationUpdate
     public bool HasThinkingLevelUpdate { get; init; }
     public string? ThinkingLevel { get; init; }
     public bool TurnCompleted { get; init; }
+    public RunUsage? RunUsage { get; init; }
     public string? SessionName { get; init; }
 }

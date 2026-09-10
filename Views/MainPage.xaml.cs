@@ -18,21 +18,48 @@ public sealed partial class MainPage : Page
     private double dragWidth;
     /// <summary>Gets the shell presentation state.</summary>
     public ShellViewModel ViewModel { get; }
+    public ViewModels.Applications.OpenInViewModel OpenIn { get; }
+    public ViewModels.GitHub.GitHubViewModel GitHub { get; }
+    private readonly Configuration.GitHubOptions githubOptions;
+    private readonly CancellationToken githubCancellation;
+    private readonly DispatcherTimer githubTimer = new() { Interval = TimeSpan.FromSeconds(15) };
 
     /// <summary>Creates the main view with dependencies composed by App.</summary>
     /// <param name="viewModel">The UI-independent shell state.</param>
     /// <param name="createProjectForm">Creates a fresh modal form.</param>
     /// <param name="picker">The window-owned folder picker.</param>
-    public MainPage(ShellViewModel viewModel, Func<CreateProjectViewModel> createProjectForm, FolderPickerService picker)
+    public MainPage(ShellViewModel viewModel, Func<CreateProjectViewModel> createProjectForm, FolderPickerService picker, ViewModels.Applications.OpenInViewModel openIn,
+        ViewModels.GitHub.GitHubViewModel github, Configuration.GitHubOptions githubOptions, CancellationToken githubCancellation)
     {
         ViewModel = viewModel;
+        OpenIn = openIn;
+        GitHub = github;
+        this.githubOptions = githubOptions;
+        this.githubCancellation = githubCancellation;
         this.createProjectForm = createProjectForm;
         this.picker = picker;
         InitializeComponent();
+        OpenIn.PropertyChanged += (_, _) => UpdateOpenInLogo();
+        ActualThemeChanged += (_, _) => { UpdateOpenInLogo(); UpdateGitHubLogo(); };
+        UpdateGitHubLogo();
+        GitHub.PullRequestChanged += (path, pull) =>
+        {
+            foreach (var project in ViewModel.Projects.Where(project => string.Equals(project.Path, path, StringComparison.OrdinalIgnoreCase)))
+                foreach (var conversation in project.Conversations) conversation.SetPullRequest(pull);
+        };
+        githubTimer.Tick += async (_, _) => await RefreshGitHubAsync();
+        Unloaded += (_, _) => githubTimer.Stop();
+        OpenIn.Failed += message => { OpenInError.Message = message; OpenInError.IsOpen = true; };
         ViewModel.Sidebar.PropertyChanged += OnSidebarChanged;
         ViewModel.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is nameof(ShellViewModel.HeaderRename) or nameof(ShellViewModel.ShowExtensions)) HeaderPath.HidePath();
+            if (args.PropertyName == nameof(ShellViewModel.SelectedProject)) _ = OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);
+            if (args.PropertyName == nameof(ShellViewModel.SelectedProject))
+            {
+                GitHub.Select(ViewModel.SelectedProject?.Path);
+                _ = RefreshGitHubAsync();
+            }
         };
     }
 
@@ -41,6 +68,79 @@ public sealed partial class MainPage : Page
         if (initialized) return;
         initialized = true;
         await ViewModel.LoadAsync();
+        await OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);
+        GitHub.Initialize();
+        GitHub.Select(ViewModel.SelectedProject?.Path);
+        githubTimer.Start();
+        await RefreshGitHubAsync();
+    }
+
+    private async Task RefreshGitHubAsync(bool force = false)
+    {
+        try { await GitHub.RefreshAsync(ViewModel.Projects.Select(project => project.Path).ToArray(), githubCancellation, force); }
+        catch (OperationCanceledException) { }
+        catch (Exception) { GitHub.ReportError("Couldn't refresh GitHub. Please try again."); }
+    }
+
+    private async void OnGitHubClicked(object sender, RoutedEventArgs args)
+    {
+        if (GitHub.IsConnected)
+        {
+            if (GitHub.SelectedPullRequest is { } pull) await OpenPullRequestAsync(pull.Url);
+            return;
+        }
+        if (dialogOpen) return;
+        dialogOpen = true;
+        try { await new GitHubConnectDialog(GitHub, githubCancellation) { XamlRoot = XamlRoot }.ShowAsync(); }
+        catch (Exception) { GitHub.ReportError("Couldn't open GitHub sign-in. Please try again."); }
+        finally { dialogOpen = false; }
+        await RefreshGitHubAsync(true);
+    }
+
+    private async void OnOpenPullRequestClicked(object sender, RoutedEventArgs args)
+    {
+        if (sender is MenuFlyoutItem { Tag: ConversationItemViewModel conversation } && conversation.PullRequestUrl is { } url)
+            await OpenPullRequestAsync(url);
+    }
+
+    private async Task OpenPullRequestAsync(Uri url)
+    {
+        try { if (!await Launcher.LaunchUriAsync(url)) GitHub.ReportError("Couldn't open your browser."); }
+        catch (Exception) { GitHub.ReportError("Couldn't open your browser."); }
+    }
+
+    private async void OnRefreshGitHubClicked(object sender, RoutedEventArgs args) => await RefreshGitHubAsync(true);
+    private void OnDisconnectGitHubClicked(object sender, RoutedEventArgs args)
+    {
+        try { GitHub.Disconnect(); }
+        catch (Exception) { GitHub.ReportError("Couldn't remove the GitHub login from Windows Credential Locker."); }
+    }
+    private async void OnManageGitHubClicked(object sender, RoutedEventArgs args) =>
+        await OpenPullRequestAsync(githubOptions.InstallationUri ?? new Uri("https://github.com/settings/installations"));
+
+    private void UpdateOpenInLogo() => OpenInLogo.Source = Controls.ApplicationLogoSource.Create(OpenIn.Logo, ActualTheme);
+
+    private void UpdateGitHubLogo() => HeaderGitHubLogo.Source = Controls.ApplicationLogoSource.Create("github-light.svg", ActualTheme);
+
+    private async void OnOpenInClicked(SplitButton sender, SplitButtonClickEventArgs args) => await OpenIn.OpenAsync();
+
+    private void OnOpenInMenuOpening(object sender, object args)
+    {
+        OpenInMenu.Items.Clear();
+        var editors = OpenIn.Applications.Where(app => app.Kind is Models.Applications.ApplicationKind.Editor or Models.Applications.ApplicationKind.SolutionEditor);
+        var others = OpenIn.Applications.Where(app => app.Kind is Models.Applications.ApplicationKind.Explorer or Models.Applications.ApplicationKind.Terminal);
+        foreach (var app in editors.Concat(others))
+        {
+            if (app == others.FirstOrDefault() && editors.Any()) OpenInMenu.Items.Add(new MenuFlyoutSeparator());
+            var item = new Controls.ActionMenuFlyoutItem { Text = app.Name,
+                Icon = new ImageIcon { Source = Controls.ApplicationLogoSource.Create(app.Logo, ActualTheme) } };
+            item.Click += async (_, _) => await OpenIn.OpenAsync(app.Id);
+            OpenInMenu.Items.Add(item);
+        }
+        OpenInMenu.Items.Add(new MenuFlyoutSeparator());
+        var refresh = new Controls.ActionMenuFlyoutItem { Text = "Refresh applications", Icon = new FontIcon { Glyph = "\uE72C" } };
+        refresh.Click += async (_, _) => await OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path, true);
+        OpenInMenu.Items.Add(refresh);
     }
 
     private async void OnNewProjectClicked(object sender, RoutedEventArgs args)
@@ -70,6 +170,7 @@ public sealed partial class MainPage : Page
         }
     }
     private void OnExtensionsClicked(object sender, RoutedEventArgs args) => ViewModel.OpenExtensions();
+    private void OnProvidersClicked(object sender, RoutedEventArgs args) => ViewModel.OpenProviders();
     private async void OnApprovalSetupRequested(object? sender, EventArgs args)
     {
         if (dialogOpen) return;

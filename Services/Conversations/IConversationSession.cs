@@ -14,6 +14,7 @@ public interface IConversationSession : IAsyncDisposable
     Task SetThinkingLevelAsync(string level, CancellationToken cancellationToken = default);
     Task StopAsync(CancellationToken cancellationToken = default);
     Task SetSessionNameAsync(string name, CancellationToken cancellationToken = default);
+    Task CopySessionAsync(string destination, string title, CancellationToken cancellationToken = default);
     Task<System.Text.Json.JsonElement> RunOperationAsync(ConversationOperation operation, string? argument = null, CancellationToken cancellationToken = default);
     Task ReplyAsync(string requestId, JsonObject response, CancellationToken cancellationToken = default);
     Task DisconnectAsync();

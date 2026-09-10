@@ -25,6 +25,10 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 ## Learned constraints
 
+- 2026-09-10: PR preview is now live integration. Show GitHub-logo Connect to GitHub in the chat header only when signed out; when connected, show Open PR only for a detected open PR. Use actual PR numbers in sidebar conversation metadata and context-menu navigation. Local project working-folder branch is shared by conversations. GitHub login uses a code-and-browser dialog, credential storage and automatic token refresh. Header context menu exposes refresh, repository access and disconnect without adding a full source-control panel.
+
+- 2026-09-10: PR UI starts as an explicitly hardcoded styling preview: Open PR beside Open in in the conversation header, subtle PR number beneath sidebar conversation titles, and an Open PR context-menu entry. Preview uses PR #123 and has no lookup, navigation, authentication or persisted metadata. Future scope is branch-based open-PR detection plus a possible Git CLI diff/commit panel.
+
 - 2026-09-10: Model and approval selectors share one row with Send/Stop below the composer. Auto is the default approval mode when the supported extension has no saved mode; preserve existing conversation choices.
 
 - 2026-09-10: Hide extension setup once the supported version is installed. Refresh is a tooltip-labeled icon at the top right of each card.
@@ -65,4 +69,10 @@ The user can register a named folder, reopen it after restarting, and work in mu
 - 2026-09-10: Write/edit tool summaries show the affected file and +added / minus-removed line counts. Expanding displays a colored unified diff instead of only Successfully wrote. Never fabricate removed-line counts without a baseline; retain real error/output details when no patch is available.
 
 - 2026-09-10: Slash commands open at a word boundary anywhere in the composer, not only at its beginning. Show a compact themed list above the input with command descriptions, origin labels, keyboard selection, and filtering. Preserve surrounding draft text when running actions. Pi skills/templates use a leading command in the draft because Pi requires that for expansion.
+
+- 2026-09-10: Fork and Clone are compact icon buttons beside Copy under the latest completed agent response only; hide them during runs. Fork opens an independent continuation, Clone adds the copy to the same project and keeps the original selected. Keep hover cursors, tooltips, accessible names, and theme-aware native styling. Providers will have a separate design; omit import, session settings, and branch navigation.
+
+- 2026-09-10: Providers is a global page matching the Extensions card grid, reachable above Extensions in both sidebar states. Show configured providers first, configuration/source, model details, and Set up/Manage. Use native modals with masked secrets for sign-in, keys, device codes, and setup links. No back button or forced conversation selection; omit account/quota values Pi does not expose.
+
+- 2026-09-10: Show whole-run reported tokens and elapsed time beside the final response action buttons only once the run finishes. Use muted 12px text, seconds below one minute, then minutes and seconds. Preserve existing response controls and avoid a live counter or extra response header.
 

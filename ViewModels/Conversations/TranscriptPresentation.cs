@@ -8,7 +8,7 @@ public sealed class TranscriptPresentation
     private readonly Dictionary<string, ChatEntryViewModel> groups = [];
     private readonly ChatEntryViewModel processing = new(new ChatEntry("presentation:processing", "", "")) { IsProcessing = true };
 
-    public IReadOnlyList<ChatEntryViewModel> Project(IEnumerable<ChatEntryViewModel> entries, bool isRunning = false)
+    public IReadOnlyList<ChatEntryViewModel> Project(IEnumerable<ChatEntryViewModel> entries, bool isRunning = false, string processingLabel = "Processing…")
     {
         var rows = new List<ChatEntryViewModel>();
         var run = new List<ChatEntryViewModel>();
@@ -21,8 +21,11 @@ public sealed class TranscriptPresentation
             rows.Add(entry);
         }
         Flush(run, rows, activeGroups);
-        if (isRunning && rows.FindLastIndex(entry => entry.IsUser) is >= 0 and var promptIndex)
-            rows.Insert(promptIndex + 1, processing);
+        if (isRunning)
+        {
+            processing.Update(new ChatEntry("presentation:processing", "", processingLabel));
+            rows.Insert(rows.FindLastIndex(entry => entry.IsUser) + 1, processing);
+        }
         foreach (var key in groups.Keys.Where(key => !activeGroups.Contains(key)).ToArray()) groups.Remove(key);
         return rows;
     }

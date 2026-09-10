@@ -1,7 +1,11 @@
 import { createWriteToolDefinition, generateUnifiedPatch, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { WriteDiffCapture } from "./WriteDiffCapture.ts";
+import registerSessionCopy from "./session-copy.ts";
+import registerModelRefresh from "./refresh-models.ts";
 
 export default function (pi: ExtensionAPI): void {
+    registerSessionCopy(pi);
+    registerModelRefresh(pi);
     const base = createWriteToolDefinition(process.cwd());
     pi.registerTool({
         name: base.name,

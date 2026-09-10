@@ -14,6 +14,7 @@ public sealed class ShellViewModel : ObservableObject
 {
     private readonly IProjectRepository repository;
     private readonly ConversationWorkspaceStore? workspaces;
+    private readonly PiSessionPaths sessionPaths;
     private readonly SemaphoreSlim titleGate = new(1, 1);
     private bool isLoading;
     private bool isReady;
@@ -25,11 +26,16 @@ public sealed class ShellViewModel : ObservableObject
     private ProjectItemViewModel? selectedProject;
     private ConversationItemViewModel? selectedConversation;
     private bool showExtensions;
+    private bool showProviders;
+    public bool ShowProviders => showProviders;
+    public ViewModels.Providers.ProvidersViewModel? Providers { get; set; }
     public bool ShowExtensions => showExtensions;
-    public bool ShowWorkspace => !showExtensions;
+    public bool ShowWorkspace => !showExtensions && !showProviders;
     public ViewModels.Extensions.ExtensionsViewModel Extensions { get; } = new();
     public void OpenExtensions()
     {
+        showProviders = false;
+        OnPropertyChanged(nameof(ShowProviders));
         showExtensions = true;
         OnPropertyChanged(nameof(ShowExtensions));
         OnPropertyChanged(nameof(ShowWorkspace));
@@ -38,9 +44,22 @@ public sealed class ShellViewModel : ObservableObject
     }
     public void CloseExtensions()
     {
+        showProviders = false;
+        OnPropertyChanged(nameof(ShowProviders));
         showExtensions = false;
         OnPropertyChanged(nameof(ShowExtensions));
         OnPropertyChanged(nameof(ShowWorkspace));
+    }
+
+    public void OpenProviders()
+    {
+        showExtensions = false;
+        showProviders = true;
+        OnPropertyChanged(nameof(ShowProviders));
+        OnPropertyChanged(nameof(ShowExtensions));
+        OnPropertyChanged(nameof(ShowWorkspace));
+        if (Providers is not null) _ = Providers.RefreshAsync();
+        if (Sidebar.IsOverlay) Sidebar.IsOpen = false;
     }
 
     /// <summary>Gets the project groups.</summary>
@@ -110,10 +129,12 @@ public sealed class ShellViewModel : ObservableObject
 
     /// <summary>Creates the shell without performing disk I/O.</summary>
     /// <param name="repository">The shared project persistence boundary.</param>
-    public ShellViewModel(IProjectRepository repository, ConversationWorkspaceStore? workspaces = null)
+    public ShellViewModel(IProjectRepository repository, ConversationWorkspaceStore? workspaces = null, PiSessionPaths? sessionPaths = null)
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.workspaces = workspaces;
+        this.sessionPaths = sessionPaths ?? new(new ProjectStorageOptions());
+        if (workspaces is not null) workspaces.CopyRequested = DuplicateConversationAsync;
         if (workspaces is not null) workspaces.SessionNameChanged += OnSessionNameChanged;
         if (workspaces is not null) workspaces.ExplicitSessionNameChanged += OnExplicitSessionNameChanged;
         ReloadCommand = new AsyncRelayCommand(_ => LoadAsync(), ReportError);
@@ -220,6 +241,27 @@ public sealed class ShellViewModel : ObservableObject
             SelectConversation(project, item);
         });
     }
+
+    public Task DuplicateConversationAsync(ConversationViewModel source, bool open) => ChangeSidebarAsync(async () =>
+    {
+        var project = Projects.FirstOrDefault(item => item.Conversations.Any(conversation => ReferenceEquals(conversation.Workspace, source)))
+            ?? throw new KeyNotFoundException("The original conversation no longer exists.");
+        var original = project.Conversations.Single(item => ReferenceEquals(item.Workspace, source));
+        var suffix = open ? "fork" : "clone";
+        var baseTitle = original.Title + " · " + suffix;
+        var title = baseTitle;
+        for (var number = 2; project.Conversations.Any(item => item.Title == title); number++) title = baseTitle + " " + number;
+        var saved = new ConversationDraft { Id = Guid.NewGuid(), Title = title, CreatedAt = DateTimeOffset.UtcNow, IsTitleManual = true };
+        await source.CopySessionAsync(sessionPaths.GetSessionFile(project.Project.Id, saved.Id), saved.Title);
+        // Publish to the catalog only after Pi has produced an independent session file.
+        // If registration fails, retain that file for recovery instead of risking deletion after an uncertain commit.
+        await Task.Run(() => repository.AddConversationCopyAsync(project.Project.Id, original.Conversation.Id, saved));
+        var item = new ConversationItemViewModel(saved, conversation => SelectConversation(project, conversation), workspaces?.GetOrCreate(project.Project, saved),
+            (conversation, name) => RenameConversationAsync(project, conversation, name));
+        project.Conversations.Add(item);
+        project.IsExpanded = true;
+        if (open && ReferenceEquals(Chat, source)) SelectConversation(project, item);
+    });
 
     public Task RenameProjectAsync(ProjectItemViewModel project, string name) => ChangeSidebarAsync(async () =>
     {

@@ -6,6 +6,15 @@ namespace PiAgentGui.Tests.Projects;
 
 internal sealed class InMemoryProjectRepository(params Project[] projects) : IProjectRepository
 {
+    public Exception? CopyRegistrationError { get; set; }
+    public Task AddConversationCopyAsync(Guid projectId, Guid sourceId, ConversationDraft conversation, CancellationToken cancellationToken = default)
+    {
+        if (CopyRegistrationError is not null) return Task.FromException(CopyRegistrationError);
+        var index = Projects.FindIndex(item => item.Id == projectId);
+        if (index < 0 || !Projects[index].Conversations.Any(item => item.Id == sourceId)) throw new KeyNotFoundException();
+        Projects[index] = Projects[index] with { Conversations = [.. Projects[index].Conversations, conversation] };
+        return Task.CompletedTask;
+    }
     public List<Project> Projects { get; } = [.. projects];
     public Exception? ReadError { get; set; }
     public Task? ReadBarrier { get; set; }

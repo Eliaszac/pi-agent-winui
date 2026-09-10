@@ -6,6 +6,14 @@ namespace PiAgentGui.Tests.Pi;
 
 internal sealed class FakeConversationSession : IConversationSession
 {
+    public List<(string Destination, string Title)> Copies { get; } = [];
+    public Exception? CopyError { get; set; }
+    public Task CopySessionAsync(string destination, string title, CancellationToken cancellationToken = default)
+    {
+        if (CopyError is not null) return Task.FromException(CopyError);
+        Copies.Add((destination, title));
+        return Task.CompletedTask;
+    }
     public Func<ConversationOperation, string?, Task<System.Text.Json.JsonElement>>? OperationHandler { get; set; }
     public Task<System.Text.Json.JsonElement> RunOperationAsync(ConversationOperation operation, string? argument = null, CancellationToken cancellationToken = default) => OperationHandler?.Invoke(operation, argument) ?? Task.FromResult(default(System.Text.Json.JsonElement));
     public Task SetSessionNameAsync(string name, CancellationToken cancellationToken = default) => Task.CompletedTask;

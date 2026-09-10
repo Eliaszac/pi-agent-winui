@@ -13,6 +13,15 @@
   </ItemGroup>
   <!-- Compile the UI-independent production files directly; no WinUI runtime is needed. -->
   <ItemGroup>
+    <Compile Include="../Models/GitHub/*.cs" Link="Production/Models/GitHub/%(Filename)%(Extension)" />
+    <Compile Include="../Services/GitHub/*.cs" Exclude="../Services/GitHub/WindowsGitHubCredentialStore.cs" Link="Production/Services/GitHub/%(Filename)%(Extension)" />
+    <Compile Include="../Configuration/GitHubOptions.cs" Link="Production/Configuration/GitHubOptions.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Models/Applications/*.cs" Link="Production/Models/Applications/%(Filename)%(Extension)" />
+    <Compile Include="../Services/Applications/*.cs" Link="Production/Services/Applications/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="../PiExtensions/*.ts" Link="PiExtensions/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>

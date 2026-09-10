@@ -14,6 +14,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
     private readonly object stateGate = new();
     private readonly CancellationTokenSource lifetime = new();
     private readonly PiTranscript transcript = new();
+    private readonly RunUsageTracker runUsage = new();
     private PiRpcClient? client;
     private bool connected;
     private bool running;
@@ -26,6 +27,36 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
     private string? manualName = launch.SessionName;
     public event Action<ConversationUpdate>? Updated;
 
+    public async Task CopySessionAsync(string destination, string title, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        destination = Path.GetFullPath(destination);
+        if (!StringComparer.OrdinalIgnoreCase.Equals(Path.GetDirectoryName(destination), Path.GetDirectoryName(Path.GetFullPath(launch.SessionFile))) ||
+            !Guid.TryParseExact(Path.GetFileNameWithoutExtension(destination), "N", out _) || Path.GetExtension(destination) != ".jsonl" ||
+            StringComparer.OrdinalIgnoreCase.Equals(destination, Path.GetFullPath(launch.SessionFile)))
+            throw new ArgumentException("The copy must have a new identity in the same project.", nameof(destination));
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
+        PiRpcClient current;
+        lock (stateGate)
+        {
+            if (running || changingModel) throw new InvalidOperationException("Wait for this conversation to finish before copying it.");
+            current = connected && client is not null ? client : throw new IOException("Pi is disconnected.");
+            changingModel = true;
+        }
+        try
+        {
+            if (File.Exists(destination)) throw new IOException("The destination conversation already exists.");
+            var packet = await current.RequestAsync("get_commands", cancellationToken: linked.Token).ConfigureAwait(false);
+            var commands = PiJson.Field(PiJson.Field(packet, "data"), "commands");
+            if (commands.ValueKind != JsonValueKind.Array || !commands.EnumerateArray().Any(item => PiJson.Text(item, "name") == "pi-gui-copy-session"))
+                throw new InvalidOperationException("Restart Pi Agent to load the conversation-copy integration.");
+            var request = new JsonObject { ["target"] = destination, ["title"] = title.Trim() };
+            await current.RequestAsync("prompt", new JsonObject { ["message"] = "/pi-gui-copy-session " + request.ToJsonString() }, linked.Token).ConfigureAwait(false);
+            if (!File.Exists(destination)) throw new IOException("Pi couldn't create the conversation copy. The original is unchanged.");
+        }
+        finally { lock (stateGate) changingModel = false; }
+    }
+
     public async Task<JsonElement> RunOperationAsync(ConversationOperation operation, string? argument = null, CancellationToken cancellationToken = default)
     {
         // Keep the transport private and allow only operations that preserve this workspace's session identity.
@@ -34,6 +65,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             ConversationOperation.Commands => "get_commands",
             ConversationOperation.Details => "get_session_stats",
             ConversationOperation.State => "get_state",
+            ConversationOperation.RefreshModels => "prompt",
             ConversationOperation.Compact => "compact",
             ConversationOperation.ExportHtml => "export_html",
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
@@ -48,14 +80,28 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
         }
         try
         {
+            if (operation == ConversationOperation.RefreshModels)
+            {
+                var discovery = await current.RequestAsync("get_commands", cancellationToken: linked.Token).ConfigureAwait(false);
+                var commands = PiJson.Field(PiJson.Field(discovery, "data"), "commands");
+                if (commands.ValueKind != JsonValueKind.Array || !commands.EnumerateArray().Any(item => PiJson.Text(item, "name") == "pi-gui-refresh-models"))
+                    throw new InvalidOperationException("Restart Pi Agent to refresh model availability in this conversation.");
+            }
             JsonObject? arguments = operation switch
             {
+                ConversationOperation.RefreshModels => new() { ["message"] = "/pi-gui-refresh-models" },
                 ConversationOperation.Compact when !string.IsNullOrWhiteSpace(argument) => new() { ["customInstructions"] = argument },
                 ConversationOperation.ExportHtml => new() { ["outputPath"] = Path.GetFullPath(argument ?? throw new ArgumentException("Choose an export file.")) },
                 _ => null
             };
             var result = await current.RequestAsync(command, arguments, linked.Token,
                 timeout: operation == ConversationOperation.Compact ? TimeSpan.FromMinutes(10) : null).ConfigureAwait(false);
+            if (operation == ConversationOperation.RefreshModels)
+            {
+                await current.RequestAsync("get_available_models", cancellationToken: linked.Token, applyResponse: packet =>
+                    Publish(new() { AvailableModels = PiModelParser.ParseList(PiJson.Field(PiJson.Field(packet, "data"), "models")) })).ConfigureAwait(false);
+                await current.RequestAsync("get_state", cancellationToken: linked.Token, applyResponse: ApplyState).ConfigureAwait(false);
+            }
             if (operation == ConversationOperation.Compact)
             {
                 // Manual compaction can finish without an agent_settled event.
@@ -303,6 +349,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
     {
         lock (stateGate)
         {
+            runUsage.Observe(packet);
             var entry = transcript.Apply(packet);
             if (entry is not null) Publish(new() { Entry = entry });
             switch (PiJson.Text(packet, "type"))
@@ -314,13 +361,14 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
                 case "agent_end": Publish(new() { Status = "Finishing…" }); break;
                 case "agent_settled":
                     awaitingSettled = false; running = false;
-                    Publish(new() { Status = "Ready", IsRunning = false, DismissPrompts = true, TurnCompleted = true });
+                    Publish(new() { Status = "Ready", IsRunning = false, IsCompacting = false, DismissPrompts = true, TurnCompleted = true, RunUsage = runUsage.Complete() });
                     _ = Task.Run(RefreshExtensionStateAsync);
                     break;
-                case "compaction_start": awaitingSettled = true; running = true; Publish(new() { Status = "Compacting context…", IsRunning = true }); break;
+                case "compaction_start": awaitingSettled = true; running = true; Publish(new() { Status = "Compacting context…", IsRunning = true, IsCompacting = true }); break;
                 case "auto_retry_start": awaitingSettled = true; running = true; Publish(new() { Status = "Retrying provider request…", IsRunning = true }); break;
                 case "extension_error": Publish(new() { Error = PiJson.Text(packet, "error") }); break;
                 case "compaction_end":
+                    Publish(new() { IsCompacting = false });
                     if (PiJson.Text(packet, "errorMessage") is { Length: > 0 } message) Publish(new() { Error = message });
                     break;
                 case "extension_ui_request": HandleExtension(packet); break;
@@ -357,6 +405,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             connected = false;
             running = false;
             awaitingSettled = false;
+            runUsage.Reset();
             Publish(new() { Status = "Disconnected", IsConnected = false, IsRunning = false,
                 Error = exception is JsonException ? "Pi sent invalid JSON. Reconnect to reopen the session." : exception.Message });
         }
@@ -380,7 +429,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
         try
         {
             await ReleaseClientAsync().ConfigureAwait(false);
-            lock (stateGate) { connected = false; running = false; awaitingSettled = false; Publish(new() { Status = "Disconnected", IsConnected = false, IsRunning = false }); }
+            lock (stateGate) { connected = false; running = false; awaitingSettled = false; runUsage.Reset(); Publish(new() { Status = "Disconnected", IsConnected = false, IsRunning = false }); }
         }
         finally { connectionGate.Release(); }
     }

@@ -8,6 +8,18 @@ namespace PiAgentGui.ViewModels.Projects;
 public sealed class ConversationItemViewModel : ObservableObject
 {
     private bool isSelected;
+    private Models.GitHub.GitHubPullRequest? pullRequest;
+    public bool HasPullRequest => pullRequest is not null;
+    public string PullRequestLabel => pullRequest is null ? "" : $"PR #{pullRequest.Number}";
+    public string OpenPullRequestLabel => $"Open {PullRequestLabel}";
+    internal Uri? PullRequestUrl => pullRequest?.Url;
+    internal void SetPullRequest(Models.GitHub.GitHubPullRequest? value)
+    {
+        pullRequest = value;
+        OnPropertyChanged(nameof(HasPullRequest));
+        OnPropertyChanged(nameof(PullRequestLabel));
+        OnPropertyChanged(nameof(OpenPullRequestLabel));
+    }
     /// <summary>Gets the saved conversation.</summary>
     internal ConversationDraft Conversation { get; private set; }
     /// <summary>Gets the displayed title.</summary>

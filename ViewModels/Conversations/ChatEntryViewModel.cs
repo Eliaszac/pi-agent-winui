@@ -19,9 +19,10 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
     public bool IsTool => entry.IsTool;
     public bool IsProcessing { get; init; }
     public bool IsMessage => !IsTool && !IsToolGroup && !IsProcessing;
-    public string ToolSummary => entry.FileChange is { } change
+    private string ToolDescription => entry.FileChange is { } change
         ? $"{Speaker} · {ProjectPathDisplay.ForTool(change.Path)}" + (change.Patch is not null ? $" · +{change.Added} −{change.Removed}" : $" · {Status}")
         : $"{Speaker} · {Status}";
+    public string ToolSummary => ToolDescription + (entry.ToolTokens is long tokens ? $" · {tokens:N0} tokens" : "");
     public string? DiffPatch => entry.FileChange?.Patch;
     internal FileChange? FileChange => entry.FileChange;
     public bool HasDiff => DiffPatch is not null;
@@ -43,6 +44,24 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
     public string Status => entry.Status;
     public bool HasDetails => Details.Length > 0;
     public bool IsUser => entry.IsUser;
+    internal bool IsAssistant => entry.IsAssistant;
+    public bool ShowConversationActions { get; private set; }
+    public bool CanDuplicate { get; private set; }
+    public string UsageLabel { get; private set; } = "";
+    public bool HasUsage => UsageLabel.Length > 0;
+    internal void SetUsage(RunUsage usage)
+    {
+        UsageLabel = RunUsageFormatter.Format(usage);
+        OnPropertyChanged(nameof(UsageLabel));
+        OnPropertyChanged(nameof(HasUsage));
+    }
+    public AsyncRelayCommand? ForkCommand { get; internal set; }
+    public AsyncRelayCommand? CloneCommand { get; internal set; }
+    internal void SetConversationActions(bool visible, bool enabled)
+    {
+        if (ShowConversationActions != visible) { ShowConversationActions = visible; OnPropertyChanged(nameof(ShowConversationActions)); }
+        if (CanDuplicate != enabled) { CanDuplicate = enabled; OnPropertyChanged(nameof(CanDuplicate)); }
+    }
     public bool IsLeftAligned => !IsUser && IsMessage;
     public bool IsEmptyAssistant => entry.IsAssistant && string.IsNullOrWhiteSpace(Text) && !Status.StartsWith("Failed", StringComparison.Ordinal);
     public bool ShowSpeaker => !entry.IsUser && !entry.IsAssistant;

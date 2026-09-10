@@ -29,6 +29,15 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator)
         if (installation.CliPath is not null) info.ArgumentList.Add(installation.CliPath);
         info.ArgumentList.Add("--mode");
         info.ArgumentList.Add("rpc");
+        if (request.ManageProviders)
+        {
+            var extension = Path.Combine(AppContext.BaseDirectory, "PiExtensions", "providers.ts");
+            if (!File.Exists(extension)) throw new FileNotFoundException("The bundled Providers integration is missing. Rebuild or reinstall Pi Agent.");
+            foreach (var flag in new[] { "--no-session", "--no-tools", "--no-extensions", "--no-skills", "--no-prompt-templates", "--no-context-files" }) info.ArgumentList.Add(flag);
+            info.ArgumentList.Add("--extension");
+            info.ArgumentList.Add(extension);
+            return info;
+        }
         if (!string.IsNullOrWhiteSpace(request.SessionName))
         {
             info.ArgumentList.Add("--name");

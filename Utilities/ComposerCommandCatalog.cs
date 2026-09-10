@@ -17,6 +17,8 @@ public static class ComposerCommandCatalog
             new("thinking", "Choose this conversation's reasoning effort", "app", "thinking"),
             new("copy", "Copy the latest completed response", "app", "copy"),
             new("new", "Create a conversation in this project", "app", "new"),
+            new("fork", "Continue from the latest response in a new conversation", "app", "fork"),
+            new("clone", "Duplicate this conversation and stay here", "app", "clone"),
             new("name", "Rename this conversation in the header", "app", "name"),
             new("extensions", "Open installed and supported extensions", "app", "extensions")
         };
@@ -24,6 +26,7 @@ public static class ComposerCommandCatalog
             foreach (var item in commands.EnumerateArray())
             {
                 var name = PiJson.Text(item, "name");
+                if (name.StartsWith("pi-gui-", StringComparison.Ordinal)) continue;
                 var source = PiJson.Text(item, "source");
                 if (name.Length == 0 || name.Any(char.IsWhiteSpace) || name.Contains('/') || result.Any(command => command.Name == name)) continue;
                 if (source is not ("extension" or "skill" or "prompt")) continue;
@@ -33,7 +36,7 @@ public static class ComposerCommandCatalog
     }
 
     public static bool IsUnsupportedNativeCommand(string name) => name is "login" or "logout" or "llama" or "scoped-models"
-        or "settings" or "resume" or "tree" or "trust" or "fork" or "clone" or "import" or "share" or "reload" or "hotkeys" or "changelog" or "quit";
+        or "settings" or "resume" or "tree" or "trust" or "import" or "share" or "reload" or "hotkeys" or "changelog" or "quit";
 
     public static IReadOnlyList<ComposerCommand> Filter(IReadOnlyList<ComposerCommand> commands, string query) => commands
         .Where(command => command.Name.Contains(query, StringComparison.OrdinalIgnoreCase) || command.Description.Contains(query, StringComparison.OrdinalIgnoreCase))

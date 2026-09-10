@@ -8,6 +8,7 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     Loaded="OnLoaded" SizeChanged="OnSizeChanged">
     <Page.Resources>
+        <Style x:Key="PullRequestIconStyle" TargetType="PathIcon"><Setter Property="Data" Value="M 4,1 A 3,3 0 1 1 4,7 A 3,3 0 1 1 4,1 Z M 4,2.5 A 1.5,1.5 0 1 0 4,5.5 A 1.5,1.5 0 1 0 4,2.5 Z M 3.25,7 L 4.75,7 4.75,12 3.25,12 Z M 4,11 A 3,3 0 1 1 4,17 A 3,3 0 1 1 4,11 Z M 4,12.5 A 1.5,1.5 0 1 0 4,15.5 A 1.5,1.5 0 1 0 4,12.5 Z M 13,11 A 3,3 0 1 1 13,17 A 3,3 0 1 1 13,11 Z M 13,12.5 A 1.5,1.5 0 1 0 13,15.5 A 1.5,1.5 0 1 0 13,12.5 Z M 9,1 L 6,4 9,7 9,4.75 10,4.75 Q 12.25,4.75 12.25,7 L 12.25,11 13.75,11 13.75,7 Q 13.75,3.25 10,3.25 L 9,3.25 Z" /></Style>
         <Style x:Key="CompactSidebarIconStyle" TargetType="Button" BasedOn="{StaticResource ShellIconButtonStyle}">
             <Setter Property="Width" Value="30" />
             <Setter Property="Height" Value="30" />
@@ -23,6 +24,14 @@
                     AutomationProperties.Name="{x:Bind Title, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
                     <controls:ActionToggleButton.ContextFlyout>
                         <MenuFlyout>
+                            <controls:ActionMenuFlyoutItem Text="{x:Bind OpenPullRequestLabel, Mode=OneWay}"
+                                Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
+                                Tag="{x:Bind}" Click="OnOpenPullRequestClicked">
+                                <controls:ActionMenuFlyoutItem.Icon>
+                                    <PathIcon Style="{StaticResource PullRequestIconStyle}" />
+                                </controls:ActionMenuFlyoutItem.Icon>
+                            </controls:ActionMenuFlyoutItem>
+                            <MenuFlyoutSeparator Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                             <controls:ActionMenuFlyoutItem Text="Rename conversation" Command="{x:Bind Rename.BeginCommand}" />
                             <controls:ActionMenuFlyoutItem Text="{x:Bind SettleLabel, Mode=OneWay}" Click="OnSettleConversationClicked" Tag="{x:Bind}" />
                             <MenuFlyoutSeparator />
@@ -36,7 +45,15 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <FontIcon Glyph="&#xE8BD;" FontSize="13.3" />
-                        <TextBlock Grid.Column="1" Text="{x:Bind Title, Mode=OneWay}" FontSize="13.3" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Grid.Column="1" Spacing="3">
+                            <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="13.3" TextTrimming="CharacterEllipsis" />
+                            <StackPanel Orientation="Horizontal" Spacing="5" AutomationProperties.Name="{x:Bind PullRequestLabel, Mode=OneWay}"
+                                Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                                <PathIcon Style="{StaticResource PullRequestIconStyle}" Width="11" Height="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{x:Bind PullRequestLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
                         <Grid Grid.Column="2" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Workspace.SidebarStatus, Mode=OneWay}">
                             <Ellipse Width="8" Height="8" Fill="{ThemeResource SystemFillColorCriticalBrush}"
                                 Visibility="{x:Bind Workspace.ShowBlockedIndicator, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
@@ -170,9 +187,14 @@
                             </ItemsControl>
                         </StackPanel>
                     </ScrollViewer>
-                    <controls:ActionButton Grid.Row="2" Margin="12,8,4,12" Click="OnExtensionsClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
+                    <StackPanel Grid.Row="2" Margin="12,8,4,12" Spacing="4">
+                    <controls:ActionButton Click="OnProvidersClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
+                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE77B;" FontSize="15" /><TextBlock Text="Providers" FontSize="13.3" /></StackPanel>
+                    </controls:ActionButton>
+                    <controls:ActionButton Click="OnExtensionsClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
                         <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xEA86;" FontSize="15" /><TextBlock Text="Extensions" FontSize="13.3" /></StackPanel>
                     </controls:ActionButton>
+                    </StackPanel>
                 </Grid>
                 <Grid Grid.ColumnSpan="2" Margin="4,15,4,12" RowSpacing="11"
                     Visibility="{x:Bind ViewModel.Sidebar.IsCollapsed, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
@@ -189,9 +211,14 @@
                         AutomationProperties.Name="New project" ToolTipService.ToolTip="New project">
                         <FontIcon Glyph="&#xE710;" FontSize="16" />
                     </controls:ActionButton>
-                    <controls:ActionButton Grid.Row="3" Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnExtensionsClicked" AutomationProperties.Name="Extensions" ToolTipService.ToolTip="Extensions">
+                    <StackPanel Grid.Row="3" Spacing="8">
+                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnProvidersClicked" AutomationProperties.Name="Providers" ToolTipService.ToolTip="Providers">
+                        <FontIcon Glyph="&#xE77B;" FontSize="16" />
+                    </controls:ActionButton>
+                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnExtensionsClicked" AutomationProperties.Name="Extensions" ToolTipService.ToolTip="Extensions">
                         <FontIcon Glyph="&#xEA86;" FontSize="16" />
                     </controls:ActionButton>
+                    </StackPanel>
                 </Grid>
                 <controls:SidebarResizeHandle Grid.Column="1" Style="{StaticResource SidebarResizeHandleStyle}"
                     ResizeStarted="OnResizeStarted" ResizeDelta="OnResizeDelta" KeyDown="OnResizeKeyDown"
@@ -201,6 +228,8 @@
             </Grid>
         </SplitView.Pane>
         <Grid Padding="24,16">
+        <views:ProvidersView DataContext="{x:Bind ViewModel.Providers}"
+            Visibility="{x:Bind ViewModel.ShowProviders, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
         <views:ExtensionsView DataContext="{x:Bind ViewModel.Extensions}"
             Visibility="{x:Bind ViewModel.ShowExtensions, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
         <Grid x:Name="WorkspaceContent" RowSpacing="0" Visibility="{x:Bind ViewModel.ShowWorkspace, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
@@ -211,9 +240,19 @@
             </Grid.RowDefinitions>
             <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.HasConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                 <Grid x:Name="HeaderTitleSlot" MinHeight="36">
+                    <Grid.ContextFlyout>
+                        <MenuFlyout>
+                            <controls:ActionMenuFlyoutItem Text="Refresh pull request" Click="OnRefreshGitHubClicked"
+                                IsEnabled="{x:Bind GitHub.IsConnected, Mode=OneWay}" />
+                            <controls:ActionMenuFlyoutItem Text="GitHub repository access" Click="OnManageGitHubClicked" />
+                            <controls:ActionMenuFlyoutItem Text="Disconnect GitHub" Click="OnDisconnectGitHubClicked"
+                                Visibility="{x:Bind GitHub.IsConnected, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                        </MenuFlyout>
+                    </Grid.ContextFlyout>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" MaxWidth="640" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <controls:ActionButton Command="{x:Bind ViewModel.HeaderRename.BeginCommand, Mode=OneWay}" HorizontalAlignment="Left"
                         Padding="4,2" MinHeight="36" Background="Transparent" BorderThickness="0" IsEnabled="{x:Bind ViewModel.HasConversation, Mode=OneWay}"
@@ -223,11 +262,39 @@
                     </controls:ActionButton>
                     <controls:InlineNameEditor ViewModel="{x:Bind ViewModel.HeaderRename, Mode=OneWay}" HorizontalAlignment="Stretch"
                         Visibility="{x:Bind ViewModel.HeaderRename.IsEditing, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                    <controls:ActionButton Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Margin="12,0,0,0" Padding="10,5" MinHeight="32"
+                        Visibility="{x:Bind GitHub.ShowHeaderButton, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
+                        Click="OnGitHubClicked" AutomationProperties.Name="{x:Bind GitHub.HeaderLabel, Mode=OneWay}"
+                        ToolTipService.ToolTip="{x:Bind GitHub.HeaderTooltip, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <Image x:Name="HeaderGitHubLogo" Width="16" Height="16" />
+                            <TextBlock Text="{x:Bind GitHub.HeaderLabel, Mode=OneWay}" FontSize="12" />
+                        </StackPanel>
+                    </controls:ActionButton>
+                    <controls:ActionSplitButton Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center"
+                        IsEnabled="{x:Bind OpenIn.CanOpen, Mode=OneWay}" Click="OnOpenInClicked"
+                        AutomationProperties.Name="{x:Bind OpenIn.Label, Mode=OneWay}" ToolTipService.ToolTip="Open the project folder">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <Image x:Name="OpenInLogo" Width="16" Height="16" />
+                            <TextBlock Text="{x:Bind OpenIn.Label, Mode=OneWay}" FontSize="12" />
+                        </StackPanel>
+                        <controls:ActionSplitButton.Flyout>
+                            <MenuFlyout x:Name="OpenInMenu" Opening="OnOpenInMenuOpening" />
+                        </controls:ActionSplitButton.Flyout>
+                    </controls:ActionSplitButton>
                 </Grid>
                 <controls:ProjectPathButton x:Name="HeaderPath" FullPath="{x:Bind ViewModel.SelectedProject.Path, Mode=OneWay}" HorizontalAlignment="Left"
                     Padding="4,2" Background="Transparent" BorderThickness="0"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Visibility="{x:Bind ViewModel.HasLoaded, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                <InfoBar x:Name="OpenInError" IsOpen="False" IsClosable="True" Severity="Warning" Title="Open in" />
+                <InfoBar IsOpen="{x:Bind GitHub.HasError, Mode=OneWay}" IsClosable="False" Severity="Warning" Title="GitHub"
+                    Message="{x:Bind GitHub.Error, Mode=OneWay}">
+                    <InfoBar.ActionButton>
+                        <controls:ActionButton Content="Repository access" Click="OnManageGitHubClicked" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
             </StackPanel>
             <InfoBar Grid.Row="1" IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" Severity="Error" IsClosable="False"
                 Title="Couldn't finish that" Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}">

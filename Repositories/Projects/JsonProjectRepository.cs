@@ -104,6 +104,15 @@ public sealed class JsonProjectRepository : IProjectRepository
         return new FileStream(catalogPath + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     }
 
+    public Task AddConversationCopyAsync(Guid projectId, Guid sourceId, ConversationDraft conversation, CancellationToken cancellationToken = default) =>
+        ChangeProjectAsync(projectId, project =>
+        {
+            if (!project.Conversations.Any(item => item.Id == sourceId)) throw new KeyNotFoundException("The original conversation no longer exists.");
+            var updated = project with { Conversations = [.. project.Conversations, conversation] };
+            ProjectValidator.Validate(updated);
+            return updated;
+        }, cancellationToken);
+
     public Task RenameProjectAsync(Guid projectId, string name, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);

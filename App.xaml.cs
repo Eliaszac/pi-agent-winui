@@ -18,6 +18,9 @@ public partial class App : Application
 {
     private Window? window;
     private ConversationWorkspaceStore? workspaces;
+    private ProviderService? providers;
+    private readonly CancellationTokenSource githubLifetime = new();
+    private readonly System.Net.Http.HttpClient githubHttp = new(new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(20) };
     private bool closing;
     private bool canClose;
     private Task? shutdown;
@@ -37,7 +40,7 @@ public partial class App : Application
         var locator = new PiInstallationLocator(runtime);
         var startup = new StartupViewModel(locator);
         window.Content = new StartupPage(startup);
-        window.Closed += (_, _) => windowClosed = true;
+        window.Closed += (_, _) => { windowClosed = true; githubLifetime.Cancel(); githubHttp.Dispose(); };
         window.AppWindow.Closing += OnClosing;
         window.Activate();
         if (!await startup.CheckAsync() || windowClosed) return;
@@ -51,14 +54,25 @@ public partial class App : Application
                 () => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout)),
             new DispatcherQueueUiDispatcher(window.DispatcherQueue));
         var projectService = new ProjectService(repository);
-        var shell = new ShellViewModel(repository, workspaces);
+        var shell = new ShellViewModel(repository, workspaces, paths);
+        providers = new ProviderService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "management"));
+        shell.Providers = new ViewModels.Providers.ProvidersViewModel(providers);
+        providers.CredentialsChanged += () => window.DispatcherQueue.TryEnqueue(() => workspaces.InvalidateProviderModels());
         window.Title = shell.WindowTitle;
         shell.PropertyChanged += (_, change) =>
         {
             if (!windowClosed && change.PropertyName == nameof(ShellViewModel.WindowTitle)) window.Title = shell.WindowTitle;
         };
         var picker = new FolderPickerService(WinRT.Interop.WindowNative.GetWindowHandle(window));
-        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker);
+        var openIn = new ViewModels.Applications.OpenInViewModel(new Services.Applications.InstalledApplicationLocator(),
+            new Services.Applications.OpenInPreferenceStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "open-in.json")),
+            new Services.Applications.ProjectApplicationLauncher());
+        var githubOptions = GitHubOptions.Load();
+        var githubApi = new Services.GitHub.GitHubApi(githubHttp);
+        var github = new ViewModels.GitHub.GitHubViewModel(new Services.GitHub.GitHubAuthentication(githubOptions, githubApi,
+            new Services.GitHub.WindowsGitHubCredentialStore(githubOptions.ClientId)), githubApi, new Services.GitHub.GitBranchReader());
+        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token);
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
@@ -69,7 +83,8 @@ public partial class App : Application
         closing = true;
         try
         {
-            shutdown ??= workspaces?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+            shutdown ??= Task.WhenAll(workspaces?.DisposeAsync().AsTask() ?? Task.CompletedTask,
+                providers?.DisposeAsync().AsTask() ?? Task.CompletedTask);
             await shutdown;
         }
         catch (Exception)

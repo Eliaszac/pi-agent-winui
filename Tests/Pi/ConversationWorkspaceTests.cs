@@ -12,6 +12,33 @@ namespace PiAgentGui.Tests.Pi;
 public sealed class ConversationWorkspaceTests
 {
     [TestMethod]
+    public async Task ProviderRefreshWaitsForTheRunningConversationAndKeepsItsModelAndDraft()
+    {
+        var dispatcher = new QueuedUiDispatcher();
+        var session = new FakeConversationSession();
+        var refreshed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.OperationHandler = (operation, _) =>
+        {
+            Assert.AreEqual(ConversationOperation.RefreshModels, operation);
+            refreshed.TrySetResult();
+            return Task.FromResult(default(System.Text.Json.JsonElement));
+        };
+        await using var workspace = new ConversationViewModel(session, dispatcher);
+        await workspace.InitializeAsync();
+        session.Emit(new() { IsRunning = true, HasModelUpdate = true, Model = new("test", "chosen", "Chosen") });
+        dispatcher.Drain();
+        workspace.Draft = "Keep this draft";
+        workspace.InvalidateProviderModels();
+        Assert.IsFalse(refreshed.Task.IsCompleted);
+        session.Emit(new() { IsRunning = false, TurnCompleted = true });
+        dispatcher.Drain();
+        await refreshed.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.AreEqual("chosen", workspace.SelectedModel!.Id);
+        Assert.AreEqual("Keep this draft", workspace.Draft);
+        Assert.AreEqual(0, session.Sent.Count);
+    }
+
+    [TestMethod]
     public async Task EffortHandlesOffAndIndependentStateAndCapabilityUpdates()
     {
         var dispatcher = new QueuedUiDispatcher();

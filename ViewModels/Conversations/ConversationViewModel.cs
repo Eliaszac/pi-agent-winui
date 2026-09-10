@@ -106,18 +106,49 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     public string ComposerActionLabel => running ? "Stop" : "Send";
     public string ComposerActionGlyph => running ? "\uE71A" : "\uE72A";
     public bool CanRetry => ShowRecovery && !busy && !disposed;
-    public bool IsEmpty => Entries.Count == 0;
+    public bool IsEmpty => Entries.Count == 0 && !previewCompacting && !compacting;
+    private readonly bool previewCompacting;
+    private bool compacting;
     public AsyncRelayCommand RetryCommand { get; }
     public AsyncRelayCommand SendCommand { get; }
     public AsyncRelayCommand StopCommand { get; }
     public AsyncRelayCommand SelectModelCommand { get; }
     public AsyncRelayCommand SelectApprovalModeCommand { get; }
     public event Action? TranscriptChanged;
+    public Func<bool, Task>? DuplicateConversation { get; set; }
+    public AsyncRelayCommand ForkCommand { get; }
+    public AsyncRelayCommand CloneCommand { get; }
+    private ChatEntryViewModel? responseActionsEntry;
+    public bool CanDuplicateConversation => CanUseCommands && Prompts.Count == 0 &&
+        Entries.LastOrDefault(entry => entry.IsAssistant || entry.IsUser) is { CanCopyResponse: true, Status.Length: 0 };
+
+    public async Task CopySessionAsync(string destination, string title)
+    {
+        if (!CanDuplicateConversation) throw new InvalidOperationException("Wait for a completed response before copying this conversation.");
+        await ExecuteAsync(() => session.CopySessionAsync(destination, title));
+    }
     public event Action<string>? SessionNameChanged;
     public event Action<string>? ExplicitSessionNameChanged;
     public Func<string, Task<bool>>? HandleComposerCommand { get; set; }
     public Task SetSessionNameAsync(string name) => session.SetSessionNameAsync(name);
     public bool CanUseCommands => IsReady && !busy && !running && !disposed;
+    private bool modelsNeedRefresh;
+    public void InvalidateProviderModels()
+    {
+        modelsNeedRefresh = true;
+        TryRefreshProviderModels();
+    }
+    private void TryRefreshProviderModels()
+    {
+        if (!modelsNeedRefresh || !CanUseCommands) return;
+        modelsNeedRefresh = false;
+        _ = RefreshProviderModelsAsync();
+    }
+    private async Task RefreshProviderModelsAsync()
+    {
+        try { await RunOperationAsync(ConversationOperation.RefreshModels); }
+        catch (Exception exception) { ReportError(exception); }
+    }
     public async Task<System.Text.Json.JsonElement> RunOperationAsync(ConversationOperation operation, string? argument = null)
     {
         if (!CanUseCommands) throw new InvalidOperationException("Wait for this conversation to finish before using commands.");
@@ -144,11 +175,14 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         if (generatedTitle is not null) ExplicitSessionNameChanged?.Invoke(generatedTitle);
     }
 
-    public ConversationViewModel(IConversationSession session, IUiDispatcher dispatcher)
+    public ConversationViewModel(IConversationSession session, IUiDispatcher dispatcher, bool previewCompacting = false)
     {
+        this.previewCompacting = previewCompacting;
         this.session = session;
         this.dispatcher = dispatcher;
         session.Updated += Enqueue;
+        ForkCommand = new AsyncRelayCommand(_ => RequestDuplicateAsync(true), ReportError);
+        CloneCommand = new AsyncRelayCommand(_ => RequestDuplicateAsync(false), ReportError);
         RetryCommand = new AsyncRelayCommand(_ => PrepareAsync(), ReportError);
         SendCommand = new AsyncRelayCommand(async _ =>
         {
@@ -197,6 +231,12 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         if (initialized || disposed) return Task.CompletedTask;
         initialized = true;
         return RetryCommand.ExecuteAsync();
+    }
+
+    public Task RequestDuplicateAsync(bool open)
+    {
+        if (!CanDuplicateConversation) throw new InvalidOperationException("Wait for a completed response before copying this conversation.");
+        return DuplicateConversation?.Invoke(open) ?? throw new InvalidOperationException("Conversation copying is unavailable.");
     }
 
     private async Task PrepareAsync()
@@ -273,8 +313,14 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                 changed = true;
             }
             if (update.Status is not null) status = update.Status;
+            if (update.IsCompacting is bool isCompacting && compacting != isCompacting)
+            {
+                compacting = isCompacting;
+                changed = true;
+            }
             if (update.IsRunning is bool isRunning)
             {
+                if (!isRunning && compacting) { compacting = false; changed = true; }
                 if (running != isRunning) changed = true;
                 if (isRunning && !running)
                 {
@@ -293,6 +339,8 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                 unseenCompletion = !isViewed;
                 if (trackingRun)
                 {
+                    if (update.RunUsage is { } usage)
+                        Entries.LastOrDefault(entry => runEntryIds.Contains(entry.Id) && entry.CanCopyResponse)?.SetUsage(usage);
                     RunChanges = new(Entries.Where(entry => runEntryIds.Contains(entry.Id))
                         .Select(entry => entry.FileChange).OfType<FileChange>());
                     trackingRun = false;
@@ -302,7 +350,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
             if (update.IsConnected is bool isConnected)
             {
                 connected = isConnected;
-                if (!connected) ClearPrompts();
+                if (!connected) { ClearPrompts(); compacting = false; changed = true; }
             }
             if (update.Error is not null) error = update.Error;
             if (update.Warning is not null) warning = update.Warning;
@@ -342,7 +390,8 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         OnPropertyChanged(nameof(HasRunChanges));
         if (changed)
         {
-            var rows = presentation.Project(Entries, running);
+            var rows = presentation.Project(Entries, running || compacting || previewCompacting,
+                compacting || previewCompacting ? "Compacting context…" : "Processing…");
             for (var index = 0; index < rows.Count; index++)
             {
                 if (index < DisplayEntries.Count && ReferenceEquals(DisplayEntries[index], rows[index])) continue;
@@ -361,7 +410,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     private void Upsert(ChatEntry entry)
     {
         if (entries.TryGetValue(entry.Id, out var existing)) existing.Update(entry);
-        else { var item = new ChatEntryViewModel(entry); entries.Add(entry.Id, item); Entries.Add(item); }
+        else { var item = new ChatEntryViewModel(entry) { ForkCommand = ForkCommand, CloneCommand = CloneCommand }; entries.Add(entry.Id, item); Entries.Add(item); }
     }
 
     private void RemovePrompt(ExtensionPromptViewModel prompt)
@@ -369,12 +418,20 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         if (Prompts.Remove(prompt)) prompt.Dispose();
         OnPropertyChanged(nameof(NeedsAttention));
         NotifyIndicators();
+        TryRefreshProviderModels();
     }
 
     private void ClearPrompts() { foreach (var prompt in Prompts) prompt.Dispose(); Prompts.Clear(); }
 
     private void NotifyState()
     {
+        var latest = IsReady && !running && Prompts.Count == 0
+            ? Entries.LastOrDefault(entry => entry.IsAssistant || entry.IsUser) : null;
+        if (latest is not { CanCopyResponse: true, Status.Length: 0 }) latest = null;
+        if (!ReferenceEquals(responseActionsEntry, latest)) responseActionsEntry?.SetConversationActions(false, false);
+        responseActionsEntry = latest;
+        latest?.SetConversationActions(true, CanDuplicateConversation);
+        OnPropertyChanged(nameof(CanDuplicateConversation));
         OnPropertyChanged(nameof(Warning));
         OnPropertyChanged(nameof(HasInlineWarning));
         foreach (var property in new[] { nameof(Status), nameof(SelectedModel), nameof(SelectedModelIndex), nameof(CanChangeModel), nameof(Error), nameof(HasError), nameof(IsRunning),
@@ -387,6 +444,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         OnPropertyChanged(nameof(ComposerActionLabel));
         OnPropertyChanged(nameof(ComposerActionGlyph));
         NotifyIndicators();
+        TryRefreshProviderModels();
     }
 
     public async ValueTask DisposeAsync()

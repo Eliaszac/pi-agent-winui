@@ -159,6 +159,7 @@ public sealed partial class ConversationView
             switch (command.Action)
             {
                 case "new": case "name": case "extensions": ShellCommandRequested?.Invoke(command.Action, argument); break;
+                case "fork": case "clone": await owner.RequestDuplicateAsync(command.Action == "fork"); break;
                 case "details":
                     var data = await owner.RunOperationAsync(ConversationOperation.Details);
                     if (!ReferenceEquals(ViewModel, owner)) return;
