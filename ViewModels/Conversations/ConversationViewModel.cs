@@ -332,6 +332,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                 entries.Clear();
                 Entries.Clear();
                 foreach (var entry in update.History) Upsert(entry);
+                RestoreEarlierSummaries(update.History);
                 changed = true;
             }
             if (update.Entry is not null)
@@ -357,6 +358,8 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                     trackingRun = true;
                     warning = "";
                     if (update.Entry is not null) runEntryIds.Add(update.Entry.Id);
+                    var previousResponse = Entries.LastOrDefault(entry => entry.CanCopyResponse);
+                    if (previousResponse is not null && RunChanges is { Files.Count: > 0 }) previousResponse.Summary = RunChanges;
                     RunChanges = null;
                     changed = true;
                 }
@@ -441,6 +444,23 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     {
         if (entries.TryGetValue(entry.Id, out var existing)) existing.Update(entry);
         else { var item = new ChatEntryViewModel(entry) { ForkCommand = ForkCommand, CloneCommand = CloneCommand }; entries.Add(entry.Id, item); Entries.Add(item); }
+    }
+
+    private void RestoreEarlierSummaries(IReadOnlyList<ChatEntry> history)
+    {
+        var start = -1;
+        for (var index = 0; index < history.Count; index++)
+        {
+            if (!history[index].IsUser) continue;
+            if (start >= 0)
+            {
+                var run = history.Skip(start).Take(index - start).ToArray();
+                var response = run.LastOrDefault(entry => entry.IsAssistant);
+                if (response is not null && entries.TryGetValue(response.Id, out var viewModel))
+                    viewModel.Summary = RunChangesViewModel.FromHistory(run, WorkingDirectory);
+            }
+            start = index;
+        }
     }
 
     private void RemovePrompt(ExtensionPromptViewModel prompt)

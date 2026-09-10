@@ -7,7 +7,16 @@ public static class LspSupport
 {
     public const string Package = "lsp-pi";
     public const string Version = "1.0.5";
-    public const string InstallCommand = "pi install npm:lsp-pi@1.0.5";
+    public const string InstallCommand = """
+        pi install npm:lsp-pi@1.0.5
+        if ($LASTEXITCODE -ne 0) { throw 'Pi installation failed' }
+        $piAgentRoot = if ($env:PI_CODING_AGENT_DIR) { $env:PI_CODING_AGENT_DIR } else { Join-Path $HOME '.pi/agent' }
+        $piPackages = Join-Path $piAgentRoot 'npm'
+        npm --prefix "$piPackages" pkg set 'overrides.lsp-pi.vscode-languageserver-protocol=3.17.5'
+        if ($LASTEXITCODE -ne 0) { throw 'Could not pin the LSP dependency' }
+        npm --prefix "$piPackages" install --ignore-scripts --legacy-peer-deps
+        if ($LASTEXITCODE -ne 0) { throw 'LSP dependency repair failed' }
+        """;
 
     public static (string Status, bool NeedsSetup) GetInstallationState(string? agentDirectory = null)
     {
@@ -28,6 +37,12 @@ public static class LspSupport
         if (PiJson.Text(package.RootElement, "name") != Package) return ("Package identity could not be verified", true);
         var version = PiJson.Text(package.RootElement, "version");
         if (version != Version) return ($"Installed globally · {version} (supported: {Version})", true);
+        var protocol = Path.Combine(directory, "node_modules", "vscode-languageserver-protocol", "package.json");
+        if (!File.Exists(protocol)) protocol = Path.Combine(root, "npm", "node_modules", "vscode-languageserver-protocol", "package.json");
+        if (!File.Exists(protocol)) return ("LSP dependency missing · run setup", true);
+        using var dependency = JsonDocument.Parse(File.ReadAllText(protocol));
+        if (PiJson.Text(dependency.RootElement, "version") != "3.17.5")
+            return ("LSP dependency needs compatibility pin · run setup", true);
         return File.Exists(Path.Combine(directory, "lsp-tool.ts")) && File.Exists(Path.Combine(directory, "lsp.ts"))
             && File.Exists(Path.Combine(directory, "lsp-core.ts"))
             ? ($"Installed globally · {version}", false) : ("Installed package is incomplete", true);

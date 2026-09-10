@@ -52,7 +52,7 @@ public static class SupportedExtensions
         "Optional code navigation and diagnostics through language servers. Completed diagnostic checks can appear in the file-change summary.",
         "A third-party extension maintained by trotsky1997, supported by Pi Agent. The published version supports languages including TypeScript, JavaScript, Svelte, Python, Go and Rust; it does not include C# support. Pi Agent reads structured diagnostic tool results for changed files, separately from lint and tests. It does not run checks automatically or manage language servers.",
         LspSupport.InstallCommand,
-        "Install and configure the language server for each language you use, following the extension documentation, then restart Pi Agent. Package installation alone does not mean a language server is available. Ask Pi to run LSP diagnostics after its edits to include the latest check in the summary. Automatic hook messages are not counted as completed checks.",
+        "Run the entire setup command: it installs the extension and pins its protocol dependency to 3.17.5. Newer protocol releases break this extension's imports and prevent Pi from starting. The pin applies only to lsp-pi. Then install and configure the language server for each language you use and restart Pi Agent. Package installation alone does not mean a server is available. Ask Pi to run LSP diagnostics after edits to include the latest check in the summary. Automatic hook messages are not counted as completed checks.",
         "",
         new("https://www.npmjs.com/package/lsp-pi/v/1.0.5"),
         new("https://github.com/trotsky1997/pi-lsp-extension"),

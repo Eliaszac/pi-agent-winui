@@ -65,6 +65,65 @@
                 </StackPanel>
             </StackPanel>
         </DataTemplate>
+        <DataTemplate x:Key="RunSummaryTemplate">
+                    <Border CornerRadius="10" BorderThickness="1"
+                        HorizontalAlignment="Stretch" Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                        >
+                        <StackPanel>
+                            <StackPanel Padding="12" Spacing="4" ToolTipService.ToolTip="Lines added and removed across this run's captured edits.">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" AutomationProperties.LiveSetting="Polite" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding Added}" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontSize="11" />
+                                    <TextBlock Text="{Binding Removed}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="11" />
+                                    <TextBlock Text="Some counts unavailable" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Visibility="{Binding HasUnknownCounts, Converter={StaticResource BooleanToVisibility}}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding VisibleFiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="chat:ChangedFileViewModel">
+                                        <controls:ActionExpander Expanding="OnFileDiffExpanding" Collapsed="OnFileDiffCollapsed" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0" Padding="0" MinHeight="32">
+                                            <controls:ActionExpander.Header>
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{x:Bind Path}" TextTrimming="CharacterEllipsis" FontSize="11" />
+                                                    <TextBlock Grid.Column="1" Text="{x:Bind Added}" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontSize="11" />
+                                                    <TextBlock Grid.Column="2" Text="{x:Bind Removed}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="11" />
+                                                </Grid>
+                                            </controls:ActionExpander.Header>
+                                            <StackPanel Spacing="6">
+                                                <TextBlock Text="Diff unavailable for some edits to this file." TextWrapping="Wrap" FontSize="11"
+                                                    Visibility="{x:Bind HasUnknownCounts, Converter={StaticResource BooleanToVisibility}}" />
+                                            </StackPanel>
+                                        </controls:ActionExpander>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding VerificationRows}" Margin="12,8,12,8"
+                                Visibility="{Binding HasVerification, Converter={StaticResource BooleanToVisibility}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+                                            <FontIcon Glyph="&#xE73E;" FontSize="10" Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                                Visibility="{Binding Passed, Converter={StaticResource BooleanToVisibility}}" />
+                                            <FontIcon Glyph="&#xE711;" FontSize="10" Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                Visibility="{Binding Failed, Converter={StaticResource BooleanToVisibility}}" />
+                                            <TextBlock Text="{Binding Label}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding DiagnosticsLabel}" Margin="12,8" FontSize="11" TextWrapping="Wrap"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                ToolTipService.ToolTip="Latest completed LSP check for changed files. Separate from build, lint and test results."
+                                Visibility="{Binding HasDiagnostics, Converter={StaticResource BooleanToVisibility}}" />
+                            <controls:ActionToggleButton Content="{Binding MoreLabel}" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Background="Transparent" BorderThickness="0"
+                                Visibility="{Binding HasMore, Converter={StaticResource BooleanToVisibility}}" />
+                        </StackPanel>
+                    </Border>
+        </DataTemplate>
     </UserControl.Resources>
     <Grid x:Name="Root" RowSpacing="4">
         <Grid.RowDefinitions>
@@ -114,60 +173,7 @@
                 ScrollViewer.HorizontalScrollMode="Disabled" AutomationProperties.Name="Conversation messages">
                 <ListView.Footer>
                     <StackPanel Margin="4,0,12,20" Spacing="6">
-                    <Border CornerRadius="10" BorderThickness="1"
-                        HorizontalAlignment="Stretch" Background="{ThemeResource LayerFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
-                        Visibility="{Binding HasRunChanges, Converter={StaticResource BooleanToVisibility}}">
-                        <StackPanel DataContext="{Binding RunChanges}">
-                            <StackPanel Padding="12" Spacing="4" ToolTipService.ToolTip="Lines added and removed across this run's captured edits.">
-                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" AutomationProperties.LiveSetting="Polite" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="{Binding Added}" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontSize="11" />
-                                    <TextBlock Text="{Binding Removed}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="11" />
-                                    <TextBlock Text="Some counts unavailable" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Visibility="{Binding HasUnknownCounts, Converter={StaticResource BooleanToVisibility}}" />
-                                </StackPanel>
-                            </StackPanel>
-                            <ItemsControl ItemsSource="{Binding VisibleFiles}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="chat:ChangedFileViewModel">
-                                        <controls:ActionExpander Expanding="OnFileDiffExpanding" Collapsed="OnFileDiffCollapsed" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0" Padding="0" MinHeight="32">
-                                            <controls:ActionExpander.Header>
-                                                <Grid ColumnSpacing="12">
-                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{x:Bind Path}" TextTrimming="CharacterEllipsis" FontSize="11" />
-                                                    <TextBlock Grid.Column="1" Text="{x:Bind Added}" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontSize="11" />
-                                                    <TextBlock Grid.Column="2" Text="{x:Bind Removed}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="11" />
-                                                </Grid>
-                                            </controls:ActionExpander.Header>
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="Diff unavailable for some edits to this file." TextWrapping="Wrap" FontSize="11"
-                                                    Visibility="{x:Bind HasUnknownCounts, Converter={StaticResource BooleanToVisibility}}" />
-                                            </StackPanel>
-                                        </controls:ActionExpander>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <ItemsControl ItemsSource="{Binding VerificationLabels}" Margin="12,8,12,8"
-                                Visibility="{Binding HasVerification, Converter={StaticResource BooleanToVisibility}}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
-                                            <FontIcon Glyph="&#xE73E;" FontSize="10" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
-                                            <TextBlock Text="{Binding}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <TextBlock Text="{Binding DiagnosticsLabel}" Margin="12,8" FontSize="11" TextWrapping="Wrap"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                ToolTipService.ToolTip="Latest completed LSP check for changed files. Separate from build, lint and test results."
-                                Visibility="{Binding HasDiagnostics, Converter={StaticResource BooleanToVisibility}}" />
-                            <controls:ActionToggleButton Content="{Binding MoreLabel}" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Background="Transparent" BorderThickness="0"
-                                Visibility="{Binding HasMore, Converter={StaticResource BooleanToVisibility}}" />
-                        </StackPanel>
-                    </Border>
+                            <ContentControl Content="{Binding RunChanges}" ContentTemplate="{StaticResource RunSummaryTemplate}" HorizontalContentAlignment="Stretch" Visibility="{Binding HasRunChanges, Converter={StaticResource BooleanToVisibility}}" />
                     <StackPanel Orientation="Horizontal" Spacing="4" DataContext="{Binding SummaryResponse}"
                         Visibility="{Binding CanCopyResponse, Converter={StaticResource BooleanToVisibility}, FallbackValue=Collapsed}">
                         <controls:CopyFeedbackButton Click="OnCopyMessageClicked" Style="{StaticResource ShellIconButtonStyle}"
@@ -247,6 +253,7 @@
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                             <controls:MarkdownMessage Text="{x:Bind Text, Mode=OneWay}" SizeChanged="OnMessageSizeChanged" />
+                            <ContentControl Content="{x:Bind Summary, Mode=OneWay}" ContentTemplate="{StaticResource RunSummaryTemplate}" HorizontalContentAlignment="Stretch" Visibility="{x:Bind HasSummary, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                             <StackPanel Orientation="Horizontal" Spacing="4"
                                 Visibility="{x:Bind ShowInlineActions, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                             <controls:CopyFeedbackButton Click="OnCopyMessageClicked" HorizontalAlignment="Left" Style="{StaticResource ShellIconButtonStyle}"
@@ -418,6 +425,3 @@
         </Grid>
     </Grid>
 </UserControl>
-
-
-

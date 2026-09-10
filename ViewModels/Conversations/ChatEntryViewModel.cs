@@ -6,6 +6,13 @@ namespace PiAgentGui.ViewModels.Conversations;
 public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
 {
     private ChatEntry entry = entry;
+    private RunChangesViewModel? summary;
+    public RunChangesViewModel? Summary
+    {
+        get => summary;
+        internal set { if (SetProperty(ref summary, value)) OnPropertyChanged(nameof(HasSummary)); }
+    }
+    public bool HasSummary => Summary is { Files.Count: > 0 };
     public IReadOnlyList<ChatImage> Images => entry.Images ?? [];
     public bool HasImages => Images.Count > 0;
     private IReadOnlyList<ChatEntryViewModel> tools = [];

@@ -10,7 +10,8 @@ public sealed class RunChangesViewModel : ObservableObject
         var start = -1;
         for (var index = history.Count - 1; index >= 0; index--)
             if (history[index].IsUser) { start = index; break; }
-        if (start < 0 || history.Count <= start + 1 || !history[^1].IsAssistant || !history[^1].IsComplete) return null;
+        var lastResponse = history.ToList().FindLastIndex(entry => entry.IsAssistant || entry.IsTool || entry.IsUser);
+        if (start < 0 || lastResponse <= start || !history[lastResponse].IsAssistant || !history[lastResponse].IsComplete) return null;
         var run = history.Skip(start + 1).ToArray();
         if (run.Any(entry => !entry.IsComplete)) return null;
         var verification = new RunVerificationTracker();
@@ -42,6 +43,7 @@ public sealed class RunChangesViewModel : ObservableObject
     public bool HasVerification => VerificationLabels.Count > 0;
     public string? DiagnosticsLabel { get; }
     public bool HasDiagnostics => DiagnosticsLabel is not null;
+    public IReadOnlyList<VerificationRow> VerificationRows => VerificationLabels.Select(label => new VerificationRow(label, label.Contains("failed", StringComparison.OrdinalIgnoreCase))).ToArray();
 
     public RunChangesViewModel(IEnumerable<FileChange> changes, IReadOnlyList<string>? verificationLabels = null, string? diagnosticsLabel = null)
     {

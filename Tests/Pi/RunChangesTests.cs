@@ -25,9 +25,36 @@ public sealed class RunChangesTests
         Assert.IsTrue(viewModel.HasRunChanges);
         Assert.AreEqual("index.js", viewModel.RunChanges!.Files.Single().Path);
         Assert.AreEqual("+1", viewModel.RunChanges.Added);
+        Assert.AreEqual("old.js", viewModel.Entries.Single(entry => entry.Id == "a1").Summary!.Files.Single().Path);
         session.Emit(new() { IsRunning = true });
         dispatcher.Drain();
         Assert.IsFalse(viewModel.HasRunChanges);
+        Assert.AreEqual("index.js", viewModel.Entries.Single(entry => entry.Id == "a2").Summary!.Files.Single().Path);
+    }
+
+    [TestMethod]
+    public void TrailingSessionNoticeDoesNotHideCompletedSummary()
+    {
+        var summary = RunChangesViewModel.FromHistory([
+            new("u", "You", "Edit", IsUser: true),
+            new("tool", "edit", "done", IsTool: true, FileChange: new("index.js", "patch", 1, 1, null)),
+            new("a", "Pi", "Done", IsAssistant: true),
+            new("notice", "Session", "Session named")]);
+        Assert.AreEqual(1, summary!.Files.Count);
+    }
+
+    [TestMethod]
+    public async Task EmptyConversationDoesNotShowSyntheticSummary()
+    {
+        var dispatcher = new QueuedUiDispatcher();
+        var session = new FakeConversationSession();
+        await using var model = new ConversationViewModel(session, dispatcher);
+        Assert.IsFalse(model.HasRunChanges);
+        Assert.IsNull(model.RunChanges);
+        Assert.AreEqual(0, model.Entries.Count);
+        session.Emit(new() { IsRunning = true });
+        dispatcher.Drain();
+        Assert.IsFalse(model.HasRunChanges);
     }
 
     [TestMethod]
