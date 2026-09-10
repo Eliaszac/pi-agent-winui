@@ -87,7 +87,7 @@ public sealed class PiTranscript
         }
         if (role == "custom" && !PiJson.Flag(message, "display")) return null;
         entries.TryGetValue(id, out var previous);
-        var text = PiJson.Content(PiJson.Field(message, "content"));
+        var text = PiJson.Content(PiJson.Field(message, "content"), includeImagePlaceholder: role != "user");
         if (role is "compactionSummary" or "branchSummary") text = PiJson.Text(message, "summary");
         if (role == "bashExecution") text = PiJson.Text(message, "output");
         toolInputs.TryGetValue(id, out var toolInput);
@@ -101,7 +101,8 @@ public sealed class PiTranscript
             IsComplete: role != "assistant" || !starting,
             FileChange: role == "toolResult" && !PiJson.Flag(message, "isError")
                 ? FileChangeParser.Parse(PiJson.Text(message, "toolName"), toolInput, PiJson.Field(message, "details")) ?? previous?.FileChange : null,
-            ToolTokens: role == "toolResult" ? PiTokenUsage.Read(PiJson.Field(message, "usage")) ?? previous?.ToolTokens : null);
+            ToolTokens: role == "toolResult" ? PiTokenUsage.Read(PiJson.Field(message, "usage")) ?? previous?.ToolTokens : null,
+            Images: role == "user" ? PiImageContent.Read(PiJson.Field(message, "content")) : null);
         entries[id] = entry;
         if (role == "assistant" && !starting) { activeAssistant = null; textBlocks.Clear(); }
         return entry;

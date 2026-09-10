@@ -19,6 +19,8 @@ public partial class App : Application
     private Window? window;
     private ConversationWorkspaceStore? workspaces;
     private ProviderService? providers;
+    private ViewModels.Terminal.TerminalPanelViewModel? terminals;
+    private ResearchCoordinator? research;
     private readonly CancellationTokenSource githubLifetime = new();
     private readonly System.Net.Http.HttpClient githubHttp = new(new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(20) };
     private bool closing;
@@ -27,7 +29,11 @@ public partial class App : Application
     private bool windowClosed;
 
     /// <summary>Initializes native application resources and system theming.</summary>
-    public App() => InitializeComponent();
+    public App()
+    {
+        InitializeComponent();
+        UnhandledException += (_, args) => CrashReportWriter.Write(args.Exception);
+    }
 
     /// <inheritdoc />
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
@@ -48,10 +54,21 @@ public partial class App : Application
         var repository = new JsonProjectRepository(storage);
         var paths = new PiSessionPaths(storage);
         var startInfo = new PiProcessStartInfoFactory(locator);
+        var researchDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "research");
+        var researchStore = new ResearchStore(researchDirectory);
+        research = new ResearchCoordinator(researchStore, new PiResearchRunner(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout), researchDirectory));
+        var researchPanel = new ViewModels.Conversations.ResearchPanelViewModel(research, new DispatcherQueueUiDispatcher(window.DispatcherQueue));
+        try { await research.InitializeAsync(); }
+        catch (Exception exception) { researchPanel.ReportError("Couldn't load saved research: " + exception.Message); }
         workspaces = new ConversationWorkspaceStore((project, conversation) =>
             new ConversationSession(new PiLaunchRequest(project.Path, paths.GetSessionFile(project.Id, conversation.Id),
-                conversation.IsTitleManual ? conversation.Title : null),
-                () => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout)),
+                conversation.IsTitleManual ? conversation.Title : null, ResearchPreferencePath: researchStore.PreferencePath),
+                () => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout))
+            {
+                ResearchRequested = async payload => await research.DispatchAsync(new Models.Conversations.ResearchTask(Guid.NewGuid(), conversation.Id, project.Path,
+                    PiJson.Text(payload, "title"), PiJson.Text(payload, "question"), PiJson.Text(payload, "provider"), PiJson.Text(payload, "model"),
+                    PiJson.Text(payload, "effort"), "Queued", "", DateTimeOffset.UtcNow))
+            },
             new DispatcherQueueUiDispatcher(window.DispatcherQueue));
         var projectService = new ProjectService(repository);
         var shell = new ShellViewModel(repository, workspaces, paths);
@@ -72,7 +89,8 @@ public partial class App : Application
         var githubApi = new Services.GitHub.GitHubApi(githubHttp);
         var github = new ViewModels.GitHub.GitHubViewModel(new Services.GitHub.GitHubAuthentication(githubOptions, githubApi,
             new Services.GitHub.WindowsGitHubCredentialStore(githubOptions.ClientId)), githubApi, new Services.GitHub.GitBranchReader());
-        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token);
+        terminals = new(directory => new Services.Terminal.ConPtySession(directory));
+        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel);
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
@@ -81,9 +99,12 @@ public partial class App : Application
         args.Cancel = true;
         if (closing) return;
         closing = true;
+        (window?.Content as MainPage)?.CloseTerminalDisplays();
         try
         {
             shutdown ??= Task.WhenAll(workspaces?.DisposeAsync().AsTask() ?? Task.CompletedTask,
+                research?.DisposeAsync().AsTask() ?? Task.CompletedTask,
+                terminals?.DisposeAsync().AsTask() ?? Task.CompletedTask,
                 providers?.DisposeAsync().AsTask() ?? Task.CompletedTask);
             await shutdown;
         }

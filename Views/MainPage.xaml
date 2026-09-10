@@ -22,6 +22,16 @@
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                     Background="Transparent" BorderThickness="0" Padding="11,7" Margin="0,1" MinHeight="34" FontSize="13.3"
                     AutomationProperties.Name="{x:Bind Title, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
+                    <controls:ActionToggleButton.Resources>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="{ThemeResource SubtleFillColorSecondary}" />
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="{ThemeResource SubtleFillColorTertiary}" />
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="{ThemeResource SubtleFillColorSecondary}" />
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedDisabled" Color="{ThemeResource SubtleFillColorSecondary}" />
+                        <SolidColorBrush x:Key="ToggleButtonForegroundChecked" Color="{ThemeResource TextFillColorPrimary}" />
+                        <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="{ThemeResource TextFillColorPrimary}" />
+                        <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed" Color="{ThemeResource TextFillColorSecondary}" />
+                        <SolidColorBrush x:Key="ToggleButtonForegroundCheckedDisabled" Color="{ThemeResource TextFillColorDisabled}" />
+                    </controls:ActionToggleButton.Resources>
                     <controls:ActionToggleButton.ContextFlyout>
                         <MenuFlyout>
                             <controls:ActionMenuFlyoutItem Text="{x:Bind OpenPullRequestLabel, Mode=OneWay}"
@@ -233,6 +243,11 @@
         <views:ExtensionsView DataContext="{x:Bind ViewModel.Extensions}"
             Visibility="{x:Bind ViewModel.ShowExtensions, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
         <Grid x:Name="WorkspaceContent" RowSpacing="0" Visibility="{x:Bind ViewModel.ShowWorkspace, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="TerminalSplitterColumn" Width="0" />
+                <ColumnDefinition x:Name="TerminalColumn" Width="0" />
+            </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -252,6 +267,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" MaxWidth="640" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <controls:ActionButton Command="{x:Bind ViewModel.HeaderRename.BeginCommand, Mode=OneWay}" HorizontalAlignment="Left"
@@ -283,6 +299,23 @@
                             <MenuFlyout x:Name="OpenInMenu" Opening="OnOpenInMenuOpening" />
                         </controls:ActionSplitButton.Flyout>
                     </controls:ActionSplitButton>
+                    <controls:ActionButton Grid.Column="3" Margin="8,0,0,0" Padding="8,5" MinWidth="32" MinHeight="32"
+                        VerticalAlignment="Center" ToolTipService.ToolTip="More actions"
+                        AutomationProperties.Name="More actions">
+                        <FontIcon Glyph="&#xE712;" FontSize="15" />
+                        <controls:ActionButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <controls:ActionMenuFlyoutItem Text="Terminal" Click="OnTerminalClicked">
+                                    <controls:ActionMenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE756;" />
+                                    </controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Background research" Click="OnResearchClicked">
+                                    <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE721;" /></controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
+                            </MenuFlyout>
+                        </controls:ActionButton.Flyout>
+                    </controls:ActionButton>
                 </Grid>
                 <controls:ProjectPathButton x:Name="HeaderPath" FullPath="{x:Bind ViewModel.SelectedProject.Path, Mode=OneWay}" HorizontalAlignment="Left"
                     Padding="4,2" Background="Transparent" BorderThickness="0"
@@ -322,9 +355,18 @@
                         Visibility="{x:Bind ViewModel.ShowCreateConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 </StackPanel>
             </ScrollViewer>
-            <views:ConversationView Grid.Row="2" ViewModel="{x:Bind ViewModel.Chat, Mode=OneWay}" ShellCommandRequested="OnShellCommandRequested"
+            <Grid x:Name="ConversationBody" Grid.Row="2"
+                Visibility="{x:Bind ViewModel.HasConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+            <views:ConversationView ViewModel="{x:Bind ViewModel.Chat, Mode=OneWay}" ShellCommandRequested="OnShellCommandRequested"
                 ApprovalSetupRequested="OnApprovalSetupRequested"
                 Visibility="{x:Bind ViewModel.HasConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+            </Grid>
+                <controls:SidebarResizeHandle Grid.Column="1" Grid.RowSpan="3" Style="{StaticResource SidebarResizeHandleStyle}" Width="6" ResizeDelta="OnTerminalResizeDelta" KeyDown="OnTerminalResizeKeyDown" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    AutomationProperties.Name="Resize terminal panel" />
+                <views:TerminalPanel x:Name="TerminalPane" Grid.Column="2" Grid.RowSpan="3"
+                    Visibility="{x:Bind Terminals.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                <views:ResearchPanel x:Name="ResearchPane" Grid.Column="2" Grid.RowSpan="3"
+                    Visibility="{x:Bind Research.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
         </Grid>
         </Grid>
     </SplitView>

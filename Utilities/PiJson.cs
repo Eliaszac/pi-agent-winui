@@ -16,14 +16,14 @@ public static class PiJson
         return element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out number);
     }
 
-    public static string Content(JsonElement content)
+    public static string Content(JsonElement content, bool includeImagePlaceholder = true)
     {
         if (content.ValueKind == JsonValueKind.String) return content.GetString()!;
         if (content.ValueKind != JsonValueKind.Array) return "";
         return string.Join("\n", content.EnumerateArray().Select(block => Text(block, "type") switch
         {
             "text" => Text(block, "text"),
-            "image" => "[Image]",
+            "image" => includeImagePlaceholder ? "[Image]" : "",
             _ => ""
         }).Where(text => text.Length > 0));
     }

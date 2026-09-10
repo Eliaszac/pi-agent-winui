@@ -20,6 +20,9 @@ public sealed partial class MainPage : Page
     public ShellViewModel ViewModel { get; }
     public ViewModels.Applications.OpenInViewModel OpenIn { get; }
     public ViewModels.GitHub.GitHubViewModel GitHub { get; }
+    public ViewModels.Terminal.TerminalPanelViewModel Terminals { get; }
+    public ViewModels.Conversations.ResearchPanelViewModel Research { get; }
+    private double terminalWidth = 400;
     private readonly Configuration.GitHubOptions githubOptions;
     private readonly CancellationToken githubCancellation;
     private readonly DispatcherTimer githubTimer = new() { Interval = TimeSpan.FromSeconds(15) };
@@ -29,16 +32,27 @@ public sealed partial class MainPage : Page
     /// <param name="createProjectForm">Creates a fresh modal form.</param>
     /// <param name="picker">The window-owned folder picker.</param>
     public MainPage(ShellViewModel viewModel, Func<CreateProjectViewModel> createProjectForm, FolderPickerService picker, ViewModels.Applications.OpenInViewModel openIn,
-        ViewModels.GitHub.GitHubViewModel github, Configuration.GitHubOptions githubOptions, CancellationToken githubCancellation)
+        ViewModels.GitHub.GitHubViewModel github, Configuration.GitHubOptions githubOptions, CancellationToken githubCancellation,
+        ViewModels.Terminal.TerminalPanelViewModel terminals, ViewModels.Conversations.ResearchPanelViewModel research)
     {
         ViewModel = viewModel;
         OpenIn = openIn;
         GitHub = github;
+        Terminals = terminals;
+        Research = research;
         this.githubOptions = githubOptions;
         this.githubCancellation = githubCancellation;
         this.createProjectForm = createProjectForm;
         this.picker = picker;
         InitializeComponent();
+        ResearchPane.DataContext = Research;
+        ResearchPane.ShareRequested += text => { if (ViewModel.Chat is { } chat) chat.Draft += (string.IsNullOrWhiteSpace(chat.Draft) ? "" : "\n\n") + text; };
+        Research.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Research.IsOpen)) UpdateTerminalLayout(); };
+        ViewModel.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(ViewModel.Chat)) Research.SelectConversation(ViewModel.Chat?.ResearchOwnerId); };
+        TerminalPane.Bind(Terminals);
+        TerminalPane.CurrentDirectory = () => ViewModel.SelectedProject?.Path;
+        Terminals.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Terminals.IsOpen)) UpdateTerminalLayout(); };
+        WorkspaceContent.SizeChanged += (_, _) => UpdateTerminalLayout();
         OpenIn.PropertyChanged += (_, _) => UpdateOpenInLogo();
         ActualThemeChanged += (_, _) => { UpdateOpenInLogo(); UpdateGitHubLogo(); };
         UpdateGitHubLogo();
@@ -119,6 +133,45 @@ public sealed partial class MainPage : Page
         await OpenPullRequestAsync(githubOptions.InstallationUri ?? new Uri("https://github.com/settings/installations"));
 
     private void UpdateOpenInLogo() => OpenInLogo.Source = Controls.ApplicationLogoSource.Create(OpenIn.Logo, ActualTheme);
+
+    private void OnTerminalClicked(object sender, RoutedEventArgs args)
+    {
+        Research.IsOpen = false;
+        if (ViewModel.SelectedProject?.Path is { } directory) Terminals.Toggle(directory);
+    }
+    private void OnResearchClicked(object sender, RoutedEventArgs args)
+    {
+        Terminals.Hide();
+        Research.SelectConversation(ViewModel.Chat?.ResearchOwnerId);
+        Research.IsOpen = !Research.IsOpen;
+    }
+    private void OnTerminalResizeDelta(object? sender, double delta)
+    {
+        terminalWidth = Math.Clamp(terminalWidth - delta, 280, Math.Max(280, WorkspaceContent.ActualWidth * 0.6));
+        UpdateTerminalLayout();
+    }
+    private void OnTerminalResizeKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        if (args.Key is not (VirtualKey.Left or VirtualKey.Right)) return;
+        OnTerminalResizeDelta(sender, args.Key == VirtualKey.Left ? -20 : 20);
+        args.Handled = true;
+    }
+    private void UpdateTerminalLayout()
+    {
+        var wide = WorkspaceContent.ActualWidth >= 780;
+        var width = Math.Min(terminalWidth, Math.Max(0, WorkspaceContent.ActualWidth * (wide ? 0.6 : 1)));
+        TerminalColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen) && wide ? width : 0);
+        TerminalSplitterColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen) && wide ? 6 : 0);
+        Grid.SetColumn(ResearchPane, wide ? 2 : 0);
+        Grid.SetColumnSpan(ResearchPane, wide ? 1 : 3);
+        ResearchPane.Width = width;
+        ResearchPane.HorizontalAlignment = HorizontalAlignment.Right;
+        Grid.SetColumn(TerminalPane, wide ? 2 : 0);
+        Grid.SetColumnSpan(TerminalPane, wide ? 1 : 3);
+        TerminalPane.Width = width;
+        TerminalPane.HorizontalAlignment = HorizontalAlignment.Right;
+    }
+    public void CloseTerminalDisplays() => TerminalPane.CloseDisplays();
 
     private void UpdateGitHubLogo() => HeaderGitHubLogo.Source = Controls.ApplicationLogoSource.Create("github-light.svg", ActualTheme);
 

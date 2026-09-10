@@ -277,7 +277,7 @@ public sealed class ShellViewModel : ObservableObject
         {
             await Task.Run(() => repository.RenameConversationAsync(project.Project.Id, conversation.Conversation.Id, title));
             conversation.SetTitle(title.Trim());
-            NotifySelection();
+            if (ReferenceEquals(selectedConversation, conversation)) NotifyConversationTitle();
             if (conversation.Workspace is not null) await conversation.Workspace.SetSessionNameAsync(title.Trim());
         }
         finally { titleGate.Release(); }
@@ -303,7 +303,7 @@ public sealed class ShellViewModel : ObservableObject
             if (await Task.Run(() => repository.SetGeneratedTitleAsync(projectId, conversationId, title)))
             {
                 conversation.SetTitle(title.Trim(), manual: false);
-                NotifySelection();
+                if (ReferenceEquals(selectedConversation, conversation)) NotifyConversationTitle();
             }
         }
         catch (KeyNotFoundException) { /* The conversation was deleted while its naming request finished. */ }
@@ -350,6 +350,12 @@ public sealed class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(CanManageSidebar));
         try { await change(); }
         finally { isChanging = false; OnPropertyChanged(nameof(CanManageSidebar)); }
+    }
+
+    private void NotifyConversationTitle()
+    {
+        OnPropertyChanged(nameof(WorkspaceTitle));
+        OnPropertyChanged(nameof(WindowTitle));
     }
 
     private void NotifySelection()

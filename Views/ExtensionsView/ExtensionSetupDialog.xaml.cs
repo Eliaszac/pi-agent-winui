@@ -10,8 +10,8 @@ public sealed partial class ExtensionSetupDialog : Controls.ActionContentDialog
     {
         InitializeComponent();
         Title = details ? definition.Name : $"Set up {definition.Name}";
-        Sections.Children.Add(new TextBlock { Text = $"Third-party extension by {definition.Author} · supported version {definition.Version}", TextWrapping = TextWrapping.Wrap, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        Sections.Children.Add(new TextBlock { Text = "Created and maintained by its independent author. Pi Agent supports using this extension; we do not develop or own it.", TextWrapping = TextWrapping.Wrap });
+        Sections.Children.Add(new TextBlock { Text = $"Third-party extension by {definition.Author} · {(definition.RecommendationOnly ? "recommended" : "supported")} version {definition.Version}", TextWrapping = TextWrapping.Wrap, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+        Sections.Children.Add(new TextBlock { Text = "Created and maintained by its independent author. We do not develop or own this extension.", TextWrapping = TextWrapping.Wrap });
         Sections.Children.Add(new TextBlock { Text = definition.Details, TextWrapping = TextWrapping.Wrap });
         Sections.Children.Add(new Controls.ActionHyperlinkButton { Content = "Documentation", NavigateUri = definition.Documentation });
         Sections.Children.Add(new Controls.ActionHyperlinkButton { Content = "Source code", NavigateUri = definition.Source });
@@ -19,7 +19,8 @@ public sealed partial class ExtensionSetupDialog : Controls.ActionContentDialog
         Sections.Children.Add(new TextBlock { Text = "Run this command in your terminal to install globally. Finish active runs, then restart Pi Agent.", TextWrapping = TextWrapping.Wrap });
         Sections.Children.Add(new Controls.CodeBlockView("PowerShell", definition.InstallCommand));
         Sections.Children.Add(new TextBlock { Text = definition.Configuration, TextWrapping = TextWrapping.Wrap });
-        Sections.Children.Add(new Controls.CodeBlockView("JSON", definition.ConfigurationJson));
+        if (!string.IsNullOrWhiteSpace(definition.ConfigurationJson))
+            Sections.Children.Add(new Controls.CodeBlockView("JSON", definition.ConfigurationJson));
     }
 }
 

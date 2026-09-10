@@ -8,7 +8,7 @@ public sealed class ExtensionCardViewModel : ObservableObject
     private bool needsSetup;
     public ExtensionDefinition Definition { get; }
     public string Attribution => $"Third-party · by {Definition.Author}";
-    public string VersionLabel => $"Supported version {Definition.Version}";
+    public string VersionLabel => $"{(Definition.RecommendationOnly ? "Recommended version" : "Supported version")} {Definition.Version}";
     public string Status { get => status; private set => SetProperty(ref status, value); }
     public bool NeedsSetup { get => needsSetup; private set => SetProperty(ref needsSetup, value); }
     public AsyncRelayCommand RefreshCommand { get; }

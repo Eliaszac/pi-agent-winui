@@ -24,6 +24,8 @@ public sealed class ConversationWorkspaceStore(
         if (!workspaces.TryGetValue(key, out var workspace))
         {
             workspace = new ConversationViewModel(sessionFactory(project, conversation), dispatcher, previewCompacting);
+            workspace.WorkingDirectory = project.Path;
+            workspace.ResearchOwnerId = conversation.Id;
             workspace.SessionNameChanged += name => SessionNameChanged?.Invoke(project.Id, conversation.Id, name);
             workspace.ExplicitSessionNameChanged += name => ExplicitSessionNameChanged?.Invoke(project.Id, conversation.Id, name);
             workspace.DuplicateConversation = open => CopyRequested?.Invoke(workspace, open)

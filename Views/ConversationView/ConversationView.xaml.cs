@@ -20,8 +20,15 @@ public sealed partial class ConversationView : UserControl
     public event EventHandler? ApprovalSetupRequested;
     private void OnFileDiffExpanding(Expander sender, ExpanderExpandingEventArgs args)
     {
+        followTail = false;
+        tailScrollPending = false;
         if (sender.DataContext is ChangedFileViewModel file && sender.Content is StackPanel { Children.Count: 1 } panel)
             panel.Children.Add(new Controls.FileDiffView { Patch = file.Patch });
+    }
+    private void OnFileDiffCollapsed(Expander sender, ExpanderCollapsedEventArgs args)
+    {
+        followTail = false;
+        tailScrollPending = false;
     }
     private void OnApprovalSetupClicked(object sender, RoutedEventArgs args) => ApprovalSetupRequested?.Invoke(this, EventArgs.Empty);
     private void OnCopyMessageClicked(object sender, RoutedEventArgs args)
@@ -146,6 +153,7 @@ public sealed partial class ConversationView : UserControl
     {
         if (composing) return;
         args.Handled = true;
+        if (FileReferencePanel.Visibility == Visibility.Visible) { AcceptFileReference(); return; }
         if (CommandPanel.Visibility == Visibility.Visible && CommandList.Items.Count > 0) { AcceptCommand(); return; }
         if (ViewModel?.CanSend == true) ViewModel.SendCommand.Execute(null);
     }

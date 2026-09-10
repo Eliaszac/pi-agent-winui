@@ -7,11 +7,18 @@
         SizeChanged="OnCardsSizeChanged" Loaded="OnCardsLoaded"
         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollMode="Disabled"
         ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch"
-        AutomationProperties.Name="Supported extensions">
+        AutomationProperties.Name="Supported and recommended extensions">
         <GridView.Header>
             <StackPanel Spacing="6" Margin="0,0,0,24">
-                <TextBlock Text="Extensions" FontSize="24" FontWeight="SemiBold" />
-                <TextBlock Text="These are third-party Pi extensions, created and maintained by independent authors, not by us. We feature them here because we provide dedicated UI for them. Install globally to use them across your projects." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Grid Margin="0,0,12,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock Text="Extensions" FontSize="24" FontWeight="SemiBold" />
+                    <controls:ActionButton Grid.Column="1" Command="{Binding RefreshCommand}" Style="{StaticResource ShellIconButtonStyle}"
+                        AutomationProperties.Name="Refresh all extensions" ToolTipService.ToolTip="Refresh all extensions">
+                        <FontIcon Glyph="&#xE72C;" FontSize="16" />
+                    </controls:ActionButton>
+                </Grid>
+                <TextBlock Text="These are third-party Pi extensions, created and maintained by independent authors, not by us. Some have dedicated UI here; others are recommendations for use with Pi. Install globally to use them across your projects." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <TextBlock Text="{Binding Error}" TextWrapping="Wrap" />
             </StackPanel>
         </GridView.Header>
@@ -32,14 +39,7 @@
                 <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" BorderThickness="1" Loaded="OnCardLoaded"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="12" SizeChanged="OnCardContentSizeChanged">
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Bind Definition.Name}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
-                            <controls:ActionButton Grid.Column="1" Command="{x:Bind RefreshCommand}" Style="{StaticResource ShellIconButtonStyle}"
-                                AutomationProperties.Name="Refresh extension status" ToolTipService.ToolTip="Refresh status">
-                                <FontIcon Glyph="&#xE72C;" FontSize="16" />
-                            </controls:ActionButton>
-                        </Grid>
+                        <TextBlock Text="{x:Bind Definition.Name}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
                         <StackPanel Spacing="4">
                             <TextBlock Text="{x:Bind Attribution}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock Text="{x:Bind VersionLabel}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -58,14 +58,7 @@
         <GridView.Footer>
             <StackPanel Spacing="12" Margin="0,20,12,20" HorizontalAlignment="Stretch"
                 Visibility="{Binding HasOtherExtensions, Converter={StaticResource BooleanToVisibility}}">
-                <Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                    <TextBlock Text="Other installed extensions" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <controls:ActionButton Grid.Column="1" Command="{Binding RefreshCommand}" Style="{StaticResource ShellIconButtonStyle}"
-                        AutomationProperties.Name="Refresh installed extensions" ToolTipService.ToolTip="Refresh installed extensions">
-                        <FontIcon Glyph="&#xE72C;" FontSize="16" />
-                    </controls:ActionButton>
-                </Grid>
+                <TextBlock Text="Other installed extensions" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <TextBlock Text="Third-party extensions found in your global Pi installation. These are not managed or specifically supported by Pi Agent. Presence on disk does not confirm they are enabled or loaded. Project-local extensions are not listed here."
                     TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <ItemsControl ItemsSource="{Binding OtherExtensions}">

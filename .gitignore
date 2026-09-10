@@ -3,6 +3,9 @@
 [Oo]bj/
 artifacts/
 
+# Local JavaScript dependencies used by extension tooling
+node_modules/
+
 # Visual Studio and Rider local state
 .vs/
 .idea/
@@ -17,6 +20,16 @@ TestResults/
 coverage/
 *.coverage
 *.coveragexml
+
+# Local diagnostics and crash captures
+*.log
+*.binlog
+*.dmp
+*.mdmp
+*.etl
+
+# WebView2 profiles if a local/default profile is created beside the app
+*.WebView2/
 
 # Generated Windows packages and bundles
 AppPackages/
@@ -35,6 +48,9 @@ BundleArtifacts/
 !.env.*.example
 *.pfx
 *.p12
+*.pem
+*.key
+*.snk
 *.publishsettings
 
 # OS metadata

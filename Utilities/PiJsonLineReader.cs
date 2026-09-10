@@ -7,7 +7,7 @@ namespace PiAgentGui.Utilities;
 public static class PiJsonLineReader
 {
     public static async IAsyncEnumerable<string> ReadAsync(TextReader reader,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default, int maxRecordLength = 16 * 1024 * 1024)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default, int maxRecordLength = 128 * 1024 * 1024)
     {
         var buffer = new char[4096];
         var pending = new StringBuilder();

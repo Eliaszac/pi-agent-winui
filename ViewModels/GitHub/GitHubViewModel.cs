@@ -10,6 +10,8 @@ public sealed class GitHubViewModel(GitHubAuthentication authentication, GitHubA
     private string? selectedPath;
     private bool refreshing;
     private bool connecting;
+    private bool selectedIsRepository;
+    private int selectionRevision;
     private string error = "";
     private readonly Dictionary<string, GitHubPullRequest?> pulls = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, GitHubBranch?> branches = new(StringComparer.OrdinalIgnoreCase);
@@ -19,7 +21,7 @@ public sealed class GitHubViewModel(GitHubAuthentication authentication, GitHubA
     public GitHubPullRequest? SelectedPullRequest => selectedPath is not null ? pulls.GetValueOrDefault(selectedPath) : null;
     public string HeaderLabel => connecting ? "Connecting…" : IsConnected ? "Open PR" : "Connect to GitHub";
     public string HeaderTooltip => SelectedPullRequest is { } pr ? $"Open PR #{pr.Number}: {pr.Title}" : "Connect to GitHub";
-    public bool ShowHeaderButton => !IsConnected || SelectedPullRequest is not null;
+    public bool ShowHeaderButton => selectedIsRepository && (!IsConnected || SelectedPullRequest is not null);
     public string Error { get => error; private set { SetProperty(ref error, value); OnPropertyChanged(nameof(HasError)); } }
     public bool HasError => Error.Length > 0;
     public event Action<string, GitHubPullRequest?>? PullRequestChanged;
@@ -31,7 +33,17 @@ public sealed class GitHubViewModel(GitHubAuthentication authentication, GitHubA
         Notify();
     }
 
-    public void Select(string? path) { selectedPath = path; Error = ""; Notify(); }
+    public void Select(string? path)
+    {
+        if (!string.Equals(selectedPath, path, StringComparison.OrdinalIgnoreCase))
+        {
+            ++selectionRevision;
+            selectedIsRepository = false;
+        }
+        selectedPath = path;
+        Error = "";
+        Notify();
+    }
     public void ReportError(string message) => Error = message;
     public void Disconnect()
     {
@@ -59,6 +71,17 @@ public sealed class GitHubViewModel(GitHubAuthentication authentication, GitHubA
 
     public async Task RefreshAsync(IEnumerable<string> paths, CancellationToken cancellationToken, bool force = false)
     {
+        var revision = selectionRevision;
+        var pathToCheck = selectedPath;
+        var isRepository = false;
+        try { if (pathToCheck is not null) isRepository = await git.IsRepositoryAsync(pathToCheck, cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception) { /* Unavailable Git or folder: hide the repository-only action. */ }
+        if (revision == selectionRevision)
+        {
+            selectedIsRepository = isRepository;
+            Notify();
+        }
         if (refreshing || token is null) return;
         refreshing = true;
         var session = token;

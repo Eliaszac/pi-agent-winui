@@ -29,8 +29,28 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     private bool unseenCompletion;
     private readonly HashSet<string> runEntryIds = [];
     private bool trackingRun;
+    private readonly RunVerificationTracker runVerification = new();
     public RunChangesViewModel? RunChanges { get; private set; }
     public bool HasRunChanges => RunChanges is { Files.Count: > 0 } && !running;
+    public ChatEntryViewModel? SummaryResponse => HasRunChanges ? responseActionsEntry : null;
+    public string? WorkingDirectory { get; internal set; }
+    public Guid ResearchOwnerId { get; internal set; }
+    public PromptFileReferences FileReferences { get; } = new();
+    public ObservableCollection<ChatImage> PendingImages { get; } = [];
+    public bool HasPendingImages => PendingImages.Count > 0;
+    public void AddScreenshot(ChatImage image)
+    {
+        if (PendingImages.Count >= PiImageContent.MaximumImages) throw new InvalidOperationException("Attach up to four screenshots per message.");
+        PendingImages.Add(image);
+        RefreshAttachments();
+    }
+    public void RemoveScreenshot(ChatImage image) { PendingImages.Remove(image); RefreshAttachments(); }
+    public void ReportAttachmentError(string message) { error = message; NotifyState(); }
+    private void RefreshAttachments()
+    {
+        OnPropertyChanged(nameof(HasPendingImages));
+        NotifyState();
+    }
     public bool ShowBlockedIndicator => !isViewed && Prompts.Count > 0;
     public bool ShowRunningIndicator => !isViewed && !ShowBlockedIndicator && running;
     public bool ShowDoneIndicator => !isViewed && !ShowBlockedIndicator && !running && unseenCompletion && !HasError;
@@ -99,7 +119,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     public bool IsLoading => preparing || (!connected && !HasError);
     public bool ShowRecovery => !IsLoading && !connected;
     public bool HasInlineError => IsReady && HasError;
-    public bool CanSend => IsReady && !busy && !running && !disposed && !string.IsNullOrWhiteSpace(Draft);
+    public bool CanSend => IsReady && !busy && !running && !disposed && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages);
     public bool CanStop => connected && running && (!busy || operationInFlight) && !stopping;
     public AsyncRelayCommand ComposerActionCommand => running ? StopCommand : SendCommand;
     public bool CanUseComposerAction => running ? CanStop : CanSend;
@@ -188,11 +208,19 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         {
             if (!CanSend) return;
             var submitted = Draft;
-            if (HandleComposerCommand is { } handler && await handler(submitted)) return;
+            var images = PendingImages.ToArray();
+            if (images.Length == 0 && HandleComposerCommand is { } handler && await handler(submitted)) return;
+            if (images.Length > 0 && submitted.TrimStart().StartsWith('/'))
+                throw new InvalidOperationException("Send screenshots with a message rather than a slash command.");
             await ExecuteAsync(async () =>
             {
-                await session.SendAsync(submitted).ConfigureAwait(false);
-                dispatcher.Post(() => { if (Draft == submitted) Draft = ""; });
+                await session.SendAsync(FileReferences.Expand(submitted), images).ConfigureAwait(false);
+                dispatcher.Post(() =>
+                {
+                    if (Draft == submitted) Draft = "";
+                    foreach (var image in images) PendingImages.Remove(image);
+                    RefreshAttachments();
+                });
             });
         }, ReportError);
         StopCommand = new AsyncRelayCommand(async _ =>
@@ -298,7 +326,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
             if (!string.IsNullOrWhiteSpace(update.SessionName)) SessionNameChanged?.Invoke(update.SessionName);
             if (update.History is not null)
             {
-                RunChanges = null;
+                RunChanges = update.IsRunning == true ? null : RunChangesViewModel.FromHistory(update.History);
                 runEntryIds.Clear();
                 trackingRun = false;
                 entries.Clear();
@@ -309,7 +337,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
             if (update.Entry is not null)
             {
                 Upsert(update.Entry);
-                if (trackingRun) runEntryIds.Add(update.Entry.Id);
+                if (trackingRun) { runEntryIds.Add(update.Entry.Id); runVerification.Observe(update.Entry); }
                 changed = true;
             }
             if (update.Status is not null) status = update.Status;
@@ -325,6 +353,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                 if (isRunning && !running)
                 {
                     runEntryIds.Clear();
+                    runVerification.Reset();
                     trackingRun = true;
                     warning = "";
                     if (update.Entry is not null) runEntryIds.Add(update.Entry.Id);
@@ -342,7 +371,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                     if (update.RunUsage is { } usage)
                         Entries.LastOrDefault(entry => runEntryIds.Contains(entry.Id) && entry.CanCopyResponse)?.SetUsage(usage);
                     RunChanges = new(Entries.Where(entry => runEntryIds.Contains(entry.Id))
-                        .Select(entry => entry.FileChange).OfType<FileChange>());
+                        .Select(entry => entry.FileChange).OfType<FileChange>(), runVerification.Labels);
                     trackingRun = false;
                     changed = true;
                 }
@@ -428,9 +457,15 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         var latest = IsReady && !running && Prompts.Count == 0
             ? Entries.LastOrDefault(entry => entry.IsAssistant || entry.IsUser) : null;
         if (latest is not { CanCopyResponse: true, Status.Length: 0 }) latest = null;
-        if (!ReferenceEquals(responseActionsEntry, latest)) responseActionsEntry?.SetConversationActions(false, false);
+        if (!ReferenceEquals(responseActionsEntry, latest) && responseActionsEntry is { } previous)
+        {
+            previous.SetConversationActions(false, false);
+            previous.ShowInlineActions = true;
+        }
         responseActionsEntry = latest;
         latest?.SetConversationActions(true, CanDuplicateConversation);
+        if (latest is not null) latest.ShowInlineActions = !HasRunChanges;
+        OnPropertyChanged(nameof(SummaryResponse));
         OnPropertyChanged(nameof(CanDuplicateConversation));
         OnPropertyChanged(nameof(Warning));
         OnPropertyChanged(nameof(HasInlineWarning));

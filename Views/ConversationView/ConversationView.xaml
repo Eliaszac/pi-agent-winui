@@ -113,7 +113,8 @@
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                 ScrollViewer.HorizontalScrollMode="Disabled" AutomationProperties.Name="Conversation messages">
                 <ListView.Footer>
-                    <Border Margin="4,0,12,20" CornerRadius="10" BorderThickness="1"
+                    <StackPanel Margin="4,0,12,20" Spacing="6">
+                    <Border CornerRadius="10" BorderThickness="1"
                         HorizontalAlignment="Stretch" Background="{ThemeResource LayerFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                         Visibility="{Binding HasRunChanges, Converter={StaticResource BooleanToVisibility}}">
@@ -130,7 +131,7 @@
                             <ItemsControl ItemsSource="{Binding VisibleFiles}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="chat:ChangedFileViewModel">
-                                        <controls:ActionExpander Expanding="OnFileDiffExpanding" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0" Padding="0" MinHeight="32">
+                                        <controls:ActionExpander Expanding="OnFileDiffExpanding" Collapsed="OnFileDiffCollapsed" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0" Padding="0" MinHeight="32">
                                             <controls:ActionExpander.Header>
                                                 <Grid ColumnSpacing="12">
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -147,11 +148,42 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding VerificationLabels}" Margin="12,8,12,8"
+                                Visibility="{Binding HasVerification, Converter={StaticResource BooleanToVisibility}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+                                            <FontIcon Glyph="&#xE73E;" FontSize="10" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
+                                            <TextBlock Text="{Binding}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <controls:ActionToggleButton Content="{Binding MoreLabel}" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Background="Transparent" BorderThickness="0"
                                 Visibility="{Binding HasMore, Converter={StaticResource BooleanToVisibility}}" />
                         </StackPanel>
                     </Border>
+                    <StackPanel Orientation="Horizontal" Spacing="4" DataContext="{Binding SummaryResponse}"
+                        Visibility="{Binding CanCopyResponse, Converter={StaticResource BooleanToVisibility}, FallbackValue=Collapsed}">
+                        <controls:CopyFeedbackButton Click="OnCopyMessageClicked" Style="{StaticResource ShellIconButtonStyle}"
+                            AutomationProperties.Name="Copy response" ToolTipService.ToolTip="Copy response" />
+                        <controls:ActionButton Command="{Binding ForkCommand}" IsEnabled="{Binding CanDuplicate}"
+                            Style="{StaticResource ShellIconButtonStyle}" AutomationProperties.Name="Fork conversation"
+                            ToolTipService.ToolTip="Fork: continue in a new conversation">
+                            <FontIcon Glyph="&#xE8A7;" FontSize="14" />
+                        </controls:ActionButton>
+                        <controls:ActionButton Command="{Binding CloneCommand}" IsEnabled="{Binding CanDuplicate}"
+                            Style="{StaticResource ShellIconButtonStyle}" AutomationProperties.Name="Clone conversation"
+                            ToolTipService.ToolTip="Clone: duplicate and stay here">
+                            <FontIcon Glyph="&#xF413;" FontSize="14" />
+                        </controls:ActionButton>
+                        <TextBlock Text="{Binding UsageLabel}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Visibility="{Binding HasUsage, Converter={StaticResource BooleanToVisibility}}"
+                            ToolTipService.ToolTip="Whole-run reported tokens, including input, output and cache usage. Elapsed time includes tools and waiting for approval." />
+                    </StackPanel>
+                    </StackPanel>
                 </ListView.Footer>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
@@ -188,7 +220,14 @@
                             <StackPanel HorizontalAlignment="Right" MaxWidth="640" Margin="48,0,0,18" Spacing="4"
                                 Visibility="{x:Bind IsUser, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                 <Border Padding="13,9" CornerRadius="13" Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                                    <StackPanel Spacing="8">
+                                    <ItemsControl ItemsSource="{x:Bind Images, Mode=OneWay}" Visibility="{x:Bind HasImages, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate><controls:ScreenshotPreview Image="{Binding}" Margin="0,0,0,6" AutomationProperties.Name="Attached screenshot" /></DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                     <TextBlock Text="{x:Bind Text, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                    </StackPanel>
                                 </Border>
                                 <controls:CopyFeedbackButton Click="OnCopyMessageClicked" HorizontalAlignment="Right" Style="{StaticResource ShellIconButtonStyle}"
                                     AutomationProperties.Name="Copy prompt" ToolTipService.ToolTip="Copy prompt"
@@ -204,7 +243,8 @@
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                             <controls:MarkdownMessage Text="{x:Bind Text, Mode=OneWay}" SizeChanged="OnMessageSizeChanged" />
-                            <StackPanel Orientation="Horizontal" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="4"
+                                Visibility="{x:Bind ShowInlineActions, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                             <controls:CopyFeedbackButton Click="OnCopyMessageClicked" HorizontalAlignment="Left" Style="{StaticResource ShellIconButtonStyle}"
                                 AutomationProperties.Name="Copy response" ToolTipService.ToolTip="Copy response"
                                 Visibility="{x:Bind CanCopyResponse, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
@@ -258,6 +298,34 @@
         </ScrollViewer>
         <Grid Grid.Row="3" Visibility="{Binding IsReady, Converter={StaticResource BooleanToVisibility}}">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <StackPanel Spacing="6">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                Visibility="{Binding HasPendingImages, Converter={StaticResource BooleanToVisibility}}" MaxHeight="132">
+                <ItemsControl ItemsSource="{Binding PendingImages}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,6">
+                                <controls:ScreenshotPreview Image="{Binding}" Width="160" Height="108" AutomationProperties.Name="Screenshot ready to send" />
+                                <controls:ActionButton Click="OnRemoveScreenshot" Tag="{Binding}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    MinWidth="24" MinHeight="24" Padding="4" AutomationProperties.Name="Remove screenshot" ToolTipService.ToolTip="Remove screenshot">
+                                    <FontIcon Glyph="&#xE711;" FontSize="10" />
+                                </controls:ActionButton>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <Border x:Name="FileReferencePanel" Visibility="Collapsed" Padding="4" CornerRadius="8" BorderThickness="1"
+                Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
+                <StackPanel>
+                    <TextBlock Text="Reference a file" FontSize="11" Margin="8,4" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <controls:CommandListView x:Name="FileReferenceList" MaxHeight="200" IsItemClickEnabled="True"
+                        ItemClick="OnFileReferenceClicked" KeyDown="OnFileReferenceKeyDown" SelectionMode="Single" DisplayMemberPath="Label" AutomationProperties.Name="File references" />
+                    <controls:ActionButton Content="Browse…" Click="OnBrowseReference" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Choose a file inside or outside the project" />
+                </StackPanel>
+            </Border>
             <StackPanel x:Name="CommandSurface" Spacing="4" Margin="0,0,0,8" Visibility="Collapsed">
                 <InfoBar x:Name="CommandNotice" IsOpen="False" IsClosable="True" Severity="Informational" Closed="OnCommandNoticeClosed" />
                 <Border x:Name="CommandPanel" Visibility="Collapsed" Padding="4" CornerRadius="8" BorderThickness="1"
@@ -289,7 +357,9 @@
                     </StackPanel>
                 </Border>
             </StackPanel>
+            </StackPanel>
             <TextBox x:Name="Composer" Grid.Row="1" Text="{Binding Draft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                Paste="OnComposerPaste"
                 TextChanged="OnComposerTextChanged" SelectionChanged="OnComposerSelectionChanged" PreviewKeyDown="OnComposerPreviewKeyDown"
                 TextCompositionStarted="OnCompositionStarted" TextCompositionEnded="OnCompositionEnded"
                 KeyboardAcceleratorPlacementMode="Hidden"

@@ -19,6 +19,15 @@
         <!-- App Options -->
         <UseRidGraph>true</UseRidGraph>
         <Platforms>x86;x64;ARM64</Platforms>
+        <!-- WebView2's native WinRT library requires a concrete architecture, even for IDE AnyCPU builds. -->
+        <PlatformTarget Condition="'$(PlatformTarget)' == '' and '$(RuntimeIdentifier)' == 'win-x86'">x86</PlatformTarget>
+        <PlatformTarget Condition="'$(PlatformTarget)' == '' and '$(RuntimeIdentifier)' == 'win-x64'">x64</PlatformTarget>
+        <PlatformTarget Condition="'$(PlatformTarget)' == '' and '$(RuntimeIdentifier)' == 'win-arm64'">ARM64</PlatformTarget>
+        <PlatformTarget Condition="'$(PlatformTarget)' == '' and ('$(Platform)' == 'x86' or '$(Platform)' == 'x64' or '$(Platform)' == 'ARM64')">$(Platform)</PlatformTarget>
+        <PlatformTarget Condition="'$(PlatformTarget)' == '' or '$(PlatformTarget)' == 'AnyCPU'">x64</PlatformTarget>
+        <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(PlatformTarget)' == 'x86'">win-x86</RuntimeIdentifier>
+        <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(PlatformTarget)' == 'x64'">win-x64</RuntimeIdentifier>
+        <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(PlatformTarget)' == 'ARM64'">win-arm64</RuntimeIdentifier>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationIcon>Assets\Pi.ico</ApplicationIcon>
         <Product>Pi Agent</Product>
@@ -37,6 +46,8 @@
         <Content Include="Assets\StoreLogo.png" />
         <Content Include="Assets\Pi.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
         <Content Include="Assets\OpenIn\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="Assets\Terminal\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="Assets\Syntax\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
         <Content Include="GitHubApp.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
         <Content Include="PiExtensions\*.ts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
         <Content Include="Assets\Wide310x150Logo.scale-200.png" />
@@ -52,6 +63,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.*" />
         <PackageReference Include="Markdig" Version="1.3.2" />
+        <PackageReference Include="TextMateSharp.Grammars" Version="2.0.4" />
         <PackageReference Include="Microsoft.Web.WebView2" Version="1.*" />
         <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.*" />
 

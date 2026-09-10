@@ -7,6 +7,9 @@ namespace PiAgentGui.Services.GitHub;
 /// <summary>Reads local Git metadata only; no fetch, hooks, credentials or working-tree mutations.</summary>
 public sealed class GitBranchReader : IGitBranchReader
 {
+    public async Task<bool> IsRepositoryAsync(string directory, CancellationToken cancellationToken) =>
+        await RunAsync(directory, ["rev-parse", "--is-inside-work-tree"], cancellationToken) == "true";
+
     public async Task<GitHubBranch?> ReadAsync(string directory, CancellationToken cancellationToken)
     {
         var branch = await RunAsync(directory, ["symbolic-ref", "--quiet", "--short", "HEAD"], cancellationToken);

@@ -9,6 +9,7 @@ public interface IConversationSession : IAsyncDisposable
     event Action<ConversationUpdate>? Updated;
     Task ConnectAsync(CancellationToken cancellationToken = default);
     Task SendAsync(string message, CancellationToken cancellationToken = default);
+    Task SendAsync(string message, IReadOnlyList<ChatImage> images, CancellationToken cancellationToken = default);
     Task SetModelAsync(string provider, string modelId, CancellationToken cancellationToken = default);
     Task SetApprovalModeAsync(string mode, CancellationToken cancellationToken = default);
     Task SetThinkingLevelAsync(string level, CancellationToken cancellationToken = default);

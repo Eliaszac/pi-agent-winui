@@ -19,6 +19,12 @@ internal sealed class FakeConversationSession : IConversationSession
     public Task SetSessionNameAsync(string name, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public event Action<ConversationUpdate>? Updated;
     public List<string> Sent { get; } = [];
+    public List<IReadOnlyList<ChatImage>> SentImages { get; } = [];
+    public async Task SendAsync(string message, IReadOnlyList<ChatImage> images, CancellationToken cancellationToken = default)
+    {
+        await SendAsync(message, cancellationToken);
+        SentImages.Add(images);
+    }
     public Exception? SendError { get; set; }
     public Exception? ModelError { get; set; }
     public Task SetThinkingLevelAsync(string level, CancellationToken cancellationToken = default)

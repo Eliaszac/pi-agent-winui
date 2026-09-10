@@ -12,6 +12,27 @@ namespace PiAgentGui.Tests.GitHub;
 [TestClass]
 public sealed class GitHubTests
 {
+    [TestMethod]
+    public async Task ConnectButtonRequiresRepositoryEvenWhenSignedOut()
+    {
+        using var http = new HttpClient(new FakeGitHubHandler(_ => throw new AssertFailedException("Signed-out checks must stay local.")));
+        var api = new GitHubApi(http);
+        var reader = new FakeGitBranchReader { IsRepository = false, Branch = null };
+        var vm = new GitHubViewModel(new(new("id", "slug"), api, new FakeGitHubCredentials()), api, reader);
+        vm.Select("folder");
+        Assert.IsFalse(vm.ShowHeaderButton);
+        await vm.RefreshAsync(["folder"], default);
+        Assert.IsFalse(vm.ShowHeaderButton);
+        // An initialized repository need not have a commit, remote or GitHub branch yet.
+        reader.IsRepository = true;
+        await vm.RefreshAsync(["folder"], default);
+        Assert.IsTrue(vm.ShowHeaderButton);
+        vm.Select("another-folder");
+        Assert.IsFalse(vm.ShowHeaderButton);
+        reader.IsRepository = false;
+        await vm.RefreshAsync(["another-folder"], default);
+        Assert.IsFalse(vm.ShowHeaderButton);
+    }
     [DataTestMethod]
     [DataRow("git@github.com:owner/repo.git")]
     [DataRow("https://github.com/owner/repo.git")]

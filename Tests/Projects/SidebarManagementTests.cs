@@ -11,6 +11,35 @@ namespace PiAgentGui.Tests.Projects;
 public sealed class SidebarManagementTests
 {
     [TestMethod]
+    public async Task GeneratedTitleUpdatesHeaderWithoutRebindingConversationSelection()
+    {
+        var dispatcher = new QueuedUiDispatcher();
+        var session = new FakeConversationSession();
+        await using var store = new ConversationWorkspaceStore((_, _) => session, dispatcher);
+        var conversation = new ConversationDraft { Id = Guid.NewGuid(), Title = "New conversation", IsTitleManual = false, CreatedAt = DateTimeOffset.UtcNow };
+        var project = new Project { Id = Guid.NewGuid(), Name = "Project", Path = Path.GetTempPath(), Conversations = [conversation] };
+        var shell = new ShellViewModel(new InMemoryProjectRepository(project), store);
+        await shell.LoadAsync();
+        var item = shell.Projects[0].Conversations[0];
+        item.SelectCommand.Execute(null);
+        dispatcher.Drain();
+        var changes = new List<string?>();
+        var updated = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        shell.PropertyChanged += (_, args) =>
+        {
+            changes.Add(args.PropertyName);
+            if (args.PropertyName == nameof(shell.WindowTitle)) updated.TrySetResult();
+        };
+        session.Emit(new() { SessionName = "Generated title" });
+        dispatcher.Drain();
+        await updated.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.AreEqual("Generated title", item.Title);
+        Assert.AreEqual("Pi Agent — Generated title", shell.WindowTitle);
+        CollectionAssert.AreEquivalent(new[] { "WorkspaceTitle", "WindowTitle" }, changes.ToArray());
+        Assert.AreSame(item.Workspace, shell.Chat);
+    }
+
+    [TestMethod]
     public async Task InlineRenameUpdatesSidebarAndSelectedWindowTitle()
     {
         var project = new Project { Id = Guid.NewGuid(), Name = "Project", Path = Path.GetTempPath() };

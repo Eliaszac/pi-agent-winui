@@ -11,7 +11,7 @@ A developer working with local source folders on a Windows desktop or laptop.
 1. Projects provide conversation context: group conversations beneath their working directory in the left sidebar.
 2. Creating a project is a focused modal task; preserve the surrounding workspace.
 3. Give space back to the conversation: allow sidebar resizing, collapse, and drag-to-expand.
-4. Follow Windows: native controls, system typography and accent, automatic light/dark themes, and keyboard access.
+4. Follow Windows: native controls, system typography, automatic light/dark themes, and keyboard access. Reserve the system accent for action buttons; keep disclosure and selection surfaces neutral.
 
 ## Success metric for the surface
 
@@ -24,6 +24,22 @@ The user can register a named folder, reopen it after restarting, and work in mu
 - Rich Markdown/code editors, attachments, advanced session browsing, and multiple-window coordination beyond session locking.
 
 ## Learned constraints
+
+- 2026-09-10: Extensions has one page-header refresh icon for all recommended/supported cards and other installed extensions; no per-card or section refresh buttons.
+
+- 2026-09-10: Use a traditional toggle switch for the research opt-in, rather than a text button labeled On/Off.
+
+- 2026-09-10: Keep the research panel compact: On/Off in the header, explanation in an info flyout, a short empty state, and result actions beside the selected result. Show Cancel only for queued/running tasks; show Copy and Add to prompt only for completed results.
+
+- 2026-09-10: Individual and grouped tool-call disclosures must stay neutral when expanded, hovered, or pressed. Do not use the Windows accent on disclosure surfaces or resize handles. Preserve system high-contrast accessibility colors.
+
+- 2026-09-10: Terminal panel spans the full chat workspace height, including the conversation header. It must not begin beneath that header.
+
+- 2026-09-10: Add a terminal icon button to the chat header, opening a right-side terminal panel with native tabs. Closing the last tab closes the panel. Hiding preserves sessions, new tabs use the selected project folder, and tab sessions remain independent when switching conversations. Support system theme, resizing and a narrow-window overlay.
+
+- 2026-09-10: The existing completed-run file-change summary may show successful verification only: Lint passed and Tests x/x passed. Never create a card for checks alone or show failed/not-run/unknown check rows. Clear verification after later edits; use recognized tool commands and explicit test totals rather than assistant prose. No coverage claim for files outside the check's scope.
+
+- 2026-09-10: Only show the GitHub header action after confirming that the selected project folder is inside an initialized Git working tree. Check locally even while signed out; an initial commit or remote is not required. Hide immediately when switching to an unverified folder.
 
 - 2026-09-10: PR preview is now live integration. Show GitHub-logo Connect to GitHub in the chat header only when signed out; when connected, show Open PR only for a detected open PR. Use actual PR numbers in sidebar conversation metadata and context-menu navigation. Local project working-folder branch is shared by conversations. GitHub login uses a code-and-browser dialog, credential storage and automatic token refresh. Header context menu exposes refresh, repository access and disconnect without adding a full source-control panel.
 

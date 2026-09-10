@@ -10,6 +10,21 @@ namespace PiAgentGui.Services.Conversations;
 /// <summary>Coordinates one Pi process and its persistent session, never a shared selected-session process.</summary>
 public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient> clientFactory, Func<bool>? permissionConfigured = null) : IConversationSession
 {
+    public Func<JsonElement, Task>? ResearchRequested { get; init; }
+    private async Task HandleResearchAsync(PiRpcClient current, JsonElement packet)
+    {
+        JsonObject response;
+        try
+        {
+            using var payload = JsonDocument.Parse(PiJson.Text(packet, "placeholder"));
+            if (ResearchRequested is null) throw new InvalidOperationException("Background research is unavailable.");
+            await ResearchRequested(payload.RootElement.Clone());
+            response = new() { ["value"] = "{\"accepted\":true}" };
+        }
+        catch (Exception exception) { response = new() { ["value"] = new JsonObject { ["error"] = exception.Message }.ToJsonString() }; }
+        try { await current.ReplyToExtensionAsync(PiJson.Text(packet, "id"), response, lifetime.Token); }
+        catch (Exception exception) when (exception is IOException or OperationCanceledException or ObjectDisposedException) { }
+    }
     private readonly SemaphoreSlim connectionGate = new(1, 1);
     private readonly object stateGate = new();
     private readonly CancellationTokenSource lifetime = new();
@@ -179,9 +194,13 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
         finally { connectionGate.Release(); }
     }
 
-    public async Task SendAsync(string message, CancellationToken cancellationToken = default)
+    public Task SendAsync(string message, CancellationToken cancellationToken = default) => SendAsync(message, [], cancellationToken);
+
+    public async Task SendAsync(string message, IReadOnlyList<ChatImage> images, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        if (images.Count == 0) ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        var payload = new JsonObject { ["message"] = message };
+        if (images.Count > 0) payload["images"] = PiImageContent.Serialize(images);
         await ConnectAsync(cancellationToken).ConfigureAwait(false);
         PiRpcClient current;
         lock (stateGate)
@@ -191,7 +210,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             running = true;
             Publish(new() { Status = "Sending…", IsRunning = true, Error = "" });
         }
-        try { await current.RequestAsync("prompt", new JsonObject { ["message"] = message }, cancellationToken).ConfigureAwait(false); }
+        try { await current.RequestAsync("prompt", payload, cancellationToken).ConfigureAwait(false); }
         catch (PiCommandException)
         {
             lock (stateGate) { running = false; Publish(new() { Status = "Ready", IsRunning = false }); }
@@ -378,6 +397,11 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
 
     private void HandleExtension(JsonElement packet)
     {
+        if (PiJson.Text(packet, "method") == "input" && PiJson.Text(packet, "title") == "pi-gui-background-research-v1" && client is { } current)
+        {
+            _ = Task.Run(() => HandleResearchAsync(current, packet.Clone()));
+            return;
+        }
         var method = PiJson.Text(packet, "method");
         if (method is "confirm" or "select" or "input" or "editor")
         {

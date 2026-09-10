@@ -21,6 +21,9 @@ public sealed partial class ConversationView
 
     private void ResetCommands()
     {
+        DismissFileReferences();
+        fileToken = null;
+        dismissedFileToken = null;
         commandOwner = null;
         commandCatalog = ComposerCommandCatalog.Create(default);
         dismissedToken = null;
@@ -36,7 +39,7 @@ public sealed partial class ConversationView
     {
         if (pickerUpdateQueued) return;
         pickerUpdateQueued = true;
-        DispatcherQueue.TryEnqueue(() => { pickerUpdateQueued = false; UpdatePicker(); });
+        DispatcherQueue.TryEnqueue(() => { pickerUpdateQueued = false; UpdatePicker(); UpdateFileReferences(); });
     }
 
     private void UpdatePicker()
@@ -93,6 +96,7 @@ public sealed partial class ConversationView
 
     private void OnComposerPreviewKeyDown(object sender, KeyRoutedEventArgs args)
     {
+        if (!composing && HandleFileReferenceKey(args)) return;
         if (composing || CommandPanel.Visibility != Visibility.Visible) return;
         if (args.Key is VirtualKey.Up or VirtualKey.Down)
         {

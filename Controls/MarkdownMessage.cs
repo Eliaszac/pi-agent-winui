@@ -1,5 +1,6 @@
 using Markdig;
 using Microsoft.UI.Dispatching;
+using PiAgentGui.Utilities;
 
 namespace PiAgentGui.Controls;
 
@@ -36,7 +37,7 @@ public sealed class MarkdownMessage : UserControl
         for (var index = 0; index < document.Count; index++)
         {
             var block = document[index];
-            var signature = block.GetType().Name + ":" + source.Substring(block.Span.Start, block.Span.Length);
+            var signature = MarkdownBlockSignature.Create(block.GetType().Name, source, block.Span.Start, block.Span.End);
             if (index < blockSources.Count && blockSources[index] == signature) continue;
             if (index < panel.Children.Count && blockSources[index].StartsWith(block.GetType().Name + ":", StringComparison.Ordinal)
                 && MarkdownRenderer.UpdateBlock((FrameworkElement)panel.Children[index], block))

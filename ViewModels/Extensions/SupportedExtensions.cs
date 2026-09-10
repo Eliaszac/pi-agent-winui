@@ -25,5 +25,27 @@ public static class SupportedExtensions
         new("https://github.com/patlux/pi-auto-session-name#readme"),
         new("https://github.com/patlux/pi-auto-session-name"), AutoSessionNameSupport.GetInstallationState);
 
-    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Permissions, AutomaticTitles];
+    public static ExtensionDefinition Mcp { get; } = new(
+        "MCP Adapter", "Nico Bailon", "2.10.0",
+        "Connect Pi to MCP servers for additional tools and services. Recommended for use with Pi; no dedicated MCP interface in this app.",
+        "A third-party extension maintained by Nico Bailon. It lets Pi discover and call tools from configured Model Context Protocol servers. Server configuration and authentication are managed by the extension, following its documentation. Pi Agent lists this as a recommendation and checks package installation only; it does not verify server connections or implement the extension's terminal panels.",
+        "pi install npm:pi-mcp-adapter@2.10.0",
+        "Configure your servers in ~/.pi/agent/mcp.json (or mcp.json in your custom PI_CODING_AGENT_DIR). Add each server's configuration under mcpServers using the upstream documentation, then restart Pi Agent. This empty structure does not connect any servers:",
+        "{\n  \"mcpServers\": {}\n}",
+        new("https://github.com/nicobailon/pi-mcp-adapter#readme"),
+        new("https://github.com/nicobailon/pi-mcp-adapter"),
+        () => McpAdapterSupport.GetInstallationState(), RecommendationOnly: true);
+
+    public static ExtensionDefinition Search { get; } = new(
+        "Pi Search", "heyhuynhgiabuu", PiSearchSupport.Version,
+        "Search the web and look up documentation with Pi. Also enables web search for background research workers.",
+        "A third-party extension providing web search, code search, documentation lookup and page fetching. Main conversations use its configured tools. Background research loads only web search, with bounded queries and the app's separate page reader. Installation does not verify provider availability or override permission rules.",
+        PiSearchSupport.InstallCommand,
+        "Basic search uses Exa's public MCP service without an API key. Optional provider keys and disabled tools can be configured in ~/.pi/pi-search.json following the upstream documentation. Restart Pi Agent after installation; new research workers use the installed supported version. Search queries are sent to the configured provider, whose limits and charges apply.",
+        "",
+        new("https://github.com/heyhuynhgiabuu/pi-search#readme"),
+        new("https://github.com/heyhuynhgiabuu/pi-search"),
+        () => PiSearchSupport.GetInstallationState());
+
+    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Permissions, AutomaticTitles, Search, Mcp];
 }

@@ -1,0 +1,57 @@
+<UserControl x:Class="PiAgentGui.Views.ResearchPanel"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:controls="using:PiAgentGui.Controls" xmlns:models="using:PiAgentGui.Models.Conversations">
+ <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+  <Grid Padding="12,8" ColumnSpacing="4" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <TextBlock Text="Research" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+   <ToggleSwitch Grid.Column="1" IsOn="{Binding Enabled, Mode=OneWay}" Toggled="OnResearchToggled"
+    OnContent="" OffContent="" MinWidth="0" VerticalAlignment="Center"
+    AutomationProperties.Name="Background research" ToolTipService.ToolTip="{Binding EnableActionLabel}"/>
+   <controls:ActionButton Grid.Column="2" Style="{StaticResource ShellIconButtonStyle}" AutomationProperties.Name="About background research" ToolTipService.ToolTip="About background research">
+    <FontIcon Glyph="&#xE946;" FontSize="14"/>
+    <controls:ActionButton.Flyout><Flyout><StackPanel MaxWidth="280" Spacing="8">
+     <TextBlock Text="Background research" FontWeight="SemiBold"/>
+     <TextBlock Text="Independent, read-only tasks. Results stay here until you add them to your prompt." TextWrapping="Wrap"/>
+     <TextBlock Text="Up to two workers can inspect files and read HTTPS pages. Install Pi Search from Extensions to enable web search. Each task allows up to 12 search queries and 20 page reads." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+     <TextBlock Text="This setting applies across projects. Turning it on takes effect next turn. Turning it off cancels active and queued tasks." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+    </StackPanel></Flyout></controls:ActionButton.Flyout>
+   </controls:ActionButton>
+   <controls:ActionButton Grid.Column="3" Click="OnClose" Style="{StaticResource ShellIconButtonStyle}" ToolTipService.ToolTip="Hide research" AutomationProperties.Name="Hide research"><FontIcon Glyph="&#xE711;" FontSize="12"/></controls:ActionButton>
+  </Grid>
+  <TextBlock Grid.Row="1" Margin="12,8" Text="{Binding Error}" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+   Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibility}}" AutomationProperties.LiveSetting="Polite"/>
+  <controls:CommandListView Grid.Row="2" MaxHeight="160" Margin="8,6" ItemsSource="{Binding Tasks}" SelectedItem="{Binding Selected, Mode=TwoWay}" SelectionMode="Single"
+   AutomationProperties.Name="Research tasks" Visibility="{Binding HasTasks, Converter={StaticResource BooleanToVisibility}}">
+   <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="8,0"/></Style></ListView.ItemContainerStyle>
+   <ListView.ItemTemplate><DataTemplate x:DataType="models:ResearchTask">
+    <Grid Padding="2,6" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+     <TextBlock Text="{x:Bind Title}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+     <TextBlock Grid.Column="1" Text="{x:Bind Status}" FontSize="11" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+    </Grid>
+   </DataTemplate></ListView.ItemTemplate>
+  </controls:CommandListView>
+  <StackPanel Grid.Row="3" Margin="24" Spacing="6" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibility}}">
+   <TextBlock Text="No research yet" FontSize="14" FontWeight="SemiBold" TextAlignment="Center"/>
+   <TextBlock Text="{Binding EmptyHint}" MaxWidth="240" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+  </StackPanel>
+  <Grid Grid.Row="3" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Visibility="{Binding HasSelection, Converter={StaticResource BooleanToVisibility}}">
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+   <Grid Margin="12,8" ColumnSpacing="8">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <TextBlock Text="{Binding Selected.Title}" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+     <controls:ActionButton Content="Cancel" Command="{Binding CancelCommand}" Padding="10,4" Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibility}}"/>
+     <controls:CopyFeedbackButton Click="OnCopy" Style="{StaticResource ShellIconButtonStyle}" Visibility="{Binding CanShare, Converter={StaticResource BooleanToVisibility}}" AutomationProperties.Name="Copy research result" ToolTipService.ToolTip="Copy research result"/>
+     <controls:ActionButton Content="Add to prompt" Click="OnShare" Padding="10,4" Visibility="{Binding CanShare, Converter={StaticResource BooleanToVisibility}}" ToolTipService.ToolTip="Add this result to the composer without sending"/>
+    </StackPanel>
+   </Grid>
+   <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="12,0,12,12" Spacing="12">
+    <TextBlock Text="{Binding Selected.Question}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+    <controls:MarkdownMessage Text="{Binding Selected.Result}"/>
+   </StackPanel></ScrollViewer>
+  </Grid>
+ </Grid>
+</UserControl>

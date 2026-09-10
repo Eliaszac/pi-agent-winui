@@ -5,6 +5,19 @@ namespace PiAgentGui.ViewModels.Conversations;
 
 public sealed class RunChangesViewModel : ObservableObject
 {
+    public static RunChangesViewModel? FromHistory(IReadOnlyList<ChatEntry> history)
+    {
+        var start = -1;
+        for (var index = history.Count - 1; index >= 0; index--)
+            if (history[index].IsUser) { start = index; break; }
+        if (start < 0 || history.Count <= start + 1 || !history[^1].IsAssistant || !history[^1].IsComplete) return null;
+        var run = history.Skip(start + 1).ToArray();
+        if (run.Any(entry => !entry.IsComplete)) return null;
+        var verification = new RunVerificationTracker();
+        foreach (var entry in run) verification.Observe(entry);
+        return new(run.Select(entry => entry.FileChange).OfType<FileChange>(), verification.Labels);
+    }
+
     private bool expanded;
     public IReadOnlyList<ChangedFileViewModel> Files { get; }
     public IReadOnlyList<ChangedFileViewModel> VisibleFiles => expanded ? Files : Files.Take(3).ToArray();
@@ -24,10 +37,13 @@ public sealed class RunChangesViewModel : ObservableObject
     public string Added => $"+{Files.Sum(file => file.AddedCount)}";
     public string Removed => $"−{Files.Sum(file => file.RemovedCount)}";
     public bool HasUnknownCounts => Files.Any(file => file.HasUnknownCounts);
+    public IReadOnlyList<string> VerificationLabels { get; }
+    public bool HasVerification => VerificationLabels.Count > 0;
 
-    public RunChangesViewModel(IEnumerable<FileChange> changes)
+    public RunChangesViewModel(IEnumerable<FileChange> changes, IReadOnlyList<string>? verificationLabels = null)
     {
         Files = changes.GroupBy(change => change.Path.Replace('\\', '/'), StringComparer.OrdinalIgnoreCase)
             .Select(group => new ChangedFileViewModel(group.ToArray())).ToArray();
+        VerificationLabels = Files.Count > 0 ? verificationLabels ?? [] : [];
     }
 }

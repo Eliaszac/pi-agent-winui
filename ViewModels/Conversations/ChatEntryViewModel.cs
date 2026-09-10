@@ -6,8 +6,12 @@ namespace PiAgentGui.ViewModels.Conversations;
 public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
 {
     private ChatEntry entry = entry;
+    public IReadOnlyList<ChatImage> Images => entry.Images ?? [];
+    public bool HasImages => Images.Count > 0;
     private IReadOnlyList<ChatEntryViewModel> tools = [];
     private bool expanded;
+    private bool showInlineActions = true;
+    public bool ShowInlineActions { get => showInlineActions; internal set => SetProperty(ref showInlineActions, value); }
     public bool IsExpanded
     {
         get => expanded;
@@ -39,7 +43,7 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
     }
     internal string Id => entry.Id;
     public string Speaker => entry.Speaker;
-    public string Text => entry.Text;
+    public string Text => entry.IsUser ? PromptFileReferences.Display(entry.Text) : entry.Text;
     public string Details => entry.Details;
     public string Status => entry.Status;
     public bool HasDetails => Details.Length > 0;
@@ -89,5 +93,7 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
         OnPropertyChanged(nameof(HasDiffNotice));
         OnPropertyChanged(nameof(CanCopyUser));
         OnPropertyChanged(nameof(CanCopyResponse));
+        OnPropertyChanged(nameof(Images));
+        OnPropertyChanged(nameof(HasImages));
     }
 }

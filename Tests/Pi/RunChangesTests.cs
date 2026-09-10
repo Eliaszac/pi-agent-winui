@@ -8,6 +8,38 @@ namespace PiAgentGui.Tests.Pi;
 public sealed class RunChangesTests
 {
     [TestMethod]
+    public async Task ReopenedConversationRestoresLatestCompletedSummary()
+    {
+        var dispatcher = new QueuedUiDispatcher();
+        var session = new FakeConversationSession();
+        await using var viewModel = new ConversationViewModel(session, dispatcher);
+        session.Emit(new() { IsRunning = false, History = [
+            new("u1", "You", "Old edit", IsUser: true),
+            new("old", "edit", "done", IsTool: true, FileChange: new("old.js", "old", 9, 2, null)),
+            new("a1", "Pi", "Done", IsAssistant: true),
+            new("u2", "You", "Latest edit", IsUser: true),
+            new("new", "edit", "done", IsTool: true, FileChange: new("index.js", "patch", 1, 1, null)),
+            new("a2", "Pi", "Done", IsAssistant: true)
+        ] });
+        dispatcher.Drain();
+        Assert.IsTrue(viewModel.HasRunChanges);
+        Assert.AreEqual("index.js", viewModel.RunChanges!.Files.Single().Path);
+        Assert.AreEqual("+1", viewModel.RunChanges.Added);
+        session.Emit(new() { IsRunning = true });
+        dispatcher.Drain();
+        Assert.IsFalse(viewModel.HasRunChanges);
+    }
+
+    [TestMethod]
+    public void IncompleteHistoryDoesNotShowCompletedSummary()
+    {
+        Assert.IsNull(RunChangesViewModel.FromHistory([
+            new("u", "You", "Edit", IsUser: true),
+            new("tool", "edit", "done", IsTool: true, FileChange: new("index.js", "patch", 1, 1, null))
+        ]));
+    }
+
+    [TestMethod]
     public async Task SummaryWaitsForSettledAndResetsForNextRun()
     {
         var dispatcher = new QueuedUiDispatcher();

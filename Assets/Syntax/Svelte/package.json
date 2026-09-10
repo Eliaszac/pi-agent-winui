@@ -1,0 +1,7 @@
+{
+  "name": "pi-gui-svelte-grammar",
+  "contributes": {
+    "languages": [{ "id": "svelte", "aliases": ["Svelte"], "extensions": [".svelte"] }],
+    "grammars": [{ "language": "svelte", "scopeName": "source.svelte", "path": "./svelte.tmLanguage.json" }]
+  }
+}
