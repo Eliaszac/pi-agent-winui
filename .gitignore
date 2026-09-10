@@ -34,6 +34,12 @@ coverage/
 # Generated Windows packages and bundles
 AppPackages/
 BundleArtifacts/
+Installer/Output/
+*.msi
+*.msp
+*.wixpdb
+PiAgent-Setup-*.exe
+PiAgent-Setup-*.exe.sha256
 *.appx
 *.appxbundle
 *.msix

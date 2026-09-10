@@ -1,5 +1,9 @@
 # Architecture and MVP
 
+## Local installer
+
+Windows x64 distribution uses an unpackaged per-user Inno Setup installer. `Installer/Build-Installer.ps1` builds an untrimmed self-contained Release payload through `Properties/PublishProfiles/LocalInstaller.pubxml`. The stable install identity is `PiAgentGui.Desktop`, with files under `%LOCALAPPDATA%/Programs/Pi Agent`; user data stays separately under `%LOCALAPPDATA%/PiAgentGui` and Pi's own user directory. Increasing installer versions update in place; same-version repair and uninstall preserve user data, and downgrade is blocked. WebView2 is detected and bootstrapped only if absent. Generated assets stay under ignored `artifacts/installer`. This first local installer is unsigned and has no automatic update feed. See `Installer/README.md` for build, upgrade and verification details.
+
 ## Opt-in background research
 
 - The conversation header's More actions menu opens Background research in the same resizable sidepanel area as Terminal. The global opt-in defaults off. Tasks/results are filtered to the selected conversation; the app owns their lifetime independently of main-agent turns.
