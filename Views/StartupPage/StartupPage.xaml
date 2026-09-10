@@ -1,0 +1,27 @@
+<Page
+    x:Class="PiAgentGui.Views.StartupPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Padding="24">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
+            Visibility="{x:Bind ViewModel.IsChecking, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+            <ProgressRing Width="32" Height="32" IsActive="{x:Bind ViewModel.IsChecking, Mode=OneWay}"
+                AutomationProperties.Name="Checking Pi installation" />
+            <TextBlock Text="Getting ready…" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+            Visibility="{x:Bind ViewModel.ShowInstall, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+            <StackPanel MaxWidth="440" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <TextBlock Text="Install Pi" FontSize="32" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="Pi powers your coding conversations. Install it to get started." TextWrapping="Wrap" />
+                <TextBlock Text="{x:Bind ViewModel.Message, Mode=OneWay}" TextWrapping="Wrap"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <controls:ActionHyperlinkButton Content="Visit the Pi website" NavigateUri="https://pi.dev/" HorizontalAlignment="Left" />
+                <TextBlock Text="After installing Pi, close and restart this app to continue." TextWrapping="Wrap" FontWeight="SemiBold" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
+

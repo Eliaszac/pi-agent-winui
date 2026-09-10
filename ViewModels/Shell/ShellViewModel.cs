@@ -1,0 +1,327 @@
+using System.Collections.ObjectModel;
+using PiAgentGui.Models.Projects;
+using PiAgentGui.Repositories.Projects;
+using PiAgentGui.Utilities;
+using PiAgentGui.ViewModels.Projects;
+using PiAgentGui.Services.Conversations;
+using PiAgentGui.ViewModels.Conversations;
+using PiAgentGui.Configuration;
+
+namespace PiAgentGui.ViewModels.Shell;
+
+/// <summary>Coordinates the saved project list and current workspace selection.</summary>
+public sealed class ShellViewModel : ObservableObject
+{
+    private readonly IProjectRepository repository;
+    private readonly ConversationWorkspaceStore? workspaces;
+    private readonly SemaphoreSlim titleGate = new(1, 1);
+    private bool isLoading;
+    private bool isReady;
+    private bool hasLoaded;
+    private bool isChanging;
+    public bool CanManageSidebar => IsReady && !isChanging;
+    private ObservableCollection<ProjectItemViewModel> projects = [];
+    private string errorMessage = "";
+    private ProjectItemViewModel? selectedProject;
+    private ConversationItemViewModel? selectedConversation;
+    private bool showExtensions;
+    public bool ShowExtensions => showExtensions;
+    public bool ShowWorkspace => !showExtensions;
+    public ViewModels.Extensions.ExtensionsViewModel Extensions { get; } = new();
+    public void OpenExtensions()
+    {
+        showExtensions = true;
+        OnPropertyChanged(nameof(ShowExtensions));
+        OnPropertyChanged(nameof(ShowWorkspace));
+        _ = Extensions.RefreshCommand.ExecuteAsync();
+        if (Sidebar.IsOverlay) Sidebar.IsOpen = false;
+    }
+    public void CloseExtensions()
+    {
+        showExtensions = false;
+        OnPropertyChanged(nameof(ShowExtensions));
+        OnPropertyChanged(nameof(ShowWorkspace));
+    }
+
+    /// <summary>Gets the project groups.</summary>
+    public ObservableCollection<ProjectItemViewModel> Projects => projects;
+    /// <summary>Gets whether a resolved workspace can be displayed, including during reload.</summary>
+    public bool HasLoaded => hasLoaded;
+    /// <summary>Gets whether the first workspace load is pending.</summary>
+    public bool ShowInitialLoading => !HasLoaded && IsLoading;
+    /// <summary>Gets the sidebar layout state.</summary>
+    public SidebarLayoutState Sidebar { get; } = new();
+    /// <summary>Gets the reload action.</summary>
+    public AsyncRelayCommand ReloadCommand { get; }
+    /// <summary>Gets the shared new conversation action.</summary>
+    public AsyncRelayCommand NewConversationCommand { get; }
+    /// <summary>Gets whether the catalog has been loaded successfully.</summary>
+    public bool IsReady { get => isReady; private set { if (SetProperty(ref isReady, value)) OnPropertyChanged(nameof(CanManageSidebar)); } }
+    /// <summary>Gets whether the catalog is loading.</summary>
+    public bool IsLoading
+    {
+        get => isLoading;
+        private set
+        {
+            if (!SetProperty(ref isLoading, value)) return;
+            OnPropertyChanged(nameof(ShowEmptyProjects));
+            OnPropertyChanged(nameof(ShowInitialLoading));
+        }
+    }
+    /// <summary>Gets whether the initial project hint is visible.</summary>
+    public bool ShowEmptyProjects => HasLoaded && !IsLoading && Projects.Count == 0 && !HasError;
+    /// <summary>Gets the latest operation error.</summary>
+    public string ErrorMessage
+    {
+        get => errorMessage;
+        private set
+        {
+            if (!SetProperty(ref errorMessage, value)) return;
+            OnPropertyChanged(nameof(HasError));
+            OnPropertyChanged(nameof(ShowEmptyProjects));
+        }
+    }
+    /// <summary>Gets whether operation feedback is visible.</summary>
+    public bool HasError => ErrorMessage.Length > 0;
+    /// <summary>Gets the currently selected project.</summary>
+    public ProjectItemViewModel? SelectedProject => selectedProject;
+    public InlineRenameViewModel HeaderRename { get; private set; } = new(() => "", _ => Task.CompletedTask);
+    /// <summary>Gets the workspace header.</summary>
+    public string WorkspaceTitle => selectedConversation?.Title ?? selectedProject?.Name ?? "Your workspace";
+    /// <summary>Gets the native window title for the selected conversation.</summary>
+    public string WindowTitle => selectedConversation is null ? ApplicationIdentity.Name : $"{ApplicationIdentity.Name} — {selectedConversation.Title}";
+    /// <summary>Gets the selected working directory.</summary>
+    public string WorkspacePath => selectedProject?.Path ?? "Projects and conversations, in one place.";
+    /// <summary>Gets the main empty-state heading.</summary>
+    public string WelcomeTitle => selectedConversation is not null ? "A fresh conversation" : selectedProject is not null ? "Start a conversation" : "Start with a project";
+    /// <summary>Gets context-sensitive workspace guidance.</summary>
+    public string WelcomeDescription => selectedConversation is not null
+        ? "Send a message to work with Pi in this project's folder."
+        : selectedProject is not null ? "Create a conversation to keep your work together in this project."
+        : "Give your project a name and choose the folder you want to work in.";
+    /// <summary>Gets whether the welcome action creates a project.</summary>
+    public bool ShowCreateProject => selectedProject is null;
+    /// <summary>Gets whether the welcome action creates a conversation.</summary>
+    public bool ShowCreateConversation => selectedProject is not null && selectedConversation is null;
+    /// <summary>Gets whether a saved draft is selected.</summary>
+    public bool HasConversation => selectedConversation is not null;
+    public ConversationViewModel? Chat => selectedConversation?.Workspace;
+    public bool ShowWelcome => HasLoaded && !HasConversation;
+
+    /// <summary>Creates the shell without performing disk I/O.</summary>
+    /// <param name="repository">The shared project persistence boundary.</param>
+    public ShellViewModel(IProjectRepository repository, ConversationWorkspaceStore? workspaces = null)
+    {
+        this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        this.workspaces = workspaces;
+        if (workspaces is not null) workspaces.SessionNameChanged += OnSessionNameChanged;
+        if (workspaces is not null) workspaces.ExplicitSessionNameChanged += OnExplicitSessionNameChanged;
+        ReloadCommand = new AsyncRelayCommand(_ => LoadAsync(), ReportError);
+        NewConversationCommand = new AsyncRelayCommand(CreateConversationAsync, ReportError);
+    }
+
+    /// <summary>Loads the catalog and preserves matching selections and expansion states.</summary>
+    public async Task LoadAsync()
+    {
+        if (IsLoading || isChanging) return;
+        IsLoading = true;
+        IsReady = false;
+        ErrorMessage = "";
+        try
+        {
+            var saved = await Task.Run(() => repository.GetAllAsync());
+            var expanded = Projects.ToDictionary(project => project.Project.Id, project => project.IsExpanded);
+            var settledExpanded = Projects.ToDictionary(project => project.Project.Id, project => project.IsSettledExpanded);
+            var projectId = selectedProject?.Project.Id;
+            var conversationId = selectedConversation?.Conversation.Id;
+            var loadedProjects = new ObservableCollection<ProjectItemViewModel>();
+            foreach (var project in saved)
+            {
+                var item = CreateProjectItem(project);
+                item.IsExpanded = expanded.TryGetValue(project.Id, out var wasExpanded) ? wasExpanded : loadedProjects.Count == 0;
+                item.IsSettledExpanded = settledExpanded.GetValueOrDefault(project.Id);
+                loadedProjects.Add(item);
+            }
+            // Publish a complete list and final selection rather than clear/add and project/conversation stages.
+            projects = loadedProjects;
+            var selected = Projects.FirstOrDefault(project => project.Project.Id == projectId) ?? Projects.FirstOrDefault();
+            var conversation = selected?.Conversations.FirstOrDefault(item => item.Conversation.Id == conversationId);
+            SetSelection(selected, conversation);
+            OnPropertyChanged(nameof(Projects));
+            hasLoaded = true;
+            OnPropertyChanged(nameof(HasLoaded));
+            OnPropertyChanged(nameof(ShowWelcome));
+            OnPropertyChanged(nameof(ShowInitialLoading));
+            IsReady = true;
+        }
+        catch (Exception exception) { ReportError(exception); }
+        finally { IsLoading = false; }
+    }
+
+    /// <summary>Adds a successfully persisted project to the sidebar.</summary>
+    /// <param name="project">The saved project.</param>
+    public void AddSavedProject(Project project)
+    {
+        var item = CreateProjectItem(project);
+        item.IsExpanded = true;
+        Projects.Add(item);
+        SelectProject(item);
+        // Keep narrow workspaces visible rather than opening an overlay above the new selection.
+        Sidebar.IsOpen = !Sidebar.IsOverlay;
+        ErrorMessage = "";
+        OnPropertyChanged(nameof(ShowEmptyProjects));
+    }
+
+    /// <summary>Displays an operation failure.</summary>
+    /// <param name="exception">The failure to describe.</param>
+    public void ReportError(Exception exception) => ErrorMessage = ProjectErrorMessage.From(exception);
+
+    private ProjectItemViewModel CreateProjectItem(Project project) =>
+        new(project, SelectProject, SelectConversation, NewConversationCommand, workspaces, RenameProjectAsync, RenameConversationAsync);
+
+    private void SelectProject(ProjectItemViewModel? project)
+    {
+        CloseExtensions();
+        if (ReferenceEquals(selectedProject, project) && selectedConversation is not null) return;
+        SetSelection(project, null);
+    }
+
+    private void SelectConversation(ProjectItemViewModel project, ConversationItemViewModel conversation)
+    {
+        SetSelection(project, conversation);
+        if (Sidebar.IsOverlay) Sidebar.IsOpen = false;
+    }
+
+    private void SetSelection(ProjectItemViewModel? project, ConversationItemViewModel? conversation)
+    {
+        CloseExtensions();
+        if (selectedConversation is not null) selectedConversation.IsSelected = false;
+        selectedProject = project;
+        selectedConversation = conversation;
+        HeaderRename.CancelCommand.Execute(null);
+        HeaderRename = new(() => conversation?.Title ?? "", title => project is not null && conversation is not null
+            ? RenameConversationAsync(project, conversation, title) : Task.CompletedTask);
+        OnPropertyChanged(nameof(HeaderRename));
+        if (conversation is not null) conversation.IsSelected = true;
+        NotifySelection();
+        _ = Chat?.InitializeAsync();
+    }
+
+    private Task CreateConversationAsync(object? parameter)
+    {
+        if (!CanManageSidebar || parameter is not ProjectItemViewModel project) return Task.CompletedTask;
+        return ChangeSidebarAsync(async () =>
+        {
+            var saved = await Task.Run(() => repository.AddConversationAsync(project.Project.Id));
+            var item = new ConversationItemViewModel(saved, conversation => SelectConversation(project, conversation), workspaces?.GetOrCreate(project.Project, saved),
+                (conversation, title) => RenameConversationAsync(project, conversation, title));
+            project.Conversations.Add(item);
+            project.IsExpanded = true;
+            SelectConversation(project, item);
+        });
+    }
+
+    public Task RenameProjectAsync(ProjectItemViewModel project, string name) => ChangeSidebarAsync(async () =>
+    {
+        await Task.Run(() => repository.RenameProjectAsync(project.Project.Id, name));
+        project.SetName(name.Trim());
+        NotifySelection();
+    });
+
+    public Task RenameConversationAsync(ProjectItemViewModel project, ConversationItemViewModel conversation, string title) => ChangeSidebarAsync(async () =>
+    {
+        await titleGate.WaitAsync();
+        try
+        {
+            await Task.Run(() => repository.RenameConversationAsync(project.Project.Id, conversation.Conversation.Id, title));
+            conversation.SetTitle(title.Trim());
+            NotifySelection();
+            if (conversation.Workspace is not null) await conversation.Workspace.SetSessionNameAsync(title.Trim());
+        }
+        finally { titleGate.Release(); }
+    });
+
+    private async void OnExplicitSessionNameChanged(Guid projectId, Guid conversationId, string title)
+    {
+        var project = Projects.FirstOrDefault(item => item.Project.Id == projectId);
+        var conversation = project?.Conversations.FirstOrDefault(item => item.Conversation.Id == conversationId);
+        if (project is null || conversation is null) return;
+        try { await RenameConversationAsync(project, conversation, title); }
+        catch (Exception exception) { ReportError(exception); }
+    }
+
+    private async void OnSessionNameChanged(Guid projectId, Guid conversationId, string title)
+    {
+        await titleGate.WaitAsync();
+        try
+        {
+            var project = Projects.FirstOrDefault(item => item.Project.Id == projectId);
+            var conversation = project?.Conversations.FirstOrDefault(item => item.Conversation.Id == conversationId);
+            if (conversation is null || conversation.Conversation.IsTitleManual || conversation.Title == title) return;
+            if (await Task.Run(() => repository.SetGeneratedTitleAsync(projectId, conversationId, title)))
+            {
+                conversation.SetTitle(title.Trim(), manual: false);
+                NotifySelection();
+            }
+        }
+        catch (KeyNotFoundException) { /* The conversation was deleted while its naming request finished. */ }
+        catch (Exception exception) { ReportError(exception); }
+        finally { titleGate.Release(); }
+    }
+
+    public ProjectItemViewModel FindProject(ConversationItemViewModel conversation) =>
+        Projects.FirstOrDefault(project => project.Conversations.Contains(conversation)) ?? throw new KeyNotFoundException("The conversation no longer exists.");
+
+    public Task ToggleSettledAsync(ConversationItemViewModel conversation) => ChangeSidebarAsync(async () =>
+    {
+        var project = FindProject(conversation);
+        var settled = !conversation.IsSettled;
+        await Task.Run(() => repository.SetConversationSettledAsync(project.Project.Id, conversation.Conversation.Id, settled));
+        conversation.SetSettled(settled);
+        project.RefreshGroups();
+        if (settled && ReferenceEquals(selectedConversation, conversation)) SetSelection(project, null);
+    });
+
+    public Task DeleteConversationAsync(ConversationItemViewModel conversation) => ChangeSidebarAsync(async () =>
+    {
+        var project = FindProject(conversation);
+        await Task.Run(() => repository.DeleteConversationAsync(project.Project.Id, conversation.Conversation.Id));
+        project.Conversations.Remove(conversation);
+        if (ReferenceEquals(selectedConversation, conversation)) SetSelection(project, null);
+        if (workspaces is not null) await workspaces.RemoveAsync(project.Project.Id, conversation.Conversation.Id);
+    });
+
+    public Task DeleteProjectAsync(ProjectItemViewModel project) => ChangeSidebarAsync(async () =>
+    {
+        await Task.Run(() => repository.DeleteProjectAsync(project.Project.Id));
+        Projects.Remove(project);
+        if (ReferenceEquals(selectedProject, project)) SetSelection(Projects.FirstOrDefault(), null);
+        OnPropertyChanged(nameof(ShowEmptyProjects));
+        if (workspaces is not null) await workspaces.RemoveAsync(project.Project.Id);
+    });
+
+    private async Task ChangeSidebarAsync(Func<Task> change)
+    {
+        if (!CanManageSidebar) throw new InvalidOperationException("Wait for the current sidebar change to finish.");
+        isChanging = true;
+        ErrorMessage = "";
+        OnPropertyChanged(nameof(CanManageSidebar));
+        try { await change(); }
+        finally { isChanging = false; OnPropertyChanged(nameof(CanManageSidebar)); }
+    }
+
+    private void NotifySelection()
+    {
+        OnPropertyChanged(nameof(SelectedProject));
+        OnPropertyChanged(nameof(WorkspaceTitle));
+        OnPropertyChanged(nameof(WindowTitle));
+        OnPropertyChanged(nameof(WorkspacePath));
+        OnPropertyChanged(nameof(WelcomeTitle));
+        OnPropertyChanged(nameof(WelcomeDescription));
+        OnPropertyChanged(nameof(ShowCreateProject));
+        OnPropertyChanged(nameof(ShowCreateConversation));
+        OnPropertyChanged(nameof(HasConversation));
+        OnPropertyChanged(nameof(Chat));
+        OnPropertyChanged(nameof(ShowWelcome));
+    }
+}

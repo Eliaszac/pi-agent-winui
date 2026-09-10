@@ -1,0 +1,12 @@
+<controls:ActionContentDialog
+    x:Class="PiAgentGui.Views.ExtensionSetupDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls"
+    CloseButtonText="Close" DefaultButton="Close">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel x:Name="Sections" Spacing="12" />
+    </ScrollViewer>
+</controls:ActionContentDialog>
+
+

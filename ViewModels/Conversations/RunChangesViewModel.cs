@@ -1,0 +1,33 @@
+using PiAgentGui.Models.Conversations;
+using PiAgentGui.Utilities;
+
+namespace PiAgentGui.ViewModels.Conversations;
+
+public sealed class RunChangesViewModel : ObservableObject
+{
+    private bool expanded;
+    public IReadOnlyList<ChangedFileViewModel> Files { get; }
+    public IReadOnlyList<ChangedFileViewModel> VisibleFiles => expanded ? Files : Files.Take(3).ToArray();
+    public bool HasMore => Files.Count > 3;
+    public string MoreLabel => expanded ? "Show fewer files" : $"Show {Files.Count - 3} more files";
+    public bool IsExpanded
+    {
+        get => expanded;
+        set
+        {
+            if (!SetProperty(ref expanded, value)) return;
+            OnPropertyChanged(nameof(VisibleFiles));
+            OnPropertyChanged(nameof(MoreLabel));
+        }
+    }
+    public string Title => $"Edited {Files.Count} {(Files.Count == 1 ? "file" : "files")}";
+    public string Added => $"+{Files.Sum(file => file.AddedCount)}";
+    public string Removed => $"−{Files.Sum(file => file.RemovedCount)}";
+    public bool HasUnknownCounts => Files.Any(file => file.HasUnknownCounts);
+
+    public RunChangesViewModel(IEnumerable<FileChange> changes)
+    {
+        Files = changes.GroupBy(change => change.Path.Replace('\\', '/'), StringComparer.OrdinalIgnoreCase)
+            .Select(group => new ChangedFileViewModel(group.ToArray())).ToArray();
+    }
+}

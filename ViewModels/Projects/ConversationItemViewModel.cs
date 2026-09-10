@@ -1,0 +1,47 @@
+using PiAgentGui.Models.Projects;
+using PiAgentGui.Utilities;
+using PiAgentGui.ViewModels.Conversations;
+
+namespace PiAgentGui.ViewModels.Projects;
+
+/// <summary>Represents a selectable conversation in the sidebar.</summary>
+public sealed class ConversationItemViewModel : ObservableObject
+{
+    private bool isSelected;
+    /// <summary>Gets the saved conversation.</summary>
+    internal ConversationDraft Conversation { get; private set; }
+    /// <summary>Gets the displayed title.</summary>
+    public string Title => Conversation.Title;
+    /// <summary>Gets the conversation selection command.</summary>
+    public RelayCommand SelectCommand { get; }
+    public ConversationViewModel? Workspace { get; }
+    public InlineRenameViewModel Rename { get; }
+    public bool IsSettled => Conversation.IsSettled;
+    public string SettleLabel => IsSettled ? "Restore conversation" : "Settle conversation";
+    /// <summary>Gets or sets the selection highlight.</summary>
+    public bool IsSelected
+    {
+        get => isSelected;
+        set { if (SetProperty(ref isSelected, value)) Workspace?.SetViewed(value); }
+    }
+
+    /// <summary>Creates a sidebar entry.</summary>
+    /// <param name="conversation">The saved draft.</param>
+    /// <param name="select">The owning shell's selection action.</param>
+    public ConversationItemViewModel(ConversationDraft conversation, Action<ConversationItemViewModel> select, ConversationViewModel? workspace = null,
+        Func<ConversationItemViewModel, string, Task>? rename = null)
+    {
+        Conversation = conversation;
+        Workspace = workspace;
+        Rename = new InlineRenameViewModel(() => Title, name => rename?.Invoke(this, name) ?? Task.CompletedTask);
+        SelectCommand = new RelayCommand(_ => select(this));
+    }
+
+    internal void SetTitle(string title, bool manual = true) { Conversation = Conversation with { Title = title, IsTitleManual = manual }; OnPropertyChanged(nameof(Title)); }
+    internal void SetSettled(bool settled)
+    {
+        Conversation = Conversation with { IsSettled = settled };
+        OnPropertyChanged(nameof(IsSettled));
+        OnPropertyChanged(nameof(SettleLabel));
+    }
+}

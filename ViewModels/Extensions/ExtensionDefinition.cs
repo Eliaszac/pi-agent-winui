@@ -1,0 +1,5 @@
+namespace PiAgentGui.ViewModels.Extensions;
+
+public sealed record ExtensionDefinition(string Name, string Author, string Version, string Description,
+    string Details, string InstallCommand, string Configuration, string ConfigurationJson,
+    Uri Documentation, Uri Source, Func<(string Status, bool NeedsSetup)> CheckInstallation);
