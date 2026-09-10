@@ -5,7 +5,7 @@ namespace PiAgentGui.ViewModels.Conversations;
 
 public sealed class RunChangesViewModel : ObservableObject
 {
-    public static RunChangesViewModel? FromHistory(IReadOnlyList<ChatEntry> history)
+    public static RunChangesViewModel? FromHistory(IReadOnlyList<ChatEntry> history, string? directory = null)
     {
         var start = -1;
         for (var index = history.Count - 1; index >= 0; index--)
@@ -15,7 +15,8 @@ public sealed class RunChangesViewModel : ObservableObject
         if (run.Any(entry => !entry.IsComplete)) return null;
         var verification = new RunVerificationTracker();
         foreach (var entry in run) verification.Observe(entry);
-        return new(run.Select(entry => entry.FileChange).OfType<FileChange>(), verification.Labels);
+        var changes = run.Select(entry => entry.FileChange).OfType<FileChange>().ToArray();
+        return new(changes, verification.Labels, verification.DiagnosticsLabel(changes, directory));
     }
 
     private bool expanded;
@@ -39,11 +40,14 @@ public sealed class RunChangesViewModel : ObservableObject
     public bool HasUnknownCounts => Files.Any(file => file.HasUnknownCounts);
     public IReadOnlyList<string> VerificationLabels { get; }
     public bool HasVerification => VerificationLabels.Count > 0;
+    public string? DiagnosticsLabel { get; }
+    public bool HasDiagnostics => DiagnosticsLabel is not null;
 
-    public RunChangesViewModel(IEnumerable<FileChange> changes, IReadOnlyList<string>? verificationLabels = null)
+    public RunChangesViewModel(IEnumerable<FileChange> changes, IReadOnlyList<string>? verificationLabels = null, string? diagnosticsLabel = null)
     {
         Files = changes.GroupBy(change => change.Path.Replace('\\', '/'), StringComparer.OrdinalIgnoreCase)
             .Select(group => new ChangedFileViewModel(group.ToArray())).ToArray();
         VerificationLabels = Files.Count > 0 ? verificationLabels ?? [] : [];
+        DiagnosticsLabel = Files.Count > 0 ? diagnosticsLabel : null;
     }
 }

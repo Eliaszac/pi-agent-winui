@@ -47,5 +47,16 @@ public static class SupportedExtensions
         new("https://github.com/heyhuynhgiabuu/pi-search"),
         () => PiSearchSupport.GetInstallationState());
 
-    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Permissions, AutomaticTitles, Search, Mcp];
+    public static ExtensionDefinition Lsp { get; } = new(
+        "Language intelligence", "trotsky1997", LspSupport.Version,
+        "Optional code navigation and diagnostics through language servers. Completed diagnostic checks can appear in the file-change summary.",
+        "A third-party extension maintained by trotsky1997, supported by Pi Agent. The published version supports languages including TypeScript, JavaScript, Svelte, Python, Go and Rust; it does not include C# support. Pi Agent reads structured diagnostic tool results for changed files, separately from lint and tests. It does not run checks automatically or manage language servers.",
+        LspSupport.InstallCommand,
+        "Install and configure the language server for each language you use, following the extension documentation, then restart Pi Agent. Package installation alone does not mean a language server is available. Ask Pi to run LSP diagnostics after its edits to include the latest check in the summary. Automatic hook messages are not counted as completed checks.",
+        "",
+        new("https://www.npmjs.com/package/lsp-pi/v/1.0.5"),
+        new("https://github.com/trotsky1997/pi-lsp-extension"),
+        () => LspSupport.GetInstallationState());
+
+    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Permissions, AutomaticTitles, Search, Mcp, Lsp];
 }

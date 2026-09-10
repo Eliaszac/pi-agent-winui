@@ -7,12 +7,14 @@ The first distribution target is Windows x64 (Windows 10 build 19041 or later). 
 Install the .NET 10 SDK, Windows build tooling used by the project, and Inno Setup 6.7.3 from https://jrsoftware.org/isdl.php. Then run from the repository:
 
 ```powershell
-./Installer/Build-Installer.ps1 -Version 0.1.0
+./Installer/Build-Installer.ps1 -Version 0.1.1
 ```
 
 Use `-CompilerPath 'C:\path\ISCC.exe'` for a custom compiler location. This machine's local compiler is under `artifacts/installer/tools/inno/`. The script locates it automatically. Generated tooling, prerequisites, publish directories, installers, hashes and logs live under ignored `artifacts/installer/`. Each publish uses a fresh directory to avoid accidentally packaging obsolete files from previous builds.
 
-The resulting file is `artifacts/installer/PiAgent-Setup-0.1.0-x64.exe` with an adjacent SHA-256 checksum. The version parameter stamps both application and installer. Use an increasing three-part numeric version for each release. Dependencies are pinned to the baseline already restored in this project.
+The resulting file is `artifacts/installer/PiAgent-Setup-0.1.1-x64.exe` with an adjacent SHA-256 checksum. The version parameter stamps both application and installer. Use an increasing three-part numeric version for each release. Dependencies are pinned to the baseline already restored in this project.
+
+Version 0.1.1 adds exclusive research-store ownership across app windows. Close all older app builds before using it; pre-0.1.1 processes do not participate in the ownership protocol. Its two new regression tests cover competing coordinators and failed initialization recovery.
 
 ## Install and update
 

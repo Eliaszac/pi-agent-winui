@@ -326,7 +326,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
             if (!string.IsNullOrWhiteSpace(update.SessionName)) SessionNameChanged?.Invoke(update.SessionName);
             if (update.History is not null)
             {
-                RunChanges = update.IsRunning == true ? null : RunChangesViewModel.FromHistory(update.History);
+                RunChanges = update.IsRunning == true ? null : RunChangesViewModel.FromHistory(update.History, WorkingDirectory);
                 runEntryIds.Clear();
                 trackingRun = false;
                 entries.Clear();
@@ -370,8 +370,9 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                 {
                     if (update.RunUsage is { } usage)
                         Entries.LastOrDefault(entry => runEntryIds.Contains(entry.Id) && entry.CanCopyResponse)?.SetUsage(usage);
-                    RunChanges = new(Entries.Where(entry => runEntryIds.Contains(entry.Id))
-                        .Select(entry => entry.FileChange).OfType<FileChange>(), runVerification.Labels);
+                    var changes = Entries.Where(entry => runEntryIds.Contains(entry.Id))
+                        .Select(entry => entry.FileChange).OfType<FileChange>().ToArray();
+                    RunChanges = new(changes, runVerification.Labels, runVerification.DiagnosticsLabel(changes, WorkingDirectory));
                     trackingRun = false;
                     changed = true;
                 }

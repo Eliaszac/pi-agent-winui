@@ -21,6 +21,50 @@ public sealed class ResearchTests
     private ResearchTask NewTask() => new(Guid.NewGuid(), Guid.NewGuid(), root, "Research", "Explain this", "test", "fake", "low", "Queued", "", DateTimeOffset.UtcNow);
 
     [TestMethod]
+    public async Task SecondCoordinatorCannotRecoverOverwriteOrCancelOwnersTasks()
+    {
+        var store = new ResearchStore(root);
+        var runner = new FakeResearchRunner();
+        await using var owner = new ResearchCoordinator(store, runner);
+        await owner.InitializeAsync();
+        await owner.SetEnabledAsync(true);
+        var task = NewTask();
+        await owner.DispatchAsync(task);
+        await WaitUntil(() => runner.Started.ContainsKey(task.Id));
+        var before = await File.ReadAllTextAsync(Path.Combine(root, "research-tasks.json"));
+        await using var second = new ResearchCoordinator(new ResearchStore(root), new FakeResearchRunner());
+        await Assert.ThrowsExceptionAsync<IOException>(() => second.InitializeAsync());
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => second.CancelAsync(task.Id));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => second.SetEnabledAsync(false));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => second.DispatchAsync(NewTask()));
+        Assert.AreEqual(before, await File.ReadAllTextAsync(Path.Combine(root, "research-tasks.json")));
+        Assert.IsTrue(store.Enabled);
+        runner.Started[task.Id].SetResult("Owner's answer");
+        await WaitUntil(() => runner.Started[task.Id].Task.IsCompleted);
+        await owner.DisposeAsync();
+        await second.InitializeAsync();
+        var restored = await store.LoadAsync();
+        Assert.AreEqual(1, restored.Count);
+        Assert.AreEqual("Owner's answer", restored[0].Result);
+        Assert.AreNotEqual("Interrupted", restored[0].Status);
+    }
+
+    [TestMethod]
+    public async Task FailedInitializationReleasesOwnershipAndRetryDoesNotDuplicateTasks()
+    {
+        var store = new ResearchStore(root);
+        var path = Path.Combine(root, "research-tasks.json");
+        await File.WriteAllTextAsync(path, "invalid JSON");
+        await using var first = new ResearchCoordinator(store, new FakeResearchRunner());
+        await Assert.ThrowsExceptionAsync<System.Text.Json.JsonException>(() => first.InitializeAsync());
+        using (store.AcquireOwnership()) { }
+        await store.SaveAsync([NewTask() with { Status = "Completed", Result = "Saved" }]);
+        await first.InitializeAsync();
+        await first.InitializeAsync();
+        Assert.AreEqual(1, (await store.LoadAsync()).Count);
+    }
+
+    [TestMethod]
     public async Task OptInQueueAndDisableKeepWorkersIndependentAndBounded()
     {
         var runner = new FakeResearchRunner();

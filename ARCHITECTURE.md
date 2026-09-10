@@ -6,6 +6,8 @@ Windows x64 distribution uses an unpackaged per-user Inno Setup installer. `Inst
 
 ## Opt-in background research
 
+- One coordinator owns each research directory through a lifetime-held `research.lock` file opened with `FileShare.None`. Acquire ownership before reading preferences or recovering tasks; hold it until worker shutdown and final saves finish. A second window reports ownership unavailable and does not read/recover/write research state. Other conversations remain usable. Failed initialization releases ownership, and a subsequent initialization reloads the authoritative snapshot. Unique temporary filenames avoid shared staging-file collisions. Windows releases ownership on process exit/crash; the lock file itself is retained. Close pre-0.1.1 app windows before testing this protection, since older versions do not acquire the lock.
+
 - The conversation header's More actions menu opens Background research in the same resizable sidepanel area as Terminal. The global opt-in defaults off. Tasks/results are filtered to the selected conversation; the app owns their lifetime independently of main-agent turns.
 - App composes ResearchCoordinator, ResearchStore, and PiResearchRunner. At most two separate Pi processes run concurrently, with a total active/queued cap of twelve and a twenty-minute execution timeout. Disabling cancels active/queued work. App shutdown disposes owned processes; saved unfinished tasks become Interrupted after restart and are never automatically replayed.
 - Storage is `%LOCALAPPDATA%/PiAgentGui/research/research-enabled.json` and `research-tasks.json`, using atomic file replacement. Completed answers and their questions are persisted by the GUI because these are app-owned one-shot workers, not catalog copies of normal Pi conversations. Worker processes use --no-session and their own lease path. Results are bounded to 100,000 characters.
@@ -315,3 +317,10 @@ Protocol and CLI behavior were checked against current official Pi documentation
 - FileChangeParser also accepts native edit details.patch; PiTranscript retains assistant tool-call arguments for saved-history filenames. FileDiffView shows a selectable colored unified patch, and tool summaries include file plus added/removed counts. Legacy writes lacking baselines report unavailable rather than infer a diff from current disk state.
 - Restart the GUI to load the bundled extension into new Pi processes after this upgrade. Pi 0.85.1 public extension exports were checked; no Pi process was launched during verification. Node capture unit tests: node --test Tests/PiExtensions/WriteDiffCapture.test.ts.
 
+
+## Optional language diagnostics
+
+- The Extensions catalog supports third-party `lsp-pi@1.0.5`. Installation is optional and global; language servers remain the user's responsibility. This published npm version has no C# server mapping, even though newer upstream repository code does. Do not derive the supported contract from the repository's moving main branch.
+- `LspDiagnosticsParser` reads structured `lsp` diagnostics/workspace-diagnostics tool results. Require successful server responses and unfiltered severity data; never infer a clean result from silence, automatic hook prose, timeouts, unsupported files or failed calls.
+- The completed file-change summary shows error/warning counts and changed-file coverage from the latest diagnostic check. No files changed or no usable matching results means no row. These counts are separate from lint/tests and are not a build verdict. Later mutations invalidate results; session history reconstructs them from Pi tool results.
+- The GUI does not invoke LSP automatically, manage language servers, add a panel, or expose LSP to restricted research workers. Package installation is distinct from server readiness.

@@ -159,6 +159,10 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <TextBlock Text="{Binding DiagnosticsLabel}" Margin="12,8" FontSize="11" TextWrapping="Wrap"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                ToolTipService.ToolTip="Latest completed LSP check for changed files. Separate from build, lint and test results."
+                                Visibility="{Binding HasDiagnostics, Converter={StaticResource BooleanToVisibility}}" />
                             <controls:ActionToggleButton Content="{Binding MoreLabel}" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Background="Transparent" BorderThickness="0"
                                 Visibility="{Binding HasMore, Converter={StaticResource BooleanToVisibility}}" />

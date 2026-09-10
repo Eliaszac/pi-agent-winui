@@ -10,11 +10,29 @@ public sealed class RunVerificationTracker
     private int revision;
     private bool lint;
     private string? tests;
+    private readonly Dictionary<string, FileDiagnostics> diagnostics = new(StringComparer.OrdinalIgnoreCase);
+
+    public string? DiagnosticsLabel(IEnumerable<FileChange> changes, string? directory)
+    {
+        try
+        {
+            var changed = changes.Select(file => Normalize(file.Path, directory)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var matching = diagnostics.Values.GroupBy(file => Normalize(file.Path, directory), StringComparer.OrdinalIgnoreCase)
+                .Where(group => changed.Contains(group.Key)).Select(group => group.Last()).ToArray();
+            if (matching.Length == 0) return null;
+            var errors = matching.Sum(file => file.Errors); var warnings = matching.Sum(file => file.Warnings);
+            return $"Diagnostics · {errors} {(errors == 1 ? "error" : "errors")} · {warnings} {(warnings == 1 ? "warning" : "warnings")} · {matching.Length}/{changed.Count} files checked";
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException) { return null; }
+    }
+
+    private static string Normalize(string path, string? directory) =>
+        Path.GetFullPath(path, directory ?? Environment.CurrentDirectory).Replace('\\', '/');
 
     public IReadOnlyList<string> Labels => (lint ? new[] { "Lint passed" } : Array.Empty<string>())
         .Concat(tests is null ? [] : new[] { tests }).ToArray();
 
-    public void Reset() { started.Clear(); completed.Clear(); revision = 0; lint = false; tests = null; }
+    public void Reset() { started.Clear(); completed.Clear(); revision = 0; lint = false; tests = null; diagnostics.Clear(); }
 
     public void Observe(ChatEntry entry)
     {
@@ -27,6 +45,7 @@ public sealed class RunVerificationTracker
             started[entry.Id] = (revision, kind);
             if (kind == "lint") lint = false;
             if (kind == "tests") tests = null;
+            if (entry.Speaker == "lsp") diagnostics.Clear();
         }
         if (entry.Status == "Running") return;
         completed.Add(entry.Id);
@@ -36,9 +55,10 @@ public sealed class RunVerificationTracker
         if (check.Kind == "lint") lint = false;
         if (check.Kind == "tests") tests = null;
         if (entry.Status != "Completed" || check.Revision != revision) return;
+        foreach (var file in entry.Diagnostics ?? []) diagnostics[file.Path] = file;
         if (check.Kind == "lint") lint = true;
         if (check.Kind == "tests") tests = VerificationOutputParser.PassedTests(entry.Text);
     }
 
-    private void Invalidate() { revision++; lint = false; tests = null; }
+    private void Invalidate() { revision++; lint = false; tests = null; diagnostics.Clear(); }
 }

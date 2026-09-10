@@ -10,19 +10,33 @@ public sealed class ResearchCoordinator(ResearchStore store, IResearchRunner run
     private readonly Dictionary<Guid, (CancellationTokenSource Cancel, Task Work)> active = [];
     private bool disposed;
     private bool initialized;
+    private FileStream? ownership;
     public bool Enabled { get; private set; }
     public event Action<IReadOnlyList<ResearchTask>>? Changed;
     public event Action<string>? Failed;
 
     public async Task InitializeAsync()
     {
-        var enabled = store.Enabled;
-        tasks.AddRange((await store.LoadAsync()).Select(task => task.Status is "Queued" or "Running"
-            ? task with { Status = "Interrupted", Result = "The app closed before this task finished. It was not restarted." } : task));
-        await store.SaveAsync(tasks);
-        Enabled = enabled;
-        initialized = true;
-        Changed?.Invoke(tasks.ToArray());
+        await gate.WaitAsync();
+        try
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            if (initialized) return;
+            ownership = store.AcquireOwnership();
+            try
+            {
+                var enabled = store.Enabled;
+                var restored = (await store.LoadAsync()).Select(task => task.Status is "Queued" or "Running"
+                    ? task with { Status = "Interrupted", Result = "The app closed before this task finished. It was not restarted." } : task).ToArray();
+                await store.SaveAsync(restored);
+                tasks.AddRange(restored);
+                Enabled = enabled;
+                initialized = true;
+            }
+            catch { ownership.Dispose(); ownership = null; throw; }
+            Changed?.Invoke(tasks.ToArray());
+        }
+        finally { gate.Release(); }
     }
     public async Task SetEnabledAsync(bool enabled)
     {
@@ -65,6 +79,7 @@ public sealed class ResearchCoordinator(ResearchStore store, IResearchRunner run
         await gate.WaitAsync();
         try
         {
+            if (!initialized || disposed) throw new InvalidOperationException("Research storage is unavailable in this window.");
             if (active.TryGetValue(id, out var work)) work.Cancel.Cancel();
             var index = tasks.FindIndex(task => task.Id == id && task.Status == "Queued");
             if (index >= 0) tasks[index] = tasks[index] with { Status = "Cancelled" };
@@ -109,8 +124,15 @@ public sealed class ResearchCoordinator(ResearchStore store, IResearchRunner run
     {
         Task[] work;
         await gate.WaitAsync();
-        try { disposed = true; foreach (var item in active.Values) item.Cancel.Cancel(); work = active.Values.Select(item => item.Work).ToArray(); }
+        try
+        {
+            if (disposed) return;
+            disposed = true;
+            foreach (var item in active.Values) item.Cancel.Cancel();
+            work = active.Values.Select(item => item.Work).ToArray();
+        }
         finally { gate.Release(); }
-        await Task.WhenAll(work);
+        try { await Task.WhenAll(work); }
+        finally { ownership?.Dispose(); ownership = null; }
     }
 }
