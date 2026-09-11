@@ -325,6 +325,9 @@
                                 <controls:ActionMenuFlyoutItem Text="Background research" Click="OnResearchClicked">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE721;" /></controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Instructions, skills &amp; MCP" Click="OnCapabilitiesClicked">
+                                    <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE8F1;"/></controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="Processes" Click="OnProcessesClicked">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE9D9;"/></controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
@@ -393,6 +396,8 @@
                     Visibility="{x:Bind Files.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:ProcessesPanel x:Name="ProcessesPane" Grid.Column="2" Grid.RowSpan="3"
                     Visibility="{x:Bind Processes.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                <views:CapabilitiesPanel x:Name="CapabilitiesPane" Grid.Column="2" Grid.RowSpan="3"
+                    Visibility="{x:Bind Capabilities.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:SourceControlPanel x:Name="SourceControlPane" Grid.Column="2" Grid.RowSpan="3"
                     Visibility="{x:Bind SourceControl.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
         </Grid>

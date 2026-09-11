@@ -11,6 +11,10 @@ namespace PiAgentGui.ViewModels.Conversations;
 public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly IConversationSession session;
+    public McpStatusSnapshot? McpStatus { get; private set; }
+    public InstructionSnapshot? Instructions { get; private set; }
+    public Task ReadInstructionsAsync() => session.RunOperationAsync(ConversationOperation.Instructions);
+    public Task<System.Text.Json.JsonElement> ReadCapabilitiesAsync() => session.RunOperationAsync(ConversationOperation.Commands);
     public ProcessIdentity? ProcessIdentity => session.ProcessIdentity;
     private readonly IUiDispatcher dispatcher;
     private readonly ConcurrentQueue<ConversationUpdate> updates = new();
@@ -363,6 +367,10 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         for (var count = 0; count < 128 && updates.TryDequeue(out var update); count++)
         {
             if (disposed) continue;
+            if (update.McpStatus is { } mcpStatus) { McpStatus = mcpStatus; OnPropertyChanged(nameof(McpStatus)); }
+            if (update.Instructions is { } instructions) { Instructions = instructions; OnPropertyChanged(nameof(Instructions)); }
+            if (update.IsConnected == false) { Instructions = null; OnPropertyChanged(nameof(Instructions)); }
+            if (update.IsConnected == false) { McpStatus = null; OnPropertyChanged(nameof(McpStatus)); }
             if (!string.IsNullOrWhiteSpace(update.SessionName)) SessionNameChanged?.Invoke(update.SessionName);
             if (update.History is not null)
             {

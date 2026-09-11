@@ -99,7 +99,10 @@ public partial class App : Application
         var sourceControl = new ViewModels.SourceControl.SourceControlViewModel(new Services.SourceControl.GitRepositoryService(new Services.SourceControl.GitCommandRunner()));
         window.Closed += (_, _) => sourceControl.Dispose();
         var scripts = new ViewModels.Projects.ProjectScriptsViewModel(repository, terminals);
-        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts);
+        var agentDirectory = PermissionModesSupport.AgentDirectory;
+        var imports = new CapabilityImportServices(new GlobalSkillRegistration(agentDirectory),
+            new PiPackageInstaller(locator, agentDirectory, githubLifetime.Token), new McpConfigImporter(agentDirectory));
+        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports);
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)

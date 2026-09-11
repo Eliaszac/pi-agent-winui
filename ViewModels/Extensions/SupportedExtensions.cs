@@ -26,15 +26,15 @@ public static class SupportedExtensions
         new("https://github.com/patlux/pi-auto-session-name"), AutoSessionNameSupport.GetInstallationState);
 
     public static ExtensionDefinition Mcp { get; } = new(
-        "MCP Adapter", "Nico Bailon", "2.10.0",
-        "Connect Pi to MCP servers for additional tools and services. Recommended for use with Pi; no dedicated MCP interface in this app.",
-        "A third-party extension maintained by Nico Bailon. It lets Pi discover and call tools from configured Model Context Protocol servers. Server configuration and authentication are managed by the extension, following its documentation. Pi Agent lists this as a recommendation and checks package installation only; it does not verify server connections or implement the extension's terminal panels.",
-        "pi install npm:pi-mcp-adapter@2.10.0",
+        "MCP Adapter", "Nico Bailon", McpAdapterSupport.Version,
+        "Connect Pi to MCP servers for additional tools and services. View conversation-specific server status in Skills & MCP.",
+        "A third-party extension maintained by Nico Bailon, supported by Pi Agent. The optional Skills & MCP panel displays the adapter's read-only runtime status. Server configuration and authentication remain managed by the extension; opening the panel does not connect servers. Older adapter versions need an update for live status.",
+        "pi install npm:pi-mcp-adapter@" + McpAdapterSupport.Version,
         "Configure your servers in ~/.pi/agent/mcp.json (or mcp.json in your custom PI_CODING_AGENT_DIR). Add each server's configuration under mcpServers using the upstream documentation, then restart Pi Agent. This empty structure does not connect any servers:",
         "{\n  \"mcpServers\": {}\n}",
         new("https://github.com/nicobailon/pi-mcp-adapter#readme"),
         new("https://github.com/nicobailon/pi-mcp-adapter"),
-        () => McpAdapterSupport.GetInstallationState(), RecommendationOnly: true);
+        () => McpAdapterSupport.GetInstallationState());
 
     public static ExtensionDefinition Search { get; } = new(
         "Pi Search", "heyhuynhgiabuu", PiSearchSupport.Version,
@@ -58,5 +58,16 @@ public static class SupportedExtensions
         new("https://github.com/trotsky1997/pi-lsp-extension"),
         () => LspSupport.GetInstallationState());
 
-    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Permissions, AutomaticTitles, Search, Mcp, Lsp];
+    public static ExtensionDefinition Browser { get; } = new(
+        "Pi Browser", "larsderidder", "0.1.0",
+        "Give Pi tools to browse pages, interact with forms, take screenshots and inspect browser errors. Optional; no embedded browser interface yet.",
+        "A third-party extension maintained by larsderidder, not developed by Pi Agent. Uses Playwright directly to control a Chromium-based browser through its debugging connection. Pi Agent recommends the extension and checks global installation files only; browser connectivity and embedded WebView2 compatibility are not verified.",
+        "pi install git:github.com/larsderidder/pi-browser",
+        "Requires Git and npm. This installs the current upstream Git revision; the displayed version is a reference, not a pinned release. Restart Pi Agent after installation. To connect an external Chromium-based browser, start it with a separate user-data directory and --remote-debugging-port=9222, then send /browser connect 9222 in the conversation. Use /browser status to inspect the connection and /browser disconnect to detach. Use separate ports and profiles for independent conversations. Follow the upstream documentation for browser setup. Installing this extension does not add a browser panel or automatically connect a browser.",
+        "",
+        new("https://github.com/larsderidder/pi-browser#readme"),
+        new("https://github.com/larsderidder/pi-browser"),
+        () => PiBrowserSupport.GetInstallationState(), RecommendationOnly: true);
+
+    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Permissions, AutomaticTitles, Search, Mcp, Lsp, Browser];
 }

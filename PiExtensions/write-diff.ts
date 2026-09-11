@@ -2,10 +2,14 @@ import { createWriteToolDefinition, generateUnifiedPatch, type ExtensionAPI } fr
 import { WriteDiffCapture } from "./WriteDiffCapture.ts";
 import registerSessionCopy from "./session-copy.ts";
 import registerModelRefresh from "./refresh-models.ts";
+import registerMcpStatus from "./mcp-status.ts";
+import registerInstructions from "./instructions.ts";
 
 export default function (pi: ExtensionAPI): void {
     registerSessionCopy(pi);
     registerModelRefresh(pi);
+    registerMcpStatus(pi);
+    registerInstructions(pi);
     const base = createWriteToolDefinition(process.cwd());
     pi.registerTool({
         name: base.name,

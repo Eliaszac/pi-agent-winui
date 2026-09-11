@@ -3,6 +3,8 @@ namespace PiAgentGui.Models.Conversations;
 /// <summary>A typed change delivered from a conversation runtime to its presentation state.</summary>
 public sealed record ConversationUpdate
 {
+    public McpStatusSnapshot? McpStatus { get; init; }
+    public InstructionSnapshot? Instructions { get; init; }
     public IReadOnlyList<string>? SteeringQueue { get; init; }
     public IReadOnlyList<PendingPrompt>? RecoveredPrompts { get; init; }
     public string? ErrorDiagnostics { get; init; }

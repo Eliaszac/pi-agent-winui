@@ -26,6 +26,7 @@ public sealed partial class MainPage : Page
     public ViewModels.Files.FileExplorerViewModel Files { get; }
     public ViewModels.Processes.ProcessesPanelViewModel Processes { get; }
     public ViewModels.SourceControl.SourceControlViewModel SourceControl { get; }
+    public ViewModels.Conversations.CapabilitiesPanelViewModel Capabilities { get; } = new();
     private readonly DispatcherTimer sourceControlTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer processesTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private double terminalWidth = 400;
@@ -41,7 +42,7 @@ public sealed partial class MainPage : Page
         ViewModels.GitHub.GitHubViewModel github, Configuration.GitHubOptions githubOptions, CancellationToken githubCancellation,
         ViewModels.Terminal.TerminalPanelViewModel terminals, ViewModels.Conversations.ResearchPanelViewModel research,
         ViewModels.Files.FileExplorerViewModel files, ViewModels.Processes.ProcessesPanelViewModel processes,
-        ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts)
+        ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts, Services.Pi.CapabilityImportServices imports)
     {
         ViewModel = viewModel;
         OpenIn = openIn;
@@ -57,6 +58,12 @@ public sealed partial class MainPage : Page
         this.createProjectForm = createProjectForm;
         this.picker = picker;
         InitializeComponent();
+        CapabilitiesPane.DataContext = Capabilities;
+        CapabilitiesPane.Imports = imports;
+        CapabilitiesPane.PickSkillFolder = picker.PickAsync;
+        Capabilities.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Capabilities.IsOpen)) UpdateTerminalLayout(); };
+        ViewModel.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(ViewModel.Chat)) Capabilities.Select(ViewModel.Chat); };
+        Unloaded += (_, _) => { Capabilities.IsOpen = false; Capabilities.Select(null); };
         SourceControlPane.DataContext = SourceControl;
         sourceControlTimer.Tick += async (_, _) => await SourceControl.RefreshAsync();
         SourceControl.PropertyChanged += (_, change) =>
@@ -185,6 +192,7 @@ public sealed partial class MainPage : Page
 
     private void OnTerminalClicked(object sender, RoutedEventArgs args)
     {
+        Capabilities.IsOpen = false;
         SourceControl.IsOpen = false;
         Processes.IsOpen = false;
         Files.IsOpen = false;
@@ -193,6 +201,7 @@ public sealed partial class MainPage : Page
     }
     private void OnResearchClicked(object sender, RoutedEventArgs args)
     {
+        Capabilities.IsOpen = false;
         SourceControl.IsOpen = false;
         Processes.IsOpen = false;
         Files.IsOpen = false;
@@ -208,6 +217,7 @@ public sealed partial class MainPage : Page
 
     private void OnFilesClicked(object sender, RoutedEventArgs args)
     {
+        Capabilities.IsOpen = false;
         SourceControl.IsOpen = false;
         Processes.IsOpen = false;
         Terminals.Hide(); Research.IsOpen = false;
@@ -224,8 +234,12 @@ public sealed partial class MainPage : Page
     {
         var wide = WorkspaceContent.ActualWidth >= 780;
         var width = Math.Min(terminalWidth, Math.Max(0, WorkspaceContent.ActualWidth * (wide ? 0.6 : 1)));
-        TerminalColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen || Files.IsOpen || Processes.IsOpen || SourceControl.IsOpen) && wide ? width : 0);
-        TerminalSplitterColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen || Files.IsOpen || Processes.IsOpen || SourceControl.IsOpen) && wide ? 6 : 0);
+        TerminalColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen || Files.IsOpen || Processes.IsOpen || SourceControl.IsOpen || Capabilities.IsOpen) && wide ? width : 0);
+        TerminalSplitterColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen || Files.IsOpen || Processes.IsOpen || SourceControl.IsOpen || Capabilities.IsOpen) && wide ? 6 : 0);
+        Grid.SetColumn(CapabilitiesPane, wide ? 2 : 0);
+        Grid.SetColumnSpan(CapabilitiesPane, wide ? 1 : 3);
+        CapabilitiesPane.Width = width;
+        CapabilitiesPane.HorizontalAlignment = HorizontalAlignment.Right;
         Grid.SetColumn(SourceControlPane, wide ? 2 : 0);
         Grid.SetColumnSpan(SourceControlPane, wide ? 1 : 3);
         SourceControlPane.Width = width;
@@ -251,6 +265,7 @@ public sealed partial class MainPage : Page
 
     private void OnSourceControlClicked(object sender, RoutedEventArgs args)
     {
+        Capabilities.IsOpen = false;
         Terminals.Hide(); Research.IsOpen = false; Files.IsOpen = false; Processes.IsOpen = false;
         SourceControl.SelectProject(ViewModel.SelectedProject?.Path);
         SourceControl.IsOpen = !SourceControl.IsOpen;
@@ -258,6 +273,7 @@ public sealed partial class MainPage : Page
 
     private void OnProcessesClicked(object sender, RoutedEventArgs args)
     {
+        Capabilities.IsOpen = false;
         SourceControl.IsOpen = false;
         Terminals.Hide(); Research.IsOpen = false; Files.IsOpen = false;
         Processes.Select(ViewModel.Chat?.ProcessIdentity);

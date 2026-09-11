@@ -1,0 +1,97 @@
+<UserControl x:Class="PiAgentGui.Views.CapabilitiesPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:PiAgentGui.Models.Conversations"
+    xmlns:vm="using:PiAgentGui.ViewModels.Conversations"
+    xmlns:controls="using:PiAgentGui.Controls">
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="12,0,8,0" RowSpacing="10">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid Height="36" ColumnSpacing="4">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="Instructions, skills &amp; MCP" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <controls:ActionButton Grid.Column="1" Click="OnRefresh" Padding="6" MinWidth="28" MinHeight="28" Background="Transparent" BorderThickness="0"
+                AutomationProperties.Name="Refresh inventory" ToolTipService.ToolTip="Refresh inventory">
+                <FontIcon Glyph="&#xE72C;" FontSize="12"/>
+            </controls:ActionButton>
+            <controls:ActionButton Grid.Column="2" Click="OnClose" Padding="6" MinWidth="28" MinHeight="28" Background="Transparent" BorderThickness="0"
+                AutomationProperties.Name="Close instructions, skills and MCP" ToolTipService.ToolTip="Close panel">
+                <FontIcon Glyph="&#xE711;" FontSize="11"/>
+            </controls:ActionButton>
+        </Grid>
+        <TextBox Grid.Row="1" Text="{Binding Search, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Filter instructions, skills and servers" FontSize="12" AutomationProperties.Name="Filter instructions, skills and servers"/>
+        <StackPanel Grid.Row="2" Spacing="5">
+            <ProgressBar IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibility}}"/>
+            <TextBlock Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Visibility="{Binding HasMessage, Converter={StaticResource BooleanToVisibility}}"/>
+        </StackPanel>
+        <Pivot Grid.Row="3">
+            <PivotItem Header="Instructions" Margin="0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Instructions.Message}" FontSize="12" Margin="8,4,8,12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Visibility="{Binding Instructions.HasMessage, Converter={StaticResource BooleanToVisibility}}"/>
+                    <controls:CommandListView Grid.Row="1" ItemsSource="{Binding Instructions.Items}" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnInstructionClicked">
+                        <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="8,10"/></Style></ListView.ItemContainerStyle>
+                        <ListView.ItemContainerTransitions><TransitionCollection/></ListView.ItemContainerTransitions>
+                        <ListView.ItemTemplate><DataTemplate x:DataType="vm:InstructionItem">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{x:Bind Name}" FontSize="12"/>
+                                <TextBlock Text="{x:Bind Scope}" FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{x:Bind Status}" FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                        </DataTemplate></ListView.ItemTemplate>
+                    </controls:CommandListView>
+                </Grid>
+            </PivotItem>
+            <PivotItem Header="Skills" Margin="0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <controls:ActionButton Content="Add globally" Click="OnAddSkills" Margin="8,0,8,12" HorizontalAlignment="Left" FontSize="12"/>
+                    <controls:CommandListView Grid.Row="1" ItemsSource="{Binding Skills}" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnSkillClicked">
+                        <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="8,8"/></Style></ListView.ItemContainerStyle>
+                        <ListView.ItemContainerTransitions><TransitionCollection/></ListView.ItemContainerTransitions>
+                        <ListView.ItemTemplate><DataTemplate x:DataType="models:AvailableSkill">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{x:Bind Name}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{x:Bind Description}" FontSize="11" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{x:Bind Scope}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                </StackPanel>
+                        </DataTemplate></ListView.ItemTemplate>
+                    </controls:CommandListView>
+                    <TextBlock Grid.Row="1" Text="No available skills match this view." FontSize="12" Margin="8,12" TextWrapping="Wrap" IsHitTestVisible="False"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{Binding HasNoSkills, Converter={StaticResource BooleanToVisibility}}"/>
+                </Grid>
+            </PivotItem>
+            <PivotItem Header="MCP" Margin="0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock Text="{Binding McpMessage}" FontSize="12" Margin="8,4,8,12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Visibility="{Binding HasMcpMessage, Converter={StaticResource BooleanToVisibility}}"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="8,0,8,12">
+                    <controls:ActionButton Content="Add server" Click="OnImportMcp" FontSize="12"/>
+                    <controls:ActionButton Content="MCP Adapter setup" Click="OnSetup" HorizontalAlignment="Left" FontSize="12"
+                        Visibility="{Binding ShowMcpSetup, Converter={StaticResource BooleanToVisibility}}"/>
+                    </StackPanel>
+                    <ListView Grid.Row="2" ItemsSource="{Binding Servers}" SelectionMode="None">
+                        <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="0,4"/></Style></ListView.ItemContainerStyle>
+                        <ListView.ItemContainerTransitions><TransitionCollection/></ListView.ItemContainerTransitions>
+                        <ListView.ItemTemplate><DataTemplate x:DataType="models:McpServerStatus">
+                            <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                <Expander.Header>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{x:Bind Name}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{x:Bind Status}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Expander.Header>
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{x:Bind Counts}" FontSize="11"/>
+                                    <TextBlock Text="{x:Bind Explanation}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                            </Expander>
+                        </DataTemplate></ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+        </Pivot>
+    </Grid>
+</UserControl>

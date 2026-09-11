@@ -7,9 +7,10 @@ namespace PiAgentGui.Tests.Pi;
 public sealed class McpAdapterSupportTests
 {
     [DataTestMethod]
-    [DataRow("\"npm:pi-mcp-adapter@2.10.0\"")]
-    [DataRow("{\"source\":\"npm:pi-mcp-adapter\"}")]
-    public void RequiresRegistrationAndPackageAndAvoidsDuplicateCard(string registration)
+    [DataRow("\"npm:pi-mcp-adapter@2.33.0\"", "2.33.0", false)]
+    [DataRow("{\"source\":\"npm:pi-mcp-adapter\"}", "2.33.0", false)]
+    [DataRow("\"npm:pi-mcp-adapter@2.10.0\"", "2.10.0", true)]
+    public void RequiresRegistrationAndPackageAndAvoidsDuplicateCard(string registration, string version, bool needsUpdate)
     {
         var allowed = Path.Combine(Path.GetTempPath(), "PiAgentGui.Tests");
         var root = Directory.CreateDirectory(Path.Combine(allowed, Guid.NewGuid().ToString("N"))).FullName;
@@ -19,8 +20,9 @@ public sealed class McpAdapterSupportTests
             File.WriteAllText(Path.Combine(root, "settings.json"), "{\"packages\":[" + registration + "]}");
             Assert.IsTrue(McpAdapterSupport.GetInstallationState(root).NeedsSetup);
             var package = Directory.CreateDirectory(Path.Combine(root, "npm", "node_modules", "pi-mcp-adapter")).FullName;
-            File.WriteAllText(Path.Combine(package, "package.json"), """{"name":"pi-mcp-adapter","version":"2.10.0","pi":{"extensions":["index.ts"]}}""");
-            Assert.IsFalse(McpAdapterSupport.GetInstallationState(root).NeedsSetup);
+            File.WriteAllText(Path.Combine(package, "package.json"), System.Text.Json.JsonSerializer.Serialize(
+                new { name = "pi-mcp-adapter", version, pi = new { extensions = new[] { "index.ts" } } }));
+            Assert.AreEqual(needsUpdate, McpAdapterSupport.GetInstallationState(root).NeedsSetup);
             Assert.AreEqual(0, new InstalledExtensionDiscovery().Discover(root).Count);
         }
         finally

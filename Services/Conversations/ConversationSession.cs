@@ -75,6 +75,15 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
 
     public async Task<JsonElement> RunOperationAsync(ConversationOperation operation, string? argument = null, CancellationToken cancellationToken = default)
     {
+        // Inventory reads may run alongside an agent turn and must not reserve mutation state.
+        if (operation == ConversationOperation.Commands)
+        {
+            PiRpcClient inventoryClient;
+            lock (stateGate) inventoryClient = connected && client is not null ? client : throw new IOException("Pi is disconnected.");
+            using var inventoryCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
+            var response = await inventoryClient.RequestAsync("get_commands", cancellationToken: inventoryCancellation.Token).ConfigureAwait(false);
+            return PiJson.Field(response, "data");
+        }
         // Keep the transport private and allow only operations that preserve this workspace's session identity.
         var command = operation switch
         {
@@ -82,6 +91,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             ConversationOperation.Details => "get_session_stats",
             ConversationOperation.State => "get_state",
             ConversationOperation.RefreshModels => "prompt",
+            ConversationOperation.Instructions => "prompt",
             ConversationOperation.Compact => "compact",
             ConversationOperation.ExportHtml => "export_html",
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
@@ -96,16 +106,18 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
         }
         try
         {
-            if (operation == ConversationOperation.RefreshModels)
+            if (operation is ConversationOperation.RefreshModels or ConversationOperation.Instructions)
             {
+                var expected = operation == ConversationOperation.Instructions ? "pi-gui-instructions" : "pi-gui-refresh-models";
                 var discovery = await current.RequestAsync("get_commands", cancellationToken: linked.Token).ConfigureAwait(false);
                 var commands = PiJson.Field(PiJson.Field(discovery, "data"), "commands");
-                if (commands.ValueKind != JsonValueKind.Array || !commands.EnumerateArray().Any(item => PiJson.Text(item, "name") == "pi-gui-refresh-models"))
-                    throw new InvalidOperationException("Restart Pi Agent to refresh model availability in this conversation.");
+                if (commands.ValueKind != JsonValueKind.Array || !commands.EnumerateArray().Any(item => PiJson.Text(item, "name") == expected))
+                    throw new InvalidOperationException("Restart Pi Agent to load this integration in the conversation.");
             }
             JsonObject? arguments = operation switch
             {
                 ConversationOperation.RefreshModels => new() { ["message"] = "/pi-gui-refresh-models" },
+                ConversationOperation.Instructions => new() { ["message"] = "/pi-gui-instructions" },
                 ConversationOperation.Compact when !string.IsNullOrWhiteSpace(argument) => new() { ["customInstructions"] = argument },
                 ConversationOperation.ExportHtml => new() { ["outputPath"] = Path.GetFullPath(argument ?? throw new ArgumentException("Choose an export file.")) },
                 _ => null
@@ -448,6 +460,18 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
 
     private void HandleExtension(JsonElement packet)
     {
+        if (PiJson.Text(packet, "method") == "setStatus" && PiJson.Text(packet, "statusKey") == InstructionSnapshotParser.StatusKey)
+        {
+            if (InstructionSnapshotParser.Parse(PiJson.Text(packet, "statusText")) is { } snapshot)
+                Publish(new() { Instructions = snapshot });
+            return;
+        }
+        if (PiJson.Text(packet, "method") == "setStatus" && PiJson.Text(packet, "statusKey") == CapabilityParser.McpStatusKey)
+        {
+            if (CapabilityParser.Mcp(PiJson.Text(packet, "statusText")) is { } snapshot)
+                Publish(new() { McpStatus = snapshot });
+            return;
+        }
         if (PiJson.Text(packet, "method") == "input" && PiJson.Text(packet, "title") == "pi-gui-background-research-v1" && client is { } current)
         {
             _ = Task.Run(() => HandleResearchAsync(current, packet.Clone()));

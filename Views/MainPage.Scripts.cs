@@ -45,7 +45,7 @@ public sealed partial class MainPage
             if (!Scripts.CanUse) return;
             ScriptError.IsOpen = false;
             await Scripts.RunAsync(id);
-            SourceControl.IsOpen = false; Processes.IsOpen = false; Files.IsOpen = false; Research.IsOpen = false;
+            Capabilities.IsOpen = false; SourceControl.IsOpen = false; Processes.IsOpen = false; Files.IsOpen = false; Research.IsOpen = false;
         }
         catch (Exception exception) { ScriptError.Message = exception.Message; ScriptError.IsOpen = true; }
     }

@@ -5,6 +5,7 @@ namespace PiAgentGui.Utilities;
 /// <summary>Detects global package registration without loading MCP servers or extension code.</summary>
 public static class McpAdapterSupport
 {
+    public const string Version = "2.33.0";
     public static (string Status, bool NeedsSetup) GetInstallationState(string? agentDirectory = null)
     {
         var root = agentDirectory ?? PermissionModesSupport.AgentDirectory;
@@ -20,8 +21,10 @@ public static class McpAdapterSupport
         var manifest = Path.Combine(root, "npm", "node_modules", "pi-mcp-adapter", "package.json");
         if (!File.Exists(manifest)) return ("Configured globally · package files not found", true);
         using var package = JsonDocument.Parse(File.ReadAllText(manifest));
-        return PiJson.Text(package.RootElement, "name") == "pi-mcp-adapter"
-            ? ($"Installed globally · {PiJson.Text(package.RootElement, "version")}", false)
-            : ("Package identity could not be verified", true);
+        if (PiJson.Text(package.RootElement, "name") != "pi-mcp-adapter") return ("Package identity could not be verified", true);
+        var version = PiJson.Text(package.RootElement, "version");
+        return System.Version.TryParse(version, out var installed) && installed >= new System.Version(Version)
+            ? ($"Installed globally · {version}", false)
+            : ($"Installed globally · {version} · update for live status", true);
     }
 }
