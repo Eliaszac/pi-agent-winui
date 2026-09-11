@@ -8,6 +8,10 @@ public class ActionToggleButton : ToggleButton
 {
     public ActionToggleButton()
     {
+        Resources.MergedDictionaries.Add(new ResourceDictionary
+        {
+            Source = new Uri("ms-appx:///Controls/DisclosureResources.xaml")
+        });
         ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.Hand);
         IsEnabledChanged += (_, _) => ProtectedCursor = InputSystemCursor.Create(
             IsEnabled ? InputSystemCursorShape.Hand : InputSystemCursorShape.Arrow);

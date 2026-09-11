@@ -6,6 +6,10 @@ public sealed class ActionExpander : Expander
 {
     public ActionExpander()
     {
+        Resources.MergedDictionaries.Add(new ResourceDictionary
+        {
+            Source = new Uri("ms-appx:///Controls/DisclosureResources.xaml")
+        });
         AddHandler(PointerMovedEvent, new PointerEventHandler(UpdateCursor), true);
         AddHandler(PointerEnteredEvent, new PointerEventHandler(UpdateCursor), true);
     }

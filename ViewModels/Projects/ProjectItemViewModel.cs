@@ -46,17 +46,16 @@ public sealed class ProjectItemViewModel : ObservableObject
     public RelayCommand ToggleSettledCommand { get; }
     /// <summary>Gets whether the group has no conversations.</summary>
     public bool HasNoConversations => Conversations.Count == 0;
-    /// <summary>Gets the group activation command.</summary>
+    /// <summary>Gets the group expansion command, which does not change navigation.</summary>
     public RelayCommand ToggleCommand { get; }
     /// <summary>Gets the shared conversation creation command.</summary>
     public AsyncRelayCommand NewConversationCommand { get; }
 
     /// <summary>Creates a project group.</summary>
     /// <param name="project">The saved project.</param>
-    /// <param name="selectProject">The project selection action.</param>
     /// <param name="selectConversation">The conversation selection action.</param>
     /// <param name="newConversationCommand">The shared creation command.</param>
-    public ProjectItemViewModel(Project project, Action<ProjectItemViewModel> selectProject,
+    public ProjectItemViewModel(Project project,
         Action<ProjectItemViewModel, ConversationItemViewModel> selectConversation, AsyncRelayCommand newConversationCommand,
         ConversationWorkspaceStore? workspaces = null, Func<ProjectItemViewModel, string, Task>? renameProject = null,
         Func<ProjectItemViewModel, ConversationItemViewModel, string, Task>? renameConversation = null)
@@ -65,7 +64,7 @@ public sealed class ProjectItemViewModel : ObservableObject
         Rename = new InlineRenameViewModel(() => Name, name => renameProject?.Invoke(this, name) ?? Task.CompletedTask);
         ToggleSettledCommand = new RelayCommand(_ => IsSettledExpanded = !IsSettledExpanded);
         NewConversationCommand = newConversationCommand;
-        ToggleCommand = new RelayCommand(_ => { IsExpanded = !IsExpanded; selectProject(this); });
+        ToggleCommand = new RelayCommand(_ => IsExpanded = !IsExpanded);
         foreach (var conversation in project.Conversations)
             Conversations.Add(new ConversationItemViewModel(conversation, item => selectConversation(this, item), workspaces?.GetOrCreate(project, conversation),
                 (item, name) => renameConversation?.Invoke(this, item, name) ?? Task.CompletedTask));

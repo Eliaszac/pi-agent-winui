@@ -542,7 +542,11 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         }
         responseActionsEntry = latest;
         latest?.SetConversationActions(true, CanDuplicateConversation);
-        if (latest is not null) latest.ShowInlineActions = !HasRunChanges;
+        if (latest is not null)
+        {
+            latest.Summary = HasRunChanges ? RunChanges : null;
+            latest.ShowInlineActions = true;
+        }
         OnPropertyChanged(nameof(SummaryResponse));
         OnPropertyChanged(nameof(CanDuplicateConversation));
         OnPropertyChanged(nameof(Warning));

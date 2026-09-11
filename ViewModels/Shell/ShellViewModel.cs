@@ -198,7 +198,7 @@ public sealed class ShellViewModel : ObservableObject
     public void ReportError(Exception exception) => ErrorMessage = ProjectErrorMessage.From(exception);
 
     private ProjectItemViewModel CreateProjectItem(Project project) =>
-        new(project, SelectProject, SelectConversation, NewConversationCommand, workspaces, RenameProjectAsync, RenameConversationAsync);
+        new(project, SelectConversation, NewConversationCommand, workspaces, RenameProjectAsync, RenameConversationAsync);
 
     private void SelectProject(ProjectItemViewModel? project)
     {

@@ -16,6 +16,8 @@ The resulting file is `artifacts/installer/PiAgent-Setup-0.1.1-x64.exe` with an 
 
 Version 0.1.1 adds exclusive research-store ownership across app windows. Close all older app builds before using it; pre-0.1.1 processes do not participate in the ownership protocol. Its two new regression tests cover competing coordinators and failed initialization recovery.
 
+Local testing update on 2026-09-11: built the current workspace as version 0.1.2 and upgraded the installed 0.1.0 successfully (installer exit code 0). Both the installed executable and uninstall registration report 0.1.2. The two existing top-level application JSON files retained their SHA-256 hashes. Installation used silent mode without closing running applications or launching the app afterward. Installer and log: `artifacts/installer/PiAgent-Setup-0.1.2-x64.exe` and `artifacts/installer/install-0.1.2.log`. This is a Release build; the temporary Debug-only `/test-error` command is not included.
+
 ## Install and update
 
 - Run the installer normally, without administrator elevation. It installs for the current user under `%LOCALAPPDATA%\Programs\Pi Agent`.

@@ -25,6 +25,10 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 ## Learned constraints
 
+- Run summaries sit directly beneath the assistant response, not in a viewport-separated footer. Show more/fewer files and tool disclosures stay neutral in checked, hover, and pressed states; retain high-contrast system colors.
+
+- Project expand/collapse is disclosure only: preserve the current page, selected conversation, and open sidebar. Browsing groups must not navigate.
+
 - 2026-09-10: Extensions has one page-header refresh icon for all recommended/supported cards and other installed extensions; no per-card or section refresh buttons.
 
 - 2026-09-10: Use a traditional toggle switch for the research opt-in, rather than a text button labeled On/Off.

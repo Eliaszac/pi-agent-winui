@@ -18,6 +18,10 @@ public sealed class RunVerificationTests
     [DataRow("ruff check .", "lint")]
     [DataRow("npx vitest run", "tests")]
     [DataRow("dotnet build", "")]
+    [DataRow("dotnet test Tests.csproj --no-restore && dotnet build App.csproj --no-restore", "tests")]
+    [DataRow("dotnet test Tests.csproj && dotnet build App.csproj || true", "")]
+    [DataRow("dotnet test Tests.csproj && dotnet build App.csproj && echo success", "")]
+    [DataRow("dotnet test Tests.csproj && python change.py", "")]
     [DataRow("npm test || true", "")]
     [DataRow("npm test; echo success", "")]
     [DataRow("npx eslint . --fix", "")]
@@ -75,6 +79,18 @@ public sealed class RunVerificationTests
         Assert.AreEqual(0, tracker.Labels.Count);
         tracker.Observe(Check("l2", "npm run lint", ""));
         tracker.Reset();
+        Assert.AreEqual(0, tracker.Labels.Count);
+    }
+
+    [TestMethod]
+    public void TestThenBuildRetainsExplicitTotalsOnlyOnSuccess()
+    {
+        var tracker = new RunVerificationTracker();
+        const string command = "dotnet test Tests/PiAgentGui.Tests.csproj --no-restore --verbosity minimal && dotnet build PiAgentGui.csproj --no-restore -p:Platform=x64 -p:OutDir=artifacts/verification/ --verbosity minimal";
+        tracker.Observe(Edit("edit"));
+        tracker.Observe(Check("check", command, Dotnet + "\nBuild succeeded.\n    0 Warning(s)\n    0 Error(s)"));
+        CollectionAssert.AreEqual(new[] { "Tests 42/42 passed" }, tracker.Labels.ToArray());
+        tracker.Observe(Check("failed-build", command, Dotnet + "\nBuild FAILED.", "Failed"));
         Assert.AreEqual(0, tracker.Labels.Count);
     }
 

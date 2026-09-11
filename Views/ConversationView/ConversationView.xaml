@@ -170,30 +170,6 @@
                 IsItemClickEnabled="False" HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                 ScrollViewer.HorizontalScrollMode="Disabled" AutomationProperties.Name="Conversation messages">
-                <ListView.Footer>
-                    <StackPanel Margin="4,0,12,20" Spacing="6">
-                            <ContentControl Content="{Binding RunChanges}" ContentTemplate="{StaticResource RunSummaryTemplate}" HorizontalContentAlignment="Stretch" Visibility="{Binding HasRunChanges, Converter={StaticResource BooleanToVisibility}}" />
-                    <StackPanel Orientation="Horizontal" Spacing="4" DataContext="{Binding SummaryResponse}"
-                        Visibility="{Binding CanCopyResponse, Converter={StaticResource BooleanToVisibility}, FallbackValue=Collapsed}">
-                        <controls:CopyFeedbackButton Click="OnCopyMessageClicked" Style="{StaticResource ShellIconButtonStyle}"
-                            AutomationProperties.Name="Copy response" ToolTipService.ToolTip="Copy response" />
-                        <controls:ActionButton Command="{Binding ForkCommand}" IsEnabled="{Binding CanDuplicate}"
-                            Style="{StaticResource ShellIconButtonStyle}" AutomationProperties.Name="Fork conversation"
-                            ToolTipService.ToolTip="Fork: continue in a new conversation">
-                            <FontIcon Glyph="&#xE8A7;" FontSize="14" />
-                        </controls:ActionButton>
-                        <controls:ActionButton Command="{Binding CloneCommand}" IsEnabled="{Binding CanDuplicate}"
-                            Style="{StaticResource ShellIconButtonStyle}" AutomationProperties.Name="Clone conversation"
-                            ToolTipService.ToolTip="Clone: duplicate and stay here">
-                            <FontIcon Glyph="&#xF413;" FontSize="14" />
-                        </controls:ActionButton>
-                        <TextBlock Text="{Binding UsageLabel}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Visibility="{Binding HasUsage, Converter={StaticResource BooleanToVisibility}}"
-                            ToolTipService.ToolTip="Whole-run reported tokens, including input, output and cache usage. Elapsed time includes tools and waiting for approval." />
-                    </StackPanel>
-                    </StackPanel>
-                </ListView.Footer>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />

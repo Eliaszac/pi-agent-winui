@@ -137,6 +137,40 @@ public sealed class ShellViewModelTests
     }
 
     [TestMethod]
+    public async Task TogglingProjectsPreservesConversationPageAndNarrowSidebar()
+    {
+        var shell = new ShellViewModel(new InMemoryProjectRepository(
+            new Project { Id = Guid.NewGuid(), Name = "First", Path = @"C:\First" },
+            new Project { Id = Guid.NewGuid(), Name = "Second", Path = @"C:\Second" }));
+        await shell.LoadAsync();
+        await shell.NewConversationCommand.ExecuteAsync(shell.Projects[0]);
+        var conversation = shell.Projects[0].Conversations[0];
+        var title = shell.WorkspaceTitle;
+        shell.Sidebar.SetAvailableWidth(600);
+        shell.Sidebar.IsOpen = true;
+
+        foreach (var showExtensions in new[] { false, true })
+        {
+            if (showExtensions) shell.OpenExtensions();
+            shell.Sidebar.IsOpen = true;
+            foreach (var project in shell.Projects)
+            {
+                var expanded = project.IsExpanded;
+                for (var toggle = 0; toggle < 2; toggle++)
+                {
+                    project.ToggleCommand.Execute(null);
+                    Assert.AreEqual(toggle == 0 ? !expanded : expanded, project.IsExpanded);
+                    Assert.AreEqual(showExtensions, shell.ShowExtensions);
+                    Assert.AreEqual(title, shell.WorkspaceTitle);
+                    Assert.IsTrue(shell.HasConversation);
+                    Assert.IsTrue(conversation.IsSelected);
+                    Assert.IsTrue(shell.Sidebar.IsOpen);
+                }
+            }
+        }
+    }
+
+    [TestMethod]
     public async Task FailedLoadIsRecoverableAndDoesNotLookLikeAnEmptyCatalog()
     {
         var repository = new InMemoryProjectRepository { ReadError = new InvalidDataException() };

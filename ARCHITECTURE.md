@@ -89,7 +89,7 @@ The native project shell and first Pi conversation pass are implemented. Convers
 - Rename, settle, restore, and delete reread under the existing catalog lock and commit atomically. Mutations preserve unrelated metadata, IDs, session paths, and records. Group updates preserve surviving row instances instead of clearing the entire visible list.
 - The Projects heading is a plain label; the user preferred removing its duplicate plus action. The existing top New project button opens the modal. Context menus use native keyboard/mouse support; inline editors use native TextBox controls.
 - `Views/MainPage.xaml` contains the native SplitView shell, project groups, draft entries, and contextual empty states. `ShellViewModel` owns loading, selection, and errors; views do not access persistence.
-- The first saved project starts expanded. Newly created projects open immediately. Collapsing the active project's group preserves its selected conversation.
+- The first saved project starts expanded. Newly created projects open immediately. Expanding or collapsing any project group changes only disclosure state; it never selects a project, navigates away from the current page/conversation, or dismisses the narrow sidebar.
 - The modal uses ContentDialog with XamlRoot, asynchronous save deferral, field validation, and preserved input on failure. FolderPickerService binds the Windows picker to the main window. Cancelling the dialog or picker does not create a project.
 - Successful creation updates the shell before completing the modal's close deferral. Updating only after ShowAsync completes exposed the old workspace during dismissal. In narrow layouts, creation also closes the sidebar overlay to reveal the destination.
 - Initial workspace content stays hidden until the catalog is resolved. Reload builds a complete project collection before publishing it and restores project/conversation selection in one step, avoiding intermediate empty-list and project-only states.
@@ -223,6 +223,9 @@ Launching the GUI or Pi requires user permission under `AGENTS.md`; unit tests a
 Protocol and CLI behavior were checked against current official Pi documentation and upstream session-manager source on 2026-09-10. See `PI-SETUP.md` for links and the remaining live smoke test.
 
 ## Transcript presentation
+
+- Latest-run summaries and response actions render inside the assistant message, like historical summaries, rather than in the ListView footer so viewport layout cannot separate them from the response. Disclosure resources are scoped locally to ActionToggleButton/ActionExpander to override native checked accent resources while retaining high-contrast colors.
+- Verification recognizes direct checks and the restricted `dotnet test … && dotnet build …` chain. Explicit all-passing totals and successful tool completion are required; arbitrary chains, masking operators, and later edits still invalidate results.
 
 - User messages use right-aligned theme-aware bubbles; assistant text remains unboxed on the left. Hide You/Pi labels but preserve tool/session headings and error status.
 - ChatEntry carries explicit user/assistant and completion flags from Pi message events. Copy prompt is available immediately; Copy response appears after message_end (including stopped/error messages with text) and for restored responses. Copy uses the full plain-text message, without speaker/status/tool arguments.

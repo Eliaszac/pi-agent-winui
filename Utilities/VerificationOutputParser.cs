@@ -16,7 +16,12 @@ public static partial class VerificationOutputParser
             command = json.RootElement.TryGetProperty("command", out var value) ? value.GetString()?.Trim() ?? "" : "";
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException) { return ""; }
-        // Compound commands, pipelines and redirections can mask exit codes or modify files.
+        // Accept only the common test-then-build chain; arbitrary shell chains remain untrusted.
+        var steps = command.Split("&&", StringSplitOptions.TrimEntries);
+        if (steps.Length == 2 && steps[0].StartsWith("dotnet test ", StringComparison.OrdinalIgnoreCase)
+            && steps[1].StartsWith("dotnet build ", StringComparison.OrdinalIgnoreCase))
+            command = string.Join(" ", steps);
+        // Pipelines, other compound commands and redirections can mask exit codes or modify files.
         if (command.IndexOfAny(['&', '|', ';', '>', '<', '\n', '\r', '`']) >= 0 || command.Contains("$(", StringComparison.Ordinal)
             || MutatingFlags().IsMatch(command)) return "";
         if (LintCommand().IsMatch(command)) return "lint";

@@ -6,52 +6,9 @@
     xmlns:controls="using:PiAgentGui.Controls">
     <Application.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Default">
-                    <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="ControlFillColorSecondaryBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="ControlFillColorTertiaryBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="ControlFillColorDefaultBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedDisabled" ResourceKey="ControlFillColorDisabledBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="TextFillColorPrimaryBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="TextFillColorPrimaryBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedPressed" ResourceKey="TextFillColorSecondaryBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedDisabled" ResourceKey="TextFillColorDisabledBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="ControlStrokeColorDefaultBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="ControlStrokeColorDefaultBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed" ResourceKey="ControlStrokeColorDefaultBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedDisabled" ResourceKey="ControlStrokeColorDefaultBrush" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Light">
-                    <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="ControlFillColorSecondaryBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="ControlFillColorTertiaryBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="ControlFillColorDefaultBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedDisabled" ResourceKey="ControlFillColorDisabledBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="TextFillColorPrimaryBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="TextFillColorPrimaryBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedPressed" ResourceKey="TextFillColorSecondaryBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedDisabled" ResourceKey="TextFillColorDisabledBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="ControlStrokeColorDefaultBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="ControlStrokeColorDefaultBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed" ResourceKey="ControlStrokeColorDefaultBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedDisabled" ResourceKey="ControlStrokeColorDefaultBrush" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="HighContrast">
-                    <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="SystemColorHighlightColorBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="SystemColorButtonTextColorBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="SystemColorHighlightTextColorBrush" />
-                    <StaticResource x:Key="ToggleButtonBackgroundCheckedDisabled" ResourceKey="SystemControlBackgroundBaseLowBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="SystemColorHighlightTextColorBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="SystemColorHighlightColorBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedPressed" ResourceKey="SystemColorHighlightColorBrush" />
-                    <StaticResource x:Key="ToggleButtonForegroundCheckedDisabled" ResourceKey="SystemColorGrayTextColorBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="SystemColorButtonTextColorBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="SystemColorButtonTextColorBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed" ResourceKey="SystemColorButtonTextColorBrush" />
-                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedDisabled" ResourceKey="SystemColorGrayTextColorBrush" />
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <ResourceDictionary Source="Controls/DisclosureResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <!-- Git geometry from Material Icon Theme; license: Assets/FileTypes/Material-LICENSE.txt. -->
             <Style x:Key="GitIconStyle" TargetType="PathIcon">
