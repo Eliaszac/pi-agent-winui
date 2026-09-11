@@ -40,6 +40,8 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
     private PermissionModesIntegration? permissions;
     private ThinkingIntegration? thinking;
     private bool thinkingInitialized;
+    private readonly ConversationSettingsStore settingsStore = new(launch.SessionFile);
+    private ConversationSettings confirmedSettings = new();
     private string? manualName = launch.SessionName;
     public event Action<ConversationUpdate>? Updated;
 
@@ -69,6 +71,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             var request = new JsonObject { ["target"] = destination, ["title"] = title.Trim() };
             await current.RequestAsync("prompt", new JsonObject { ["message"] = "/pi-gui-copy-session " + request.ToJsonString() }, linked.Token).ConfigureAwait(false);
             if (!File.Exists(destination)) throw new IOException("Pi couldn't create the conversation copy. The original is unchanged.");
+            await new ConversationSettingsStore(destination).SaveAsync(confirmedSettings, linked.Token).ConfigureAwait(false);
         }
         finally { lock (stateGate) changingModel = false; }
     }
@@ -173,6 +176,8 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             next.EventReceived += OnEvent;
             next.Faulted += OnFault;
             await next.StartAsync(launch with { SessionName = manualName }, cancellationToken).ConfigureAwait(false);
+            var savedSettings = await settingsStore.ReadAsync(cancellationToken).ConfigureAwait(false);
+            confirmedSettings = savedSettings ?? new();
             thinking = new(Publish);
             await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
             await next.RequestAsync("get_available_models", cancellationToken: cancellationToken, applyResponse: packet =>
@@ -182,12 +187,23 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             if (permissions.DefaultApplied)
                 await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
             await thinking.RefreshAsync(next, cancellationToken).ConfigureAwait(false);
-            if (isNewSession && thinking.Levels.Contains("low"))
+            if (savedSettings?.ApprovalMode is { } savedMode && permissions.Available && savedMode != confirmedSettings.ApprovalMode)
+                await permissions.SetAsync(next, savedMode, cancellationToken).ConfigureAwait(false);
+            // Approval profiles can change both model and effort. Restore explicit choices last.
+            if (savedSettings is { Provider: { Length: > 0 } provider, Model: { Length: > 0 } model })
+                await next.RequestAsync("set_model", new JsonObject { ["provider"] = provider, ["modelId"] = model }, cancellationToken).ConfigureAwait(false);
+            if (savedSettings is not null)
+                await thinking.RefreshAsync(next, cancellationToken).ConfigureAwait(false);
+            if (savedSettings?.Effort is { } effort && thinking.Levels.Contains(effort))
+                await thinking.SetAsync(next, effort, cancellationToken).ConfigureAwait(false);
+            else if (isNewSession && savedSettings is null && thinking.Levels.Contains("low"))
             {
                 await thinking.SetAsync(next, "low", cancellationToken).ConfigureAwait(false);
                 await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
             }
             thinkingInitialized = true;
+            if (savedSettings is not null)
+                await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
             await next.RequestAsync("get_messages", cancellationToken: cancellationToken, applyResponse: packet =>
             {
                 lock (stateGate)
@@ -299,6 +315,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
                 cancellationToken, packet => Publish(new() { HasModelUpdate = true, Model = PiModelParser.Parse(PiJson.Field(packet, "data")) })).ConfigureAwait(false);
             await current.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
             await thinking!.RefreshAsync(current, cancellationToken).ConfigureAwait(false);
+            await settingsStore.SaveAsync(confirmedSettings, cancellationToken).ConfigureAwait(false);
         }
         catch (PiCommandException) { throw; }
         catch (Exception exception) { await DisconnectAsync().ConfigureAwait(false); OnFault(exception); throw; }
@@ -318,6 +335,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
         {
             await thinking!.SetAsync(current, level, cancellationToken).ConfigureAwait(false);
             await current.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
+            await settingsStore.SaveAsync(confirmedSettings, cancellationToken).ConfigureAwait(false);
         }
         catch (PiCommandException) { throw; }
         catch (InvalidOperationException) { throw; }
@@ -341,6 +359,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             // Extension model profiles may change the model too. Reflect Pi's actual conversation state.
             await current.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
             await thinking!.RefreshAsync(current, cancellationToken).ConfigureAwait(false);
+            await settingsStore.SaveAsync(confirmedSettings, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -359,6 +378,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             if (permissions?.Available == true) await permissions.RefreshAsync(client, lifetime.Token).ConfigureAwait(false);
             await client.RequestAsync("get_state", cancellationToken: lifetime.Token, applyResponse: ApplyState).ConfigureAwait(false);
             await thinking!.RefreshAsync(client, lifetime.Token).ConfigureAwait(false);
+            await settingsStore.SaveAsync(confirmedSettings, lifetime.Token).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -511,7 +531,19 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
         }
     }
 
-    private void Publish(ConversationUpdate update) => Updated?.Invoke(update);
+    private void Publish(ConversationUpdate update)
+    {
+        lock (stateGate)
+        {
+            if (update.HasModelUpdate && update.Model is { } model)
+                confirmedSettings = confirmedSettings with { Provider = model.Provider, Model = model.Id };
+            if (update.HasThinkingLevelUpdate && update.ThinkingLevel is { Length: > 0 } effort)
+                confirmedSettings = confirmedSettings with { Effort = effort };
+            if (update.HasApprovalModeUpdate && update.ApprovalMode is { } mode)
+                confirmedSettings = confirmedSettings with { ApprovalMode = mode };
+        }
+        Updated?.Invoke(update);
+    }
 
     private async Task ReleaseClientAsync()
     {

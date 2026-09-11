@@ -240,7 +240,7 @@
                                 Visibility="{x:Bind ShowInlineActions, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                             <controls:CopyFeedbackButton Click="OnCopyMessageClicked" HorizontalAlignment="Left" Style="{StaticResource ShellIconButtonStyle}"
                                 AutomationProperties.Name="Copy response" ToolTipService.ToolTip="Copy response"
-                                Visibility="{x:Bind CanCopyResponse, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                                Visibility="{x:Bind ShowConversationActions, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                             <controls:ActionButton Command="{x:Bind ForkCommand}" IsEnabled="{x:Bind CanDuplicate, Mode=OneWay}"
                                 Style="{StaticResource ShellIconButtonStyle}" AutomationProperties.Name="Fork conversation"
                                 ToolTipService.ToolTip="Fork: continue in a new conversation"

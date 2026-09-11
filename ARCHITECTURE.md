@@ -1,5 +1,7 @@
 # Architecture and MVP
 
+- Confirmed model, effort and approval selector preferences are saved atomically beside each Pi session as `<session>.settings.json`, including before the first response when Pi has not yet flushed its JSONL. Reconnection restores approval first, then model and supported effort after extension initialization so profiles do not replace explicit selections. Pi still owns messages and runtime state. Conversation copies include confirmed preferences. Assistant copy, fork and clone buttons share the settled-response visibility rule.
+
 - Provider onboarding stays hidden while initial credential discovery is pending. It appears only after a completed check confirms no configured provider, or a failed check supplies an error; startup uncertainty never displays a sign-in/setup prompt.
 
 - The empty workspace is a project-focused landing surface: project name without its path, a prominent create-project/new-conversation action, contextual provider setup, and up to four recent unsettled conversations ordered by last use (creation time fallback). Recent rows reuse the existing conversation-selection command. Providers and Extensions remain accessible through compact footer actions. Native theme resources and a bounded scrolling single-column layout support both themes and narrow windows.

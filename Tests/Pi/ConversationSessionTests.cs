@@ -55,7 +55,7 @@ public sealed class ConversationSessionTests
     public async Task ModelsLoadAndSwitchThroughRpcAndRejectChangesDuringRun()
     {
         var transport = new FakePiTransport { AutoReply = true };
-        var launch = new PiLaunchRequest(Path.GetTempPath(), Path.Combine(Path.GetTempPath(), "models.jsonl"));
+        var launch = new PiLaunchRequest(Path.GetTempPath(), Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".jsonl"));
         await using var session = new ConversationSession(launch, () => new PiRpcClient(transport, TimeSpan.FromSeconds(3)));
         PiModel? selected = null;
         IReadOnlyList<PiModel>? available = null;
