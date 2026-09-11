@@ -49,6 +49,7 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
         OnPropertyChanged(nameof(GroupSummary));
     }
     internal string Id => entry.Id;
+    internal ChatEntry Source => entry;
     public string Speaker => entry.Speaker;
     public string Text => entry.IsUser ? PromptFileReferences.Display(entry.Text) : entry.Text;
     public string Details => entry.Details;

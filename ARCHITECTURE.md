@@ -1,5 +1,7 @@
 # Architecture and MVP
 
+- Completed change summaries offer Ask agent to revert. The clicked summary identifies its own original user message and final response, including restored historical cards. A bounded prompt includes those IDs, original request, captured tool evidence and patches, with explicit truncation notices. It asks the agent to inspect current files, preserve earlier/later work, avoid Git history/staging changes and external side-effect reversal, and explain unsafe reversals. This only prepares a normal editable composer draft; the user sends it through the usual model/permission flow. Existing drafts/attachments are preserved and active operations block preparation. No automatic filesystem rollback or RPC request occurs on click.
+
 ## Local installer
 
 Windows x64 distribution uses an unpackaged per-user Inno Setup installer. `Installer/Build-Installer.ps1` builds an untrimmed self-contained Release payload through `Properties/PublishProfiles/LocalInstaller.pubxml`. The stable install identity is `PiAgentGui.Desktop`, with files under `%LOCALAPPDATA%/Programs/Pi Agent`; user data stays separately under `%LOCALAPPDATA%/PiAgentGui` and Pi's own user directory. Increasing installer versions update in place; same-version repair and uninstall preserve user data, and downgrade is blocked. WebView2 is detected and bootstrapped only if absent. Generated assets stay under ignored `artifacts/installer`. This first local installer is unsigned and has no automatic update feed. See `Installer/README.md` for build, upgrade and verification details.
