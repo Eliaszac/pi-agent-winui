@@ -2,6 +2,8 @@ namespace PiAgentGui.Views;
 
 public sealed partial class ConversationView
 {
+    private void OnDismissError(InfoBar sender, object args) => ViewModel?.DismissError();
+
     private bool errorDetailsOpen;
     private async void OnErrorDetails(object sender, RoutedEventArgs args)
     {

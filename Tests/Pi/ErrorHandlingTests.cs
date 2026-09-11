@@ -9,6 +9,29 @@ namespace PiAgentGui.Tests.Pi;
 [TestClass]
 public sealed class ErrorHandlingTests
 {
+#if DEBUG
+    [TestMethod]
+    public async Task ErrorPreviewUsesRealPresentationWithoutSendingOrRemovingAttachments()
+    {
+        var dispatcher = new QueuedUiDispatcher();
+        var session = new FakeConversationSession();
+        await using var model = new ConversationViewModel(session, dispatcher);
+        await model.InitializeAsync(); dispatcher.Drain();
+        model.AddScreenshot(new ChatImage("aGVsbG8="));
+        model.Draft = "/test-error";
+        await model.SendCommand.ExecuteAsync();
+        Assert.IsTrue(model.HasInlineError);
+        Assert.AreEqual("Provider limit reached", model.ErrorTitle);
+        StringAssert.Contains(model.ErrorDiagnosticReport, "UI PREVIEW");
+        Assert.IsTrue(model.HasPendingImages);
+        Assert.AreEqual(0, session.Sent.Count);
+        Assert.AreEqual(0, session.Steered.Count);
+        model.Draft = "/test-error clear";
+        await model.SendCommand.ExecuteAsync();
+        Assert.IsFalse(model.HasError);
+        Assert.AreEqual(0, session.Sent.Count);
+    }
+#endif
     [DataTestMethod]
     [DataRow("Pi did not acknowledge the request. Its acceptance is uncertain", "acknowledgement-timeout")]
     [DataRow("401 Unauthorized", "authentication")]

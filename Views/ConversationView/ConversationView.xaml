@@ -125,21 +125,14 @@
                     </Border>
         </DataTemplate>
     </UserControl.Resources>
-    <Grid x:Name="Root" RowSpacing="4">
+    <Grid x:Name="Root">
+    <Grid RowSpacing="4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0">
-            <InfoBar IsOpen="{Binding HasInlineError}" Severity="Error" IsClosable="False"
-                Title="{Binding ErrorTitle}" Message="{Binding Error}">
-                <InfoBar.ActionButton><controls:ActionButton Content="Details" Click="OnErrorDetails" ToolTipService.ToolTip="Recovery guidance and copyable diagnostics"/></InfoBar.ActionButton>
-            </InfoBar>
-            <InfoBar IsOpen="{Binding HasInlineWarning}" Severity="Warning" IsClosable="False"
-                Title="Extension notice" Message="{Binding Warning}" />
-        </StackPanel>
         <StackPanel Grid.Row="1" Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center"
             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibility}}">
             <ProgressRing Width="32" Height="32" IsActive="{Binding IsLoading}"
@@ -461,5 +454,14 @@
                 </controls:ActionButton>
             </Grid>
         </Grid>
+    </Grid>
+    <StackPanel VerticalAlignment="Top">
+        <InfoBar IsOpen="{Binding HasInlineError}" Severity="Error" IsClosable="True" CloseButtonClick="OnDismissError"
+            Title="{Binding ErrorTitle}" Message="{Binding Error}">
+            <InfoBar.ActionButton><controls:ActionButton Content="Details" Click="OnErrorDetails" ToolTipService.ToolTip="Recovery guidance and copyable diagnostics"/></InfoBar.ActionButton>
+        </InfoBar>
+        <InfoBar IsOpen="{Binding HasInlineWarning}" Severity="Warning" IsClosable="False"
+            Title="Extension notice" Message="{Binding Warning}" />
+    </StackPanel>
     </Grid>
 </UserControl>

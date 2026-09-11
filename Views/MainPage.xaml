@@ -288,7 +288,7 @@
                             <TextBlock Text="{x:Bind GitHub.HeaderLabel, Mode=OneWay}" FontSize="12" />
                         </StackPanel>
                     </controls:ActionButton>
-                    <controls:ActionSplitButton Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center"
+                    <controls:ActionSplitButton Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Height="32"
                         IsEnabled="{x:Bind OpenIn.CanOpen, Mode=OneWay}" Click="OnOpenInClicked"
                         AutomationProperties.Name="{x:Bind OpenIn.Label, Mode=OneWay}" ToolTipService.ToolTip="Open the project folder">
                         <StackPanel Orientation="Horizontal" Spacing="7">
@@ -299,7 +299,7 @@
                             <MenuFlyout x:Name="OpenInMenu" Opening="OnOpenInMenuOpening" />
                         </controls:ActionSplitButton.Flyout>
                     </controls:ActionSplitButton>
-                    <controls:ActionButton Grid.Column="3" Margin="8,0,0,0" Padding="8,5" MinWidth="32" MinHeight="32"
+                    <controls:ActionButton Grid.Column="3" Margin="8,0,0,0" Padding="8,5" MinWidth="32" MinHeight="32" Height="32"
                         VerticalAlignment="Center" ToolTipService.ToolTip="More actions"
                         AutomationProperties.Name="More actions">
                         <FontIcon Glyph="&#xE712;" FontSize="15" />

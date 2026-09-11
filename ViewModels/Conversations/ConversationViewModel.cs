@@ -219,6 +219,18 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         {
             if (!CanSend) return;
             var submitted = Draft;
+#if DEBUG
+            // Temporary local UI preview. Never send these commands to the agent.
+            if (submitted.Trim() is "/test-error" or "/test-error clear")
+            {
+                if (submitted.Trim() == "/test-error clear") SetError("");
+                else SetError("UI preview: 429 rate limit exceeded. The provider temporarily refused this request. No model request was made.",
+                    "UI PREVIEW — simulated error\n" + Utilities.ErrorDiagnostics.Create(new InvalidOperationException("Simulated provider limit")));
+                Draft = "";
+                NotifyState();
+                return;
+            }
+#endif
             var images = PendingImages.ToArray();
             if (await HandlePendingSendAsync(submitted, images)) return;
             if (images.Length == 0 && HandleComposerCommand is { } handler && await handler(submitted)) return;
@@ -309,6 +321,14 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         NotifyState();
         try { await Task.Run(operation); }
         finally { busy = false; NotifyState(); dispatcher.Post(TryDispatchQueued); }
+    }
+
+    /// <summary>Dismisses the current inline error without affecting the active run or pending messages.</summary>
+    public void DismissError()
+    {
+        if (!HasInlineError) return;
+        SetError("");
+        NotifyState();
     }
 
     private void ReportError(Exception exception)
