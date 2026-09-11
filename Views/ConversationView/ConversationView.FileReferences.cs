@@ -87,16 +87,18 @@ public sealed partial class ConversationView
     {
         if (FileReferenceList.SelectedItem is FileReference file) InsertFileReference(file.Path);
     }
-    private void InsertFileReference(string path)
+    private void InsertFileReference(string path, int? selectionStart = null, int selectionLength = 0)
     {
         var token = fileToken;
-        if (token is null) return;
+        if (token is null && selectionStart is null) return;
+        var start = token?.Start ?? selectionStart!.Value;
+        var length = token?.Length ?? selectionLength;
         var text = Composer.Text;
         DismissFileReferences();
         var label = ViewModel!.FileReferences.Add(path);
-        var reference = "@" + label + " ";
-        Composer.Text = text.Remove(token.Start, token.Length).Insert(token.Start, reference);
-        Composer.Select(token.Start + reference.Length, 0);
+        var reference = (start > 0 && !char.IsWhiteSpace(text[start - 1]) ? " " : "") + "@" + label + " ";
+        Composer.Text = text.Remove(start, length).Insert(start, reference);
+        Composer.Select(start + reference.Length, 0);
         Composer.Focus(FocusState.Programmatic);
     }
     private async void OnBrowseReference(object sender, RoutedEventArgs args)
@@ -104,11 +106,13 @@ public sealed partial class ConversationView
         var owner = ViewModel;
         var text = Composer.Text;
         var token = fileToken;
+        var selectionStart = Composer.SelectionStart;
+        var selectionLength = Composer.SelectionLength;
         try
         {
             var path = await new FileReferencePicker().PickAsync(XamlRoot);
             if (path is not null && ReferenceEquals(owner, ViewModel) && text == Composer.Text && token == fileToken)
-                InsertFileReference(path);
+                InsertFileReference(path, selectionStart, selectionLength);
         }
         catch (Exception) { owner?.ReportAttachmentError("Couldn't open the file picker. Try again."); }
     }

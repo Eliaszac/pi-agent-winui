@@ -1,5 +1,11 @@
 ## Product purpose
 
+- 2026-09-11: Keep approval, model and effort adjacent in a compact left-aligned group; put flexible space after effort, before the far-right Send/Stop actions.
+
+- 2026-09-11: Composer toolbar has no plus/attachment action or approval glyph. Selectors read `Approval: <mode>` and `Effort: <level>`. Selector widths must remain stable when dropdowns open.
+
+- 2026-09-11: Composer follows the supplied compact chat reference: one rounded neutral surface, borderless multiline draft above an internal toolbar, plus/file action and approval left, model/effort and neutral circular Send/Stop right. Narrow widths wrap the toolbar. Speech input is explicitly deferred.
+
 A native Windows frontend for Pi that organizes coding conversations by named working directory.
 
 ## Primary user

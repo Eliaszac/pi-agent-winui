@@ -6,8 +6,17 @@
     xmlns:controls="using:PiAgentGui.Controls"
     FontSize="13" Loaded="OnLoaded" Unloaded="OnUnloaded">
     <UserControl.Resources>
+        <Style x:Key="ComposerSelectorStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="6,4,0,4"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
         <Style x:Key="ComposerActionStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+            <Setter Property="Foreground" Value="{ThemeResource ApplicationPageBackgroundThemeBrush}" />
             <Setter Property="UseSystemFocusVisuals" Value="True" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -18,23 +27,23 @@
                                     <VisualState x:Name="Normal" />
                                     <VisualState x:Name="PointerOver">
                                         <VisualState.Setters>
-                                            <Setter Target="Circle.Fill" Value="{ThemeResource AccentFillColorSecondaryBrush}" />
+                                            <Setter Target="Circle.Fill" Value="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Pressed">
                                         <VisualState.Setters>
-                                            <Setter Target="Circle.Fill" Value="{ThemeResource AccentFillColorTertiaryBrush}" />
+                                            <Setter Target="Circle.Fill" Value="{ThemeResource TextFillColorTertiaryBrush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Disabled">
                                         <VisualState.Setters>
-                                            <Setter Target="Circle.Fill" Value="{ThemeResource AccentFillColorDisabledBrush}" />
-                                            <Setter Target="Icon.Foreground" Value="{ThemeResource TextOnAccentFillColorDisabledBrush}" />
+                                            <Setter Target="Circle.Fill" Value="{ThemeResource ControlFillColorDisabledBrush}" />
+                                            <Setter Target="Icon.Foreground" Value="{ThemeResource TextFillColorDisabledBrush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                 </VisualStateGroup>
                             </VisualStateManager.VisualStateGroups>
-                            <Ellipse x:Name="Circle" Margin="1" Fill="{ThemeResource AccentFillColorDefaultBrush}" />
+                            <Ellipse x:Name="Circle" Margin="1" Fill="{ThemeResource TextFillColorPrimaryBrush}" />
                             <ContentPresenter x:Name="Icon" Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
@@ -389,66 +398,78 @@
                 </Border>
             </StackPanel>
             </StackPanel>
-            <TextBox x:Name="Composer" Grid.Row="1" Text="{Binding Draft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            <Border Grid.Row="1" Grid.RowSpan="2" CornerRadius="20" Padding="8"
+                Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+            <Grid RowSpacing="8">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <TextBox x:Name="Composer" Text="{Binding Draft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 Paste="OnComposerPaste"
                 TextChanged="OnComposerTextChanged" SelectionChanged="OnComposerSelectionChanged" PreviewKeyDown="OnComposerPreviewKeyDown"
                 TextCompositionStarted="OnCompositionStarted" TextCompositionEnded="OnCompositionEnded"
                 KeyboardAcceleratorPlacementMode="Hidden"
                 PlaceholderText="Message Pi…" AutomationProperties.Name="Message Pi" AcceptsReturn="True"
-                FontSize="13" TextWrapping="Wrap" MinHeight="80" MaxHeight="184" VerticalContentAlignment="Top" Padding="11,9,104,9">
+                FontSize="14" TextWrapping="Wrap" MinHeight="48" MaxHeight="184" VerticalContentAlignment="Top" Padding="4,6"
+                Background="Transparent" BorderThickness="0">
+                <TextBox.Resources>
+                    <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent"/>
+                </TextBox.Resources>
                 <TextBox.KeyboardAccelerators>
                     <KeyboardAccelerator Key="Enter" ScopeOwner="{x:Bind Composer}" Invoked="OnSendInvoked" />
                     <KeyboardAccelerator Key="Enter" Modifiers="Control" ScopeOwner="{x:Bind Composer}" Invoked="OnNewLineInvoked" />
                 </TextBox.KeyboardAccelerators>
             </TextBox>
-            <controls:ComposerActionButton Grid.Row="1" Command="{Binding ComposerActionCommand}" IsEnabled="{Binding CanUseComposerAction}"
-                AutomationProperties.Name="{Binding ComposerActionLabel}" ToolTipService.ToolTip="{Binding ComposerActionLabel}"
-                Style="{StaticResource ComposerActionStyle}" Width="32" Height="32" MinWidth="32" MinHeight="32"
-                Padding="0" CornerRadius="16" BorderThickness="0" UseLayoutRounding="True"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,10">
-                <controls:ComposerActionIcon IsRunning="{Binding ComposerShowsStop}" />
-            </controls:ComposerActionButton>
-            <controls:ComposerActionButton Grid.Row="1" Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}"
-                Visibility="{Binding ShowSeparateStop, Converter={StaticResource BooleanToVisibility}}"
-                AutomationProperties.Name="Stop" ToolTipService.ToolTip="Stop" Style="{StaticResource ComposerActionStyle}"
-                Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0" CornerRadius="16" BorderThickness="0"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,58,10">
-                <controls:ComposerActionIcon IsRunning="True" />
-            </controls:ComposerActionButton>
-            <Grid Grid.Row="2" ColumnSpacing="12" Margin="0,8,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <controls:ActionComboBox x:Name="ModelSelector" FontSize="13" MinHeight="30" Padding="11,4,0,5" Loaded="OnModelSelectorLoaded"
-                    SelectionChanged="OnModelSelectionChanged"
-                    IsEnabled="{Binding CanChangeModel}" PlaceholderText="Select model" AutomationProperties.Name="Model"
-                    HorizontalAlignment="Stretch" MinWidth="0" />
-                <controls:ActionComboBox x:Name="ThinkingSelector" FontSize="13" MinHeight="30" Padding="11,4,0,5" Grid.Column="1" Loaded="OnThinkingSelectorLoaded"
-                    SelectionChanged="OnThinkingSelectionChanged" IsEnabled="{Binding CanChangeThinkingLevel}"
-                    PlaceholderText="Effort" AutomationProperties.Name="Reasoning effort" ToolTipService.ToolTip="Reasoning effort">
-                    <controls:ActionComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock><Run Text="Effort: " /><Run Text="{Binding}" /></TextBlock>
-                        </DataTemplate>
-                    </controls:ActionComboBox.ItemTemplate>
-                </controls:ActionComboBox>
-                <controls:ActionComboBox x:Name="ApprovalSelector" FontSize="13" MinHeight="30" Padding="11,4,0,5" Grid.Column="2" Loaded="OnApprovalSelectorLoaded"
-                    SelectionChanged="OnApprovalSelectionChanged" IsEnabled="{Binding CanChangeApprovalMode}"
-                    PlaceholderText="Choose approval mode" AutomationProperties.Name="Approval mode"
-                    Visibility="{Binding HasApprovalModes, Converter={StaticResource BooleanToVisibility}}">
-                    <controls:ActionComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock><Run Text="Approval: " /><Run Text="{Binding}" /></TextBlock>
-                        </DataTemplate>
-                    </controls:ActionComboBox.ItemTemplate>
-                </controls:ActionComboBox>
-                <controls:ActionButton Grid.Column="2" Click="OnApprovalSetupClicked" HorizontalAlignment="Left" AutomationProperties.Name="Set up approval modes"
-                    ToolTipService.ToolTip="{Binding ApprovalStatus}"
-                    Visibility="{Binding ShowApprovalSetup, Converter={StaticResource BooleanToVisibility}}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="Approval" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <FontIcon Glyph="&#xE70D;" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </StackPanel>
-                </controls:ActionButton>
+            <Grid x:Name="ComposerToolbar" Grid.Row="1" ColumnSpacing="4" RowSpacing="4" SizeChanged="OnComposerToolbarSizeChanged">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <controls:ActionComboBox x:Name="ApprovalSelector" Style="{StaticResource ComposerSelectorStyle}" Width="132"
+                        Loaded="OnApprovalSelectorLoaded" SelectionChanged="OnApprovalSelectionChanged" IsEnabled="{Binding CanChangeApprovalMode}"
+                        PlaceholderText="Approval" AutomationProperties.Name="Approval mode" ToolTipService.ToolTip="Approval mode"
+                        Visibility="{Binding HasApprovalModes, Converter={StaticResource BooleanToVisibility}}">
+                        <controls:ActionComboBox.ItemTemplate><DataTemplate>
+                            <TextBlock><Run Text="Approval: "/><Run Text="{Binding}"/></TextBlock>
+                        </DataTemplate></controls:ActionComboBox.ItemTemplate>
+                    </controls:ActionComboBox>
+                    <controls:ActionButton Click="OnApprovalSetupClicked" Background="Transparent" BorderThickness="0" Padding="8,4"
+                        AutomationProperties.Name="Set up approval modes" ToolTipService.ToolTip="{Binding ApprovalStatus}"
+                        Visibility="{Binding ShowApprovalSetup, Converter={StaticResource BooleanToVisibility}}" Content="Approval"/>
+                </StackPanel>
+                <Grid x:Name="ComposerModelActions" Grid.Column="1" ColumnSpacing="4" HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <controls:ActionComboBox x:Name="ModelSelector" Style="{StaticResource ComposerSelectorStyle}" Width="220"
+                        Loaded="OnModelSelectorLoaded" SelectionChanged="OnModelSelectionChanged" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        IsEnabled="{Binding CanChangeModel}" PlaceholderText="Select model" AutomationProperties.Name="Model" ToolTipService.ToolTip="{Binding SelectedModel.DisplayName}">
+                        <controls:ActionComboBox.ItemTemplate><DataTemplate>
+                            <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate></controls:ActionComboBox.ItemTemplate>
+                    </controls:ActionComboBox>
+                    <controls:ActionComboBox x:Name="ThinkingSelector" Grid.Column="1" Style="{StaticResource ComposerSelectorStyle}" Width="112"
+                        Loaded="OnThinkingSelectorLoaded" SelectionChanged="OnThinkingSelectionChanged" IsEnabled="{Binding CanChangeThinkingLevel}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" PlaceholderText="Effort" AutomationProperties.Name="Reasoning effort" ToolTipService.ToolTip="Reasoning effort">
+                        <controls:ActionComboBox.ItemTemplate><DataTemplate>
+                            <TextBlock><Run Text="Effort: "/><Run Text="{Binding}"/></TextBlock>
+                        </DataTemplate></controls:ActionComboBox.ItemTemplate>
+                    </controls:ActionComboBox>
+                    <controls:ComposerActionButton Grid.Column="3" Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}"
+                        Visibility="{Binding ShowSeparateStop, Converter={StaticResource BooleanToVisibility}}"
+                        AutomationProperties.Name="Stop" ToolTipService.ToolTip="Stop" Style="{StaticResource ComposerActionStyle}"
+                        Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0" CornerRadius="16" BorderThickness="0">
+                        <controls:ComposerActionIcon IsRunning="True"/>
+                    </controls:ComposerActionButton>
+                    <controls:ComposerActionButton Grid.Column="4" Command="{Binding ComposerActionCommand}" IsEnabled="{Binding CanUseComposerAction}"
+                        AutomationProperties.Name="{Binding ComposerActionLabel}" ToolTipService.ToolTip="{Binding ComposerActionLabel}"
+                        Style="{StaticResource ComposerActionStyle}" Width="32" Height="32" MinWidth="32" MinHeight="32"
+                        Padding="0" CornerRadius="16" BorderThickness="0" UseLayoutRounding="True">
+                        <controls:ComposerActionIcon IsRunning="{Binding ComposerShowsStop}"/>
+                    </controls:ComposerActionButton>
+                </Grid>
             </Grid>
+            </Grid>
+            </Border>
         </Grid>
     </Grid>
     <StackPanel VerticalAlignment="Top">
