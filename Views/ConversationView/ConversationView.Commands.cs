@@ -44,7 +44,8 @@ public sealed partial class ConversationView
     {
         if (pickerUpdateQueued) return;
         pickerUpdateQueued = true;
-        DispatcherQueue.TryEnqueue(() => { pickerUpdateQueued = false; UpdatePicker(); UpdateFileReferences(); });
+        if (!DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            () => { pickerUpdateQueued = false; if (!IsLoaded) return; UpdatePicker(); UpdateFileReferences(); })) pickerUpdateQueued = false;
     }
 
     private void UpdatePicker()
@@ -54,8 +55,11 @@ public sealed partial class ConversationView
         if (commandToken is null || ViewModel is not { IsReady: true })
         {
             if (CommandPanel.Visibility == Visibility.Visible) commandOwner = null;
-            CommandPanel.Visibility = Visibility.Collapsed;
-            RefreshCommandSurface();
+            if (CommandPanel.Visibility != Visibility.Collapsed)
+            {
+                CommandPanel.Visibility = Visibility.Collapsed;
+                RefreshCommandSurface();
+            }
             if (commandToken is null) dismissedToken = null;
             return;
         }

@@ -1,0 +1,49 @@
+<UserControl x:Class="PiAgentGui.Views.GettingStartedCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls">
+    <Border Padding="10" Margin="0,0,0,6" CornerRadius="8" BorderThickness="1"
+        Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+        Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibility}}">
+        <StackPanel Spacing="6">
+            <StackPanel Spacing="8" Visibility="{Binding ShowProviderSetup, Converter={StaticResource BooleanToVisibility}}">
+                <TextBlock Text="{Binding ProviderTitle}" FontSize="12" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding ProviderMessage}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <controls:ActionButton Click="OnProviders" Margin="0,4,0,0" Padding="10,8" CornerRadius="6"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding ProviderAction}">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE77B;" FontSize="13" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ProviderAction}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="10" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </Grid>
+                </controls:ActionButton>
+            </StackPanel>
+            <StackPanel Spacing="6" Visibility="{Binding ShowRecommendations, Converter={StaticResource BooleanToVisibility}}">
+                <controls:ActionExpander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0">
+                    <Expander.Header><TextBlock Text="{Binding ExtensionTitle}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/></Expander.Header>
+                    <Border Margin="8,0,0,4" Padding="8,0,0,0" BorderThickness="1,0,0,0" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
+                    <ScrollViewer MaxHeight="180" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Missing}">
+                            <ItemsControl.ItemTemplate><DataTemplate>
+                                <controls:ActionButton Click="OnSetup" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                    Background="Transparent" BorderThickness="0" CornerRadius="4" Margin="0,1" MinHeight="30" Padding="6,7"
+                                    AutomationProperties.Name="{Binding Definition.Name}" ToolTipService.ToolTip="Open extension setup">
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Definition.Name}" TextWrapping="Wrap" FontSize="11" VerticalAlignment="Center"/>
+                                        <FontIcon Grid.Column="1" Glyph="&#xE76C;" FontSize="9" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </Grid>
+                                </controls:ActionButton>
+                            </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    </Border>
+                </controls:ActionExpander>
+                <controls:ActionButton Content="Dismiss suggestions" Command="{Binding DismissCommand}" FontSize="11" Padding="6,3" Background="Transparent" BorderThickness="0" HorizontalAlignment="Left"/>
+            </StackPanel>
+            <TextBlock Text="{Binding Error}" FontSize="11" TextWrapping="Wrap"
+                Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibility}}"/>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -32,6 +32,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     private bool connected;
     private bool isViewed;
     public event Action? ViewedRunCompleted;
+    public Func<bool>? TryOpenProviderSetup { get; set; }
     private bool unseenCompletion;
     private readonly HashSet<string> runEntryIds = [];
     private bool trackingRun;
@@ -110,9 +111,21 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         get => draft;
         set
         {
+            var couldSend = CanSend;
+            var showedStop = ComposerShowsStop;
+            var separateStop = ShowSeparateStop;
+            var action = ComposerActionCommand;
+            var label = ComposerActionLabel;
+            var couldUseAction = CanUseComposerAction;
+            var steering = IsSteeringDraft;
             if (!SetProperty(ref draft, value)) return;
-            OnPropertyChanged(nameof(CanSend));
-            NotifyQueue();
+            if (couldSend != CanSend) OnPropertyChanged(nameof(CanSend));
+            if (showedStop != ComposerShowsStop) OnPropertyChanged(nameof(ComposerShowsStop));
+            if (separateStop != ShowSeparateStop) OnPropertyChanged(nameof(ShowSeparateStop));
+            if (action != ComposerActionCommand) OnPropertyChanged(nameof(ComposerActionCommand));
+            if (label != ComposerActionLabel) OnPropertyChanged(nameof(ComposerActionLabel));
+            if (couldUseAction != CanUseComposerAction) OnPropertyChanged(nameof(CanUseComposerAction));
+            if (steering != IsSteeringDraft) OnPropertyChanged(nameof(IsSteeringDraft));
         }
     }
     public string Status => status;
@@ -240,6 +253,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (images.Length == 0 && HandleComposerCommand is { } handler && await handler(submitted)) return;
             if (images.Length > 0 && submitted.TrimStart().StartsWith('/'))
                 throw new InvalidOperationException("Send screenshots with a message rather than a slash command.");
+            if (TryOpenProviderSetup?.Invoke() == true) return;
             await ExecuteAsync(async () =>
             {
                 await session.SendAsync(FileReferences.Expand(submitted), images).ConfigureAwait(false);

@@ -27,6 +27,13 @@ public sealed partial class MainPage : Page
     public ViewModels.Processes.ProcessesPanelViewModel Processes { get; }
     public ViewModels.SourceControl.SourceControlViewModel SourceControl { get; }
     public ViewModels.Conversations.CapabilitiesPanelViewModel Capabilities { get; } = new();
+    public GettingStartedViewModel GettingStarted { get; }
+    private void OnGettingStartedProviders(object? sender, EventArgs args) => ViewModel.OpenProviders();
+    private void OnWelcomeSizeChanged(object sender, SizeChangedEventArgs args)
+    {
+        if (WelcomeContent is not null) WelcomeContent.Width = Math.Max(0, Math.Min(600, args.NewSize.Width - 56));
+        if (WelcomeViewport is not null) WelcomeViewport.MinHeight = args.NewSize.Height;
+    }
     private readonly DispatcherTimer sourceControlTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer processesTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private double terminalWidth = 400;
@@ -45,6 +52,8 @@ public sealed partial class MainPage : Page
         ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts, Services.Pi.CapabilityImportServices imports)
     {
         ViewModel = viewModel;
+        GettingStarted = new(viewModel.Providers!, viewModel.Extensions,
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "onboarding.json"));
         OpenIn = openIn;
         GitHub = github;
         Terminals = terminals;
@@ -59,6 +68,9 @@ public sealed partial class MainPage : Page
         this.picker = picker;
         InitializeComponent();
         CapabilitiesPane.DataContext = Capabilities;
+        GettingStartedPane.DataContext = GettingStarted;
+        GettingStartedPane.ProvidersRequested += (_, _) => ViewModel.OpenProviders();
+        Unloaded += (_, _) => GettingStarted.Dispose();
         CapabilitiesPane.Imports = imports;
         CapabilitiesPane.PickSkillFolder = picker.PickAsync;
         Capabilities.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Capabilities.IsOpen)) UpdateTerminalLayout(); };
@@ -136,6 +148,7 @@ public sealed partial class MainPage : Page
         if (initialized) return;
         initialized = true;
         await ViewModel.LoadAsync();
+        _ = GettingStarted.InitializeAsync();
         await Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedProject?.Path);
         Files.SelectProject(ViewModel.SelectedProject?.Path);
         await OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);

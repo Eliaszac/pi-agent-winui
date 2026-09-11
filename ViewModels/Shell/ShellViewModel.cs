@@ -112,12 +112,18 @@ public sealed class ShellViewModel : ObservableObject
     /// <summary>Gets the selected working directory.</summary>
     public string WorkspacePath => selectedProject?.Path ?? "Projects and conversations, in one place.";
     /// <summary>Gets the main empty-state heading.</summary>
-    public string WelcomeTitle => selectedConversation is not null ? "A fresh conversation" : selectedProject is not null ? "Start a conversation" : "Start with a project";
+    public string WelcomeTitle => selectedProject?.Name ?? "Make room for your next idea.";
+    public IReadOnlyList<WelcomeConversation> RecentConversations => Projects
+        .Where(project => selectedProject is null || ReferenceEquals(project, selectedProject))
+        .SelectMany(project => project.Conversations.Where(conversation => !conversation.IsSettled)
+            .Select(conversation => new WelcomeConversation(project.Name, conversation)))
+        .OrderByDescending(item => item.Conversation.LastUsedAt).Take(4).ToArray();
+    public bool HasRecentConversations => RecentConversations.Count > 0;
     /// <summary>Gets context-sensitive workspace guidance.</summary>
     public string WelcomeDescription => selectedConversation is not null
         ? "Send a message to work with Pi in this project's folder."
-        : selectedProject is not null ? "Create a conversation to keep your work together in this project."
-        : "Give your project a name and choose the folder you want to work in.";
+        : selectedProject is not null ? "Pick up where you left off, or give Pi something new to work on."
+        : "Choose a folder. Start a conversation. Keep the work together.";
     /// <summary>Gets whether the welcome action creates a project.</summary>
     public bool ShowCreateProject => selectedProject is null;
     /// <summary>Gets whether the welcome action creates a conversation.</summary>
@@ -379,6 +385,8 @@ public sealed class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(WindowTitle));
         OnPropertyChanged(nameof(WorkspacePath));
         OnPropertyChanged(nameof(WelcomeTitle));
+        OnPropertyChanged(nameof(RecentConversations));
+        OnPropertyChanged(nameof(HasRecentConversations));
         OnPropertyChanged(nameof(WelcomeDescription));
         OnPropertyChanged(nameof(ShowCreateProject));
         OnPropertyChanged(nameof(ShowCreateConversation));

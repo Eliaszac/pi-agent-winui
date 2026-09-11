@@ -198,6 +198,7 @@
                         </StackPanel>
                     </ScrollViewer>
                     <StackPanel Grid.Row="2" Margin="12,8,4,12" Spacing="4">
+                    <views:GettingStartedCard x:Name="GettingStartedPane"/>
                     <controls:ActionButton Click="OnProvidersClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
                         <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE77B;" FontSize="15" /><TextBlock Text="Providers" FontSize="13.3" /></StackPanel>
                     </controls:ActionButton>
@@ -222,6 +223,11 @@
                         <FontIcon Glyph="&#xE710;" FontSize="16" />
                     </controls:ActionButton>
                     <StackPanel Grid.Row="3" Spacing="8">
+                    <controls:ActionButton Click="OnProvidersClicked" Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center"
+                        Visibility="{x:Bind GettingStarted.ShowProviderSetup, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
+                        AutomationProperties.Name="Provider setup" ToolTipService.ToolTip="{x:Bind GettingStarted.ProviderMessage, Mode=OneWay}">
+                        <FontIcon Glyph="&#xE946;" FontSize="16"/>
+                    </controls:ActionButton>
                     <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnProvidersClicked" AutomationProperties.Name="Providers" ToolTipService.ToolTip="Providers">
                         <FontIcon Glyph="&#xE77B;" FontSize="16" />
                     </controls:ActionButton>
@@ -364,25 +370,67 @@
                 IsActive="{x:Bind ViewModel.ShowInitialLoading, Mode=OneWay}"
                 Visibility="{x:Bind ViewModel.ShowInitialLoading, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
             <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SizeChanged="OnWelcomeSizeChanged"
                 Visibility="{x:Bind ViewModel.ShowWelcome, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
-                <StackPanel MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" Margin="0,48,0,32">
-                    <FontIcon Glyph="&#xE8B7;" FontSize="32" HorizontalAlignment="Left"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{x:Bind ViewModel.WelcomeTitle, Mode=OneWay}" FontSize="28" FontWeight="SemiBold" TextWrapping="Wrap" />
-                    <TextBlock Text="{x:Bind ViewModel.WelcomeDescription, Mode=OneWay}" TextWrapping="Wrap"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <controls:ActionButton Content="New project" Click="OnNewProjectClicked" Style="{StaticResource AccentButtonStyle}"
-                        IsEnabled="{x:Bind ViewModel.CanManageSidebar, Mode=OneWay}"
-                        Visibility="{x:Bind ViewModel.ShowCreateProject, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                    <controls:ActionButton Content="New conversation" Command="{x:Bind ViewModel.NewConversationCommand}"
-                        CommandParameter="{x:Bind ViewModel.SelectedProject, Mode=OneWay}" Style="{StaticResource AccentButtonStyle}"
-                        IsEnabled="{x:Bind ViewModel.CanManageSidebar, Mode=OneWay}"
-                        Visibility="{x:Bind ViewModel.ShowCreateConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                <Grid x:Name="WelcomeViewport">
+                <StackPanel x:Name="WelcomeContent" MaxWidth="600" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="28" Margin="0,24">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{x:Bind ViewModel.WelcomeTitle, Mode=OneWay}" FontSize="32" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{x:Bind ViewModel.WelcomeDescription, Mode=OneWay}" FontSize="14" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    <StackPanel Spacing="10">
+                        <controls:ActionButton Click="OnNewProjectClicked" Padding="16,14" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            IsEnabled="{x:Bind ViewModel.CanManageSidebar, Mode=OneWay}" Visibility="{x:Bind ViewModel.ShowCreateProject, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                            <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <FontIcon Glyph="&#xE8F4;" FontSize="20" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Create a project" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="Choose the folder you want to work in" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></StackPanel>
+                                <FontIcon Grid.Column="2" Glyph="&#xE72A;" FontSize="14" VerticalAlignment="Center"/>
+                            </Grid>
+                        </controls:ActionButton>
+                        <controls:ActionButton Command="{x:Bind ViewModel.NewConversationCommand}" CommandParameter="{x:Bind ViewModel.SelectedProject, Mode=OneWay}"
+                            Padding="16,14" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            IsEnabled="{x:Bind ViewModel.CanManageSidebar, Mode=OneWay}" Visibility="{x:Bind ViewModel.ShowCreateConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                            <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <FontIcon Glyph="&#xE710;" FontSize="18" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Start a conversation" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="Build a feature, investigate a bug, or explore the code" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></StackPanel>
+                                <FontIcon Grid.Column="2" Glyph="&#xE72A;" FontSize="14" VerticalAlignment="Center"/>
+                            </Grid>
+                        </controls:ActionButton>
+                        <controls:ActionButton Click="OnProvidersClicked" Padding="12,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            Visibility="{x:Bind GettingStarted.ShowProviderSetup, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                            <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel Spacing="3"><TextBlock Text="{x:Bind GettingStarted.ProviderAction, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"/><TextBlock Text="{x:Bind GettingStarted.ProviderMessage, Mode=OneWay}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></StackPanel>
+                                <FontIcon Grid.Column="1" Glyph="&#xE76C;" FontSize="12" VerticalAlignment="Center"/>
+                            </Grid>
+                        </controls:ActionButton>
+                    </StackPanel>
+                    <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.HasRecentConversations, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Text="Pick up where you left off" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.RecentConversations, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate><DataTemplate>
+                                <controls:ActionButton Command="{Binding OpenCommand}" Style="{StaticResource SidebarItemButtonStyle}" Padding="10,10" Margin="0,1">
+                                    <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE8F2;" FontSize="15" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding ProjectName}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></StackPanel>
+                                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="10" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </Grid>
+                                </controls:ActionButton>
+                            </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <Border BorderThickness="0,1,0,0" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" Padding="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <controls:ActionButton Click="OnProvidersClicked" Content="Providers" Background="Transparent" BorderThickness="0" FontSize="12"/>
+                            <controls:ActionButton Click="OnExtensionsClicked" Content="Extensions" Background="Transparent" BorderThickness="0" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
+                </Grid>
             </ScrollViewer>
             <Grid x:Name="ConversationBody" Grid.Row="2"
                 Visibility="{x:Bind ViewModel.HasConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
             <views:ConversationView ViewModel="{x:Bind ViewModel.Chat, Mode=OneWay}" ShellCommandRequested="OnShellCommandRequested"
+                GettingStarted="{x:Bind GettingStarted}" ProvidersRequested="OnGettingStartedProviders"
                 ApprovalSetupRequested="OnApprovalSetupRequested"
                 Visibility="{x:Bind ViewModel.HasConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
             </Grid>

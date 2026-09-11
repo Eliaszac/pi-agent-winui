@@ -8,6 +8,29 @@ namespace PiAgentGui.Tests.Projects;
 public sealed class ShellViewModelTests
 {
     [TestMethod]
+    public async Task WelcomeShowsFourRecentUnsettledConversationsAndOpensSelectedItem()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var conversations = Enumerable.Range(0, 7).Select(index => new ConversationDraft
+        {
+            Id = Guid.NewGuid(), Title = "Conversation " + index, CreatedAt = now.AddDays(-10),
+            LastUsedAt = now.AddMinutes(index), IsSettled = index == 6
+        }).ToArray();
+        var shell = new ShellViewModel(new InMemoryProjectRepository(new Project
+        {
+            Id = Guid.NewGuid(), Name = "Example", Path = @"C:\Example", Conversations = conversations
+        }));
+        await shell.LoadAsync();
+        Assert.IsTrue(shell.ShowWelcome);
+        Assert.AreEqual("Example", shell.WelcomeTitle);
+        CollectionAssert.AreEqual(new[] { "Conversation 5", "Conversation 4", "Conversation 3", "Conversation 2" }, shell.RecentConversations.Select(item => item.Title).ToArray());
+        shell.RecentConversations[0].OpenCommand.Execute(null);
+        Assert.IsTrue(shell.HasConversation);
+        Assert.AreEqual("Conversation 5", shell.WorkspaceTitle);
+        Assert.IsFalse(shell.ShowWelcome);
+    }
+
+    [TestMethod]
     public async Task HeaderRenameUpdatesSidebarAndWindowWithoutStartingSidebarEditor()
     {
         var shell = new ShellViewModel(new InMemoryProjectRepository(

@@ -7,6 +7,21 @@ namespace PiAgentGui.Views;
 
 public sealed partial class ConversationView : UserControl
 {
+    public static readonly DependencyProperty GettingStartedProperty = DependencyProperty.Register(nameof(GettingStarted),
+        typeof(ViewModels.Shell.GettingStartedViewModel), typeof(ConversationView), new PropertyMetadata(null));
+    public ViewModels.Shell.GettingStartedViewModel? GettingStarted
+    {
+        get => (ViewModels.Shell.GettingStartedViewModel?)GetValue(GettingStartedProperty);
+        set => SetValue(GettingStartedProperty, value);
+    }
+    public event EventHandler? ProvidersRequested;
+    private void OnConnectProvider(object sender, RoutedEventArgs args) => ProvidersRequested?.Invoke(this, EventArgs.Empty);
+    private bool TryOpenProviderSetup()
+    {
+        if (GettingStarted?.NeedsProvider != true || ProvidersRequested is null) return false;
+        ProvidersRequested.Invoke(this, EventArgs.Empty);
+        return true;
+    }
     public static readonly DependencyProperty ViewModelProperty = DependencyProperty.Register(
         nameof(ViewModel), typeof(ConversationViewModel), typeof(ConversationView), new PropertyMetadata(null, OnViewModelChanged));
     private ConversationViewModel? observed;
@@ -94,6 +109,7 @@ public sealed partial class ConversationView : UserControl
             observed.TranscriptChanged -= OnTranscriptChanged;
             observed.PropertyChanged -= OnPresentationChanged;
             observed.HandleComposerCommand = null;
+            observed.TryOpenProviderSetup = null;
         }
         observed = IsLoaded ? ViewModel : null;
         if (observed is not null)
@@ -101,6 +117,7 @@ public sealed partial class ConversationView : UserControl
             observed.TranscriptChanged += OnTranscriptChanged;
             observed.PropertyChanged += OnPresentationChanged;
             observed.HandleComposerCommand = HandleTypedCommandAsync;
+            observed.TryOpenProviderSetup = TryOpenProviderSetup;
         }
         SynchronizeModelSelector();
         SynchronizeThinkingSelector();
@@ -122,6 +139,7 @@ public sealed partial class ConversationView : UserControl
             observed.TranscriptChanged -= OnTranscriptChanged;
             observed.PropertyChanged -= OnPresentationChanged;
             observed.HandleComposerCommand = null;
+            observed.TryOpenProviderSetup = null;
         }
         observed = null;
         ResetCommands();

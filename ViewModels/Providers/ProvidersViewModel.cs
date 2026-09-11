@@ -9,6 +9,8 @@ public sealed class ProvidersViewModel(IProviderService service) : ObservableObj
     private IReadOnlyList<ProviderCardViewModel> cards = [];
     private bool busy;
     private string error = "";
+    public bool HasInventory { get; private set; }
+    public bool HasConfiguredProvider => Cards.Any(card => card.Provider.Configured);
     public IReadOnlyList<ProviderCardViewModel> Cards { get => cards; private set => SetProperty(ref cards, value); }
     public bool IsBusy { get => busy; private set { SetProperty(ref busy, value); OnPropertyChanged(nameof(CanInteract)); } }
     public bool CanInteract => !IsBusy;
@@ -33,6 +35,15 @@ public sealed class ProvidersViewModel(IProviderService service) : ObservableObj
             var result = await Task.Run(() => service.RunAsync(action, card?.Id, method, prompt, notify, cancellationToken), cancellationToken);
             Cards = result.OrderByDescending(provider => provider.Configured).ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(provider => new ProviderCardViewModel(provider)).ToArray();
+            HasInventory = true;
+            OnPropertyChanged(nameof(HasInventory));
+            OnPropertyChanged(nameof(HasConfiguredProvider));
+        }
+        catch
+        {
+            HasInventory = false;
+            OnPropertyChanged(nameof(HasInventory));
+            throw;
         }
         finally { IsBusy = false; }
     }

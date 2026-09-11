@@ -17,13 +17,16 @@ public sealed partial class ConversationView
     private async void UpdateFileReferences()
     {
         if (FileReferencePanel is null) return;
+        if (composing) return;
+        var nextToken = FileReferenceToken.Find(Composer.Text, Composer.SelectionStart, Composer.SelectionLength);
+        if (nextToken == fileToken && (nextToken is null || FileReferencePanel.Visibility == Visibility.Visible)) return;
         fileSearchLifetime?.Cancel();
-        fileToken = FileReferenceToken.Find(Composer.Text, Composer.SelectionStart, Composer.SelectionLength);
+        fileToken = nextToken;
         var token = fileToken;
         var owner = ViewModel;
         if (token is null || owner is not { IsReady: true } || composing)
         {
-            FileReferencePanel.Visibility = Visibility.Collapsed;
+            if (FileReferencePanel.Visibility != Visibility.Collapsed) FileReferencePanel.Visibility = Visibility.Collapsed;
             if (token is null) dismissedFileToken = null;
             return;
         }
