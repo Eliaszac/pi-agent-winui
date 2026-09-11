@@ -49,6 +49,23 @@ public sealed class ProjectPersistenceTests
     }
 
     [TestMethod]
+    public async Task ScriptsPersistAlongsideConcurrentCatalogChanges()
+    {
+        var repository = new JsonProjectRepository(options);
+        var project = await new ProjectService(repository).CreateAsync("Scripts", workingDirectory,
+            JsonSerializer.SerializeToElement(new { custom = "keep" }));
+        var script = new PiAgentGui.Models.Projects.ProjectScript(Guid.NewGuid(), "Tests", "dotnet test");
+        await repository.AddConversationAsync(project.Id);
+        await repository.UpdateScriptsAsync(project.Id, new() { Scripts = [script], SelectedId = script.Id });
+        await repository.RenameProjectAsync(project.Id, "Renamed");
+        var saved = (await new JsonProjectRepository(options).GetAllAsync()).Single();
+        Assert.AreEqual("Renamed", saved.Name);
+        Assert.AreEqual(1, saved.Conversations.Count);
+        Assert.AreEqual("keep", saved.Metadata.GetProperty("custom").GetString());
+        Assert.AreEqual(script, PiAgentGui.Utilities.ProjectScripts.Read(saved.Metadata).Scripts.Single());
+    }
+
+    [TestMethod]
     public void LegacyConversationTitlesAreProtected()
     {
         var conversation = JsonSerializer.Deserialize<PiAgentGui.Models.Projects.ConversationDraft>(
@@ -236,7 +253,7 @@ public sealed class ProjectPersistenceTests
     }
 
     [TestMethod]
-    public async Task CompetingWriterFailsWithoutChangingCatalog()
+    public async Task PersistentlyLockedCatalogTimesOutWithoutChangingData()
     {
         var repository = new JsonProjectRepository(options);
         var project = await new ProjectService(repository).CreateAsync("Example", workingDirectory);
@@ -247,6 +264,37 @@ public sealed class ProjectPersistenceTests
                 project.Id, JsonSerializer.SerializeToElement(new { changed = true })));
         }
         Assert.AreEqual(before, await File.ReadAllTextAsync(options.CatalogPath));
+    }
+
+    [TestMethod]
+    public async Task BriefCatalogContentionWaitsThenCompletesReadAndWrite()
+    {
+        var repository = new JsonProjectRepository(options);
+        var project = await new ProjectService(repository).CreateAsync("Example", workingDirectory);
+        Task<IReadOnlyList<PiAgentGui.Models.Projects.Project>> read;
+        Task write;
+        using (var held = new FileStream(options.CatalogPath + ".lock", FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            read = new JsonProjectRepository(options).GetAllAsync();
+            write = repository.RenameProjectAsync(project.Id, "Updated");
+            Assert.IsFalse(read.IsCompleted);
+            Assert.IsFalse(write.IsCompleted);
+        }
+        await Task.WhenAll(read, write).WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.AreEqual(1, read.Result.Count);
+        Assert.AreEqual("Updated", (await repository.GetAllAsync()).Single().Name);
+    }
+
+    [TestMethod]
+    public async Task WaitingForCatalogLockCanBeCancelled()
+    {
+        var repository = new JsonProjectRepository(options);
+        await new ProjectService(repository).CreateAsync("Example", workingDirectory);
+        using var held = new FileStream(options.CatalogPath + ".lock", FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var cancellation = new CancellationTokenSource();
+        var pending = repository.GetAllAsync(cancellation.Token);
+        cancellation.Cancel();
+        await Assert.ThrowsExceptionAsync<TaskCanceledException>(async () => await pending);
     }
 
     [DataTestMethod]

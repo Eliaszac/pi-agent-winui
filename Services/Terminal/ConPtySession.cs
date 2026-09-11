@@ -6,7 +6,7 @@ using System.Threading.Channels;
 namespace PiAgentGui.Services.Terminal;
 
 /// <summary>Owns one interactive shell and its Windows pseudoconsole. Native I/O stays off the UI thread.</summary>
-public sealed class ConPtySession(string directory) : ITerminalSession
+public sealed class ConPtySession(string directory, string? command = null) : ITerminalSession
 {
     private readonly SemaphoreSlim lifecycle = new(1, 1);
     private readonly Channel<string> input = Channel.CreateBounded<string>(new BoundedChannelOptions(128) { SingleReader = true });
@@ -66,7 +66,8 @@ public sealed class ConPtySession(string directory) : ITerminalSession
                     var startup = new ConPtyNative.StartupInfoEx { Startup = new() { Size = Marshal.SizeOf<ConPtyNative.StartupInfoEx>() }, Attributes = attributes };
                     var shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "7", "pwsh.exe");
                     if (!File.Exists(shell)) shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
-                    if (!ConPtyNative.CreateProcessW(shell, new StringBuilder($"\"{shell}\" -NoLogo"), 0, 0, false, 0x00080000, 0, directory, ref startup, out var child)) throw new Win32Exception();
+                    var arguments = command is null ? "-NoLogo" : "-NoLogo -NoProfile -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
+                    if (!ConPtyNative.CreateProcessW(shell, new StringBuilder($"\"{shell}\" {arguments}"), 0, 0, false, 0x00080000, 0, directory, ref startup, out var child)) throw new Win32Exception();
                     process = child.Process;
                     ConPtyNative.CloseHandle(child.Thread);
                 }

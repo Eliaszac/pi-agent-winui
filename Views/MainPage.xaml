@@ -269,6 +269,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <controls:ActionButton Command="{x:Bind ViewModel.HeaderRename.BeginCommand, Mode=OneWay}" HorizontalAlignment="Left"
                         Padding="4,2" MinHeight="36" Background="Transparent" BorderThickness="0" IsEnabled="{x:Bind ViewModel.HasConversation, Mode=OneWay}"
@@ -289,6 +290,14 @@
                         </StackPanel>
                     </controls:ActionButton>
                     <controls:ActionSplitButton Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Height="32"
+                        Click="OnRunScriptClicked" AutomationProperties.Name="Run project script" ToolTipService.ToolTip="Run the selected project script">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <FontIcon Glyph="&#xE768;" FontSize="12" />
+                            <TextBlock Text="{x:Bind Scripts.Label, Mode=OneWay}" FontSize="12" MaxWidth="120" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <controls:ActionSplitButton.Flyout><MenuFlyout x:Name="ScriptsMenu" Opening="OnScriptsMenuOpening" /></controls:ActionSplitButton.Flyout>
+                    </controls:ActionSplitButton>
+                    <controls:ActionSplitButton Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" Height="32"
                         IsEnabled="{x:Bind OpenIn.CanOpen, Mode=OneWay}" Click="OnOpenInClicked"
                         AutomationProperties.Name="{x:Bind OpenIn.Label, Mode=OneWay}" ToolTipService.ToolTip="Open the project folder">
                         <StackPanel Orientation="Horizontal" Spacing="7">
@@ -299,7 +308,7 @@
                             <MenuFlyout x:Name="OpenInMenu" Opening="OnOpenInMenuOpening" />
                         </controls:ActionSplitButton.Flyout>
                     </controls:ActionSplitButton>
-                    <controls:ActionButton Grid.Column="3" Margin="8,0,0,0" Padding="8,5" MinWidth="32" MinHeight="32" Height="32"
+                    <controls:ActionButton Grid.Column="4" Margin="8,0,0,0" Padding="8,5" MinWidth="32" MinHeight="32" Height="32"
                         VerticalAlignment="Center" ToolTipService.ToolTip="More actions"
                         AutomationProperties.Name="More actions">
                         <FontIcon Glyph="&#xE712;" FontSize="15" />
@@ -333,6 +342,8 @@
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Visibility="{x:Bind ViewModel.HasLoaded, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <InfoBar x:Name="OpenInError" IsOpen="False" IsClosable="True" Severity="Warning" Title="Open in" />
+                <InfoBar x:Name="ScriptError" IsOpen="False" IsClosable="True" Severity="Error" Title="Project scripts" />
+                <InfoBar IsOpen="{x:Bind Scripts.HasError, Mode=OneWay}" IsClosable="False" Severity="Error" Title="Project scripts" Message="{x:Bind Scripts.Error, Mode=OneWay}" />
                 <InfoBar IsOpen="{x:Bind GitHub.HasError, Mode=OneWay}" IsClosable="False" Severity="Warning" Title="GitHub"
                     Message="{x:Bind GitHub.Error, Mode=OneWay}">
                     <InfoBar.ActionButton>

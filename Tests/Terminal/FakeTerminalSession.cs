@@ -5,7 +5,8 @@ namespace PiAgentGui.Tests.Terminal;
 public sealed class FakeTerminalSession : ITerminalSession
 {
     public event Action<string>? Output { add { } remove { } }
-    public event Action? Exited { add { } remove { } }
+    public event Action? Exited;
+    public void Complete() => Exited?.Invoke();
     public bool Disposed { get; private set; }
     public Task StartAsync(int columns, int rows) => Task.CompletedTask;
     public Task WriteAsync(string text) => Task.CompletedTask;

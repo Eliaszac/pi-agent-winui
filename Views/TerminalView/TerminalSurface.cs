@@ -137,7 +137,12 @@ public sealed class TerminalSurface : UserControl, IDisposable
         catch (OperationCanceledException) { }
     }
 
-    private void OnExited() => DispatcherQueue.TryEnqueue(() => Send(new { type = "exit" }));
+    private void OnExited() => DispatcherQueue.TryEnqueue(() =>
+    {
+        rendered = true;
+        feedback.Visibility = Visibility.Collapsed;
+        Send(new { type = "exit" });
+    });
     private async Task WatchStartupAsync()
     {
         try

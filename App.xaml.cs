@@ -90,14 +90,16 @@ public partial class App : Application
         var githubApi = new Services.GitHub.GitHubApi(githubHttp);
         var github = new ViewModels.GitHub.GitHubViewModel(new Services.GitHub.GitHubAuthentication(githubOptions, githubApi,
             new Services.GitHub.WindowsGitHubCredentialStore(githubOptions.ClientId)), githubApi, new Services.GitHub.GitBranchReader());
-        terminals = new(directory => new Services.Terminal.ConPtySession(directory));
+        terminals = new(directory => new Services.Terminal.ConPtySession(directory),
+            (directory, command) => new Services.Terminal.ConPtySession(directory, command));
         var files = new ViewModels.Files.FileExplorerViewModel(new DispatcherQueueUiDispatcher(window.DispatcherQueue));
         window.Closed += (_, _) => files.Dispose();
         var processReader = new AgentProcessReader();
         var processes = new ViewModels.Processes.ProcessesPanelViewModel(processReader, new AgentProcessStopper(processReader.Read, WindowsProcessTerminator.Stop));
         var sourceControl = new ViewModels.SourceControl.SourceControlViewModel(new Services.SourceControl.GitRepositoryService(new Services.SourceControl.GitCommandRunner()));
         window.Closed += (_, _) => sourceControl.Dispose();
-        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl);
+        var scripts = new ViewModels.Projects.ProjectScriptsViewModel(repository, terminals);
+        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts);
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)

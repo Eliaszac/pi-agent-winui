@@ -4,6 +4,16 @@ The first distribution target is Windows x64 (Windows 10 build 19041 or later). 
 
 ## Build
 
+For the complete local build-and-install workflow, close Pi Agent and run this from the repository in PowerShell as your normal Windows user:
+
+```powershell
+./Installer/Install-Local.ps1
+```
+
+The script builds the current workspace, including uncommitted changes, and installs a Release build. It automatically increments the installed patch version, or uses the project version if newer. This stamps the build without editing the project's version. Optional `-Version 0.2.0` selects an explicit version (same-version repair is allowed; downgrade is rejected); `-CompilerPath` overrides the Inno Setup compiler location.
+
+It checks for running app windows before building and installing, verifies the installer checksum and installed version, and checks that existing top-level application JSON files are unchanged. It does not force-close the app, restart Windows, or launch the app afterward. Logs and generated files stay under ignored `artifacts/installer/`. The build prerequisites below still apply.
+
 Install the .NET 10 SDK, Windows build tooling used by the project, and Inno Setup 6.7.3 from https://jrsoftware.org/isdl.php. Then run from the repository:
 
 ```powershell

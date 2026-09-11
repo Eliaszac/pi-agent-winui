@@ -4,7 +4,8 @@ using PiAgentGui.Utilities;
 
 namespace PiAgentGui.ViewModels.Terminal;
 
-public sealed class TerminalPanelViewModel(Func<string, ITerminalSession> createSession) : ObservableObject, IAsyncDisposable
+public sealed class TerminalPanelViewModel(Func<string, ITerminalSession> createSession,
+    Func<string, string, ITerminalSession>? createScriptSession = null) : ObservableObject, IAsyncDisposable
 {
     private bool isOpen;
     private int sequence;
@@ -33,6 +34,21 @@ public sealed class TerminalPanelViewModel(Func<string, ITerminalSession> create
     }
 
     public void Hide() => IsOpen = false;
+
+    public void RunScript(Guid projectId, Guid scriptId, string name, string directory, string command)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        var key = $"{projectId}:{scriptId}";
+        var active = Tabs.FirstOrDefault(tab => tab.ScriptKey == key && !tab.IsFinished);
+        if (active is null)
+        {
+            var session = createScriptSession?.Invoke(directory, command) ?? throw new InvalidOperationException("Script terminals are unavailable.");
+            active = new(directory, ++sequence, session, name, key);
+            Tabs.Add(active);
+        }
+        Selected = active;
+        IsOpen = true;
+    }
 
     public async Task CloseAsync(TerminalTabViewModel tab)
     {

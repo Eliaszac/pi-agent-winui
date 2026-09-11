@@ -21,6 +21,7 @@ public sealed partial class MainPage : Page
     public ViewModels.Applications.OpenInViewModel OpenIn { get; }
     public ViewModels.GitHub.GitHubViewModel GitHub { get; }
     public ViewModels.Terminal.TerminalPanelViewModel Terminals { get; }
+    public ProjectScriptsViewModel Scripts { get; }
     public ViewModels.Conversations.ResearchPanelViewModel Research { get; }
     public ViewModels.Files.FileExplorerViewModel Files { get; }
     public ViewModels.Processes.ProcessesPanelViewModel Processes { get; }
@@ -40,12 +41,13 @@ public sealed partial class MainPage : Page
         ViewModels.GitHub.GitHubViewModel github, Configuration.GitHubOptions githubOptions, CancellationToken githubCancellation,
         ViewModels.Terminal.TerminalPanelViewModel terminals, ViewModels.Conversations.ResearchPanelViewModel research,
         ViewModels.Files.FileExplorerViewModel files, ViewModels.Processes.ProcessesPanelViewModel processes,
-        ViewModels.SourceControl.SourceControlViewModel sourceControl)
+        ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts)
     {
         ViewModel = viewModel;
         OpenIn = openIn;
         GitHub = github;
         Terminals = terminals;
+        Scripts = scripts;
         Research = research;
         Files = files;
         Processes = processes;
@@ -112,6 +114,7 @@ public sealed partial class MainPage : Page
             if (args.PropertyName == nameof(ShellViewModel.SelectedProject)) _ = OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);
             if (args.PropertyName == nameof(ShellViewModel.SelectedProject))
             {
+                _ = Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedProject?.Path);
                 Files.SelectProject(ViewModel.SelectedProject?.Path);
                 SourceControl.SelectProject(ViewModel.SelectedProject?.Path);
                 if (SourceControl.IsOpen) _ = SourceControl.RefreshAsync();
@@ -126,6 +129,7 @@ public sealed partial class MainPage : Page
         if (initialized) return;
         initialized = true;
         await ViewModel.LoadAsync();
+        await Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedProject?.Path);
         Files.SelectProject(ViewModel.SelectedProject?.Path);
         await OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);
         GitHub.Initialize();

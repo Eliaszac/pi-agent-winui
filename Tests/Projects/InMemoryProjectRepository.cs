@@ -6,6 +6,12 @@ namespace PiAgentGui.Tests.Projects;
 
 internal sealed class InMemoryProjectRepository(params Project[] projects) : IProjectRepository
 {
+    public Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default)
+    {
+        var index = Projects.FindIndex(item => item.Id == projectId);
+        Projects[index] = Projects[index] with { Metadata = Utilities.ProjectScripts.Write(Projects[index].Metadata, settings) };
+        return Task.CompletedTask;
+    }
     public Task TouchConversationAsync(Guid projectId, Guid conversationId, DateTimeOffset usedAt, CancellationToken cancellationToken = default)
     {
         var index = Projects.FindIndex(project => project.Id == projectId);

@@ -31,7 +31,7 @@ public sealed class JsonProjectRepository : IProjectRepository
     public async Task<IReadOnlyList<Project>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var catalogLock = AcquireLock();
+        using var catalogLock = await ProjectCatalogLock.AcquireAsync(catalogPath, cancellationToken).ConfigureAwait(false);
         var catalog = await ReadAsync(cancellationToken).ConfigureAwait(false);
         return catalog.Projects.AsReadOnly();
     }
@@ -48,7 +48,7 @@ public sealed class JsonProjectRepository : IProjectRepository
         };
 
         cancellationToken.ThrowIfCancellationRequested();
-        using var catalogLock = AcquireLock();
+        using var catalogLock = await ProjectCatalogLock.AcquireAsync(catalogPath, cancellationToken).ConfigureAwait(false);
         var catalog = await ReadAsync(cancellationToken).ConfigureAwait(false);
         if (catalog.Projects.Any(existing => existing.Id == savedProject.Id ||
             StringComparer.OrdinalIgnoreCase.Equals(ProjectPath.Normalize(existing.Path), savedProject.Path)))
@@ -64,7 +64,7 @@ public sealed class JsonProjectRepository : IProjectRepository
         ProjectValidator.ValidateMetadata(metadata);
         var savedMetadata = metadata.Clone();
         cancellationToken.ThrowIfCancellationRequested();
-        using var catalogLock = AcquireLock();
+        using var catalogLock = await ProjectCatalogLock.AcquireAsync(catalogPath, cancellationToken).ConfigureAwait(false);
         var catalog = await ReadAsync(cancellationToken).ConfigureAwait(false);
         var index = catalog.Projects.FindIndex(project => project.Id == projectId);
         if (index < 0)
@@ -78,7 +78,7 @@ public sealed class JsonProjectRepository : IProjectRepository
     public async Task<ConversationDraft> AddConversationAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var catalogLock = AcquireLock();
+        using var catalogLock = await ProjectCatalogLock.AcquireAsync(catalogPath, cancellationToken).ConfigureAwait(false);
         var catalog = await ReadAsync(cancellationToken).ConfigureAwait(false);
         var index = catalog.Projects.FindIndex(project => project.Id == projectId);
         if (index < 0)
@@ -97,13 +97,6 @@ public sealed class JsonProjectRepository : IProjectRepository
         return conversation;
     }
 
-    private FileStream AcquireLock()
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(catalogPath)!);
-        // Keep the lock file in place: deleting it could race with another process opening it.
-        return new FileStream(catalogPath + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-    }
-
     public Task AddConversationCopyAsync(Guid projectId, Guid sourceId, ConversationDraft conversation, CancellationToken cancellationToken = default) =>
         ChangeProjectAsync(projectId, project =>
         {
@@ -118,6 +111,9 @@ public sealed class JsonProjectRepository : IProjectRepository
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return ChangeProjectAsync(projectId, project => project with { Name = name.Trim() }, cancellationToken);
     }
+
+    public Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default) =>
+        ChangeProjectAsync(projectId, project => project with { Metadata = ProjectScripts.Write(project.Metadata, settings) }, cancellationToken);
 
     public Task DeleteProjectAsync(Guid projectId, CancellationToken cancellationToken = default) =>
         ChangeProjectAsync(projectId, _ => null, cancellationToken);
@@ -167,7 +163,7 @@ public sealed class JsonProjectRepository : IProjectRepository
     private async Task ChangeProjectAsync(Guid projectId, Func<Project, Project?> change, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var catalogLock = AcquireLock();
+        using var catalogLock = await ProjectCatalogLock.AcquireAsync(catalogPath, cancellationToken).ConfigureAwait(false);
         var catalog = await ReadAsync(cancellationToken).ConfigureAwait(false);
         var index = catalog.Projects.FindIndex(project => project.Id == projectId);
         if (index < 0) throw new KeyNotFoundException("The project no longer exists.");
