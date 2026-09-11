@@ -14,6 +14,7 @@ public sealed class ProcessPiTransport(PiProcessStartInfoFactory startInfoFactor
     private FileStream? sessionLease;
     private Task stderrTask = Task.CompletedTask;
     private int disposed;
+    private readonly PiExitHint exitHint = new();
     public ProcessIdentity? ProcessIdentity { get; private set; }
 
     public Task StartAsync(PiLaunchRequest request, CancellationToken cancellationToken = default)
@@ -49,6 +50,12 @@ public sealed class ProcessPiTransport(PiProcessStartInfoFactory startInfoFactor
         var running = process ?? throw new InvalidOperationException("Pi is not connected.");
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
         await foreach (var line in PiJsonLineReader.ReadAsync(running.StandardOutput, linked.Token).ConfigureAwait(false)) yield return line;
+        if (!linked.IsCancellationRequested)
+        {
+            try { await stderrTask.WaitAsync(TimeSpan.FromMilliseconds(200), linked.Token).ConfigureAwait(false); }
+            catch (TimeoutException) { }
+            throw new PiProcessExitException(running.HasExited ? running.ExitCode : null, exitHint.Describe());
+        }
     }
 
     public async Task WriteLineAsync(string line, CancellationToken cancellationToken = default)
@@ -69,7 +76,7 @@ public sealed class ProcessPiTransport(PiProcessStartInfoFactory startInfoFactor
     {
         // Drain continuously to prevent pipe deadlocks. Do not persist potentially sensitive diagnostics.
         var buffer = new char[4096];
-        try { while (await reader.ReadAsync(buffer.AsMemory(), lifetime.Token).ConfigureAwait(false) > 0) { } }
+        try { int count; while ((count = await reader.ReadAsync(buffer.AsMemory(), lifetime.Token).ConfigureAwait(false)) > 0) exitHint.Append(buffer.AsSpan(0, count)); }
         catch (Exception exception) when (exception is OperationCanceledException or IOException or ObjectDisposedException) { }
     }
 

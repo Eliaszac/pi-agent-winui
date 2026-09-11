@@ -98,6 +98,7 @@ public sealed class PermissionModesTests
             File.WriteAllText(Path.Combine(directory, "settings.json"), """{"packages":[{"source":"npm:@georgedong32/permission-modes@2.6.3"}]}""");
             Assert.IsTrue(PermissionModesSupport.IsGloballyConfigured(directory));
             File.WriteAllText(Path.Combine(directory, "package.json"), """{"name":"@georgedong32/permission-modes","version":"2.6.3"}""");
+            File.WriteAllText(Path.Combine(directory, "classifier-client.ts"), PermissionModesCompatibility.FixedOptions);
             var command = JsonSerializer.SerializeToElement(new { name = "mode", source = "extension", sourceInfo = new { path = Path.Combine(directory, "index.ts"), scope = "user" } });
             Assert.IsTrue(PermissionModesSupport.IsSupportedCommand(command));
             File.WriteAllText(Path.Combine(directory, "package.json"), """{"name":"@georgedong32/permission-modes","version":"99.0.0"}""");
@@ -109,6 +110,7 @@ public sealed class PermissionModesTests
         {
             File.Delete(Path.Combine(directory, "settings.json"));
             File.Delete(Path.Combine(directory, "package.json"));
+            File.Delete(Path.Combine(directory, "classifier-client.ts"));
             Directory.Delete(directory);
         }
     }

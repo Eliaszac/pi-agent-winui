@@ -10,6 +10,11 @@ namespace PiAgentGui.Views;
 
 public sealed partial class ConversationView
 {
+    private async void OnRestoreSteering(object sender, RoutedEventArgs args)
+    {
+        if (sender is FrameworkElement { Tag: PendingPrompt prompt } && ViewModel is { } owner)
+            await owner.RestoreRecoveredCommand.ExecuteAsync(prompt);
+    }
     public event Action<string, string>? ShellCommandRequested;
     private IReadOnlyList<ComposerCommand> commandCatalog = ComposerCommandCatalog.Create(default);
     private ConversationViewModel? commandOwner;
@@ -46,7 +51,7 @@ public sealed partial class ConversationView
     {
         if (CommandPanel is null || composing || (ViewModel is { } current && executingCommands.Contains(current))) return;
         commandToken = SlashCommandToken.Find(Composer.Text, Composer.SelectionStart, Composer.SelectionLength);
-        if (commandToken is null || ViewModel is not { IsReady: true, IsRunning: false })
+        if (commandToken is null || ViewModel is not { IsReady: true })
         {
             if (CommandPanel.Visibility == Visibility.Visible) commandOwner = null;
             CommandPanel.Visibility = Visibility.Collapsed;
@@ -55,7 +60,7 @@ public sealed partial class ConversationView
             return;
         }
         if (dismissedToken == $"{commandToken.Start}:{commandToken.Query}") return;
-        var matches = ComposerCommandCatalog.Filter(commandCatalog, commandToken.Query);
+        var matches = ComposerCommandCatalog.Filter(ViewModel.IsRunning ? commandCatalog.Where(item => item.Action == "steer").ToArray() : commandCatalog, commandToken.Query);
         var selected = CommandList.SelectedItem as ComposerCommand;
         CommandList.ItemsSource = matches;
         CommandList.SelectedIndex = Math.Max(0, matches.ToList().FindIndex(item => item == selected));
@@ -123,7 +128,16 @@ public sealed partial class ConversationView
     private async void AcceptCommand(ComposerCommand? command = null)
     {
         command ??= CommandList.SelectedItem as ComposerCommand;
-        if (command is null || commandToken is null || ViewModel is not { CanUseCommands: true } owner) return;
+        if (command is null || commandToken is null || ViewModel is not { IsReady: true } owner) return;
+        if (command.Action == "steer")
+        {
+            owner.Draft = "/steer " + commandToken.RemoveFrom(Composer.Text);
+            DismissPicker();
+            Composer.Focus(FocusState.Programmatic);
+            Composer.Select(owner.Draft.Length, 0);
+            return;
+        }
+        if (!owner.CanUseCommands) return;
         var text = Composer.Text;
         var token = commandToken;
         DismissPicker();

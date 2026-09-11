@@ -5,11 +5,11 @@ namespace PiAgentGui.ViewModels.Extensions;
 public static class SupportedExtensions
 {
     public static ExtensionDefinition Permissions { get; } = new(
-        "Permission Modes", "GeorgeDong32", "2.6.3",
+        "Permission Modes", "GeorgeDong32", PermissionModesSupport.Version,
         "Control when Pi asks before changing files or running commands. Switch between manual approval, planning, automatic review, and bypass from the conversation input.",
         "Ask prompts for changes and mutating commands. Plan restricts writes to its plan file and limits commands to a read-only allowlist. Auto reviews tool actions using the extension's rules and a separate model. Bypass skips approval prompts. Existing rules and model profiles still apply. These are agent policies, not an operating-system sandbox.",
         PermissionModesSupport.InstallCommand,
-        "Auto uses a separate approval model, defaulting to anthropic/claude-haiku-4-5. Choose a model you have connected in ~/.pi/agent/permission-modes.json. For example:",
+        "The command installs the supported third-party package and applies Pi Agent's compatibility repair: omit the unsupported temperature option only for Codex classifier requests. It keeps a backup and does not change approval rules or fail-closed behavior. Reinstalling or updating the extension can remove this repair; run Set up again if the card requests it. Auto uses a separate approval model, defaulting to anthropic/claude-haiku-4-5. Choose a connected model in permission-modes.json in your Pi agent directory (~/.pi/agent by default). Merge these fields into any existing configuration rather than replacing your rules:",
         "{\n  \"classifier\": {\n    \"model\": \"openai-codex/gpt-5.5\",\n    \"failClosed\": true\n  }\n}",
         new("https://github.com/GeorgeDong32/pi-permission-modes#readme"),
         new("https://github.com/GeorgeDong32/pi-permission-modes"),

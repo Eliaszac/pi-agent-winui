@@ -134,7 +134,9 @@
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0">
             <InfoBar IsOpen="{Binding HasInlineError}" Severity="Error" IsClosable="False"
-                Title="Couldn't finish that" Message="{Binding Error}" />
+                Title="{Binding ErrorTitle}" Message="{Binding Error}">
+                <InfoBar.ActionButton><controls:ActionButton Content="Details" Click="OnErrorDetails" ToolTipService.ToolTip="Recovery guidance and copyable diagnostics"/></InfoBar.ActionButton>
+            </InfoBar>
             <InfoBar IsOpen="{Binding HasInlineWarning}" Severity="Warning" IsClosable="False"
                 Title="Extension notice" Message="{Binding Warning}" />
         </StackPanel>
@@ -148,11 +150,15 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
             Visibility="{Binding ShowRecovery, Converter={StaticResource BooleanToVisibility}}">
             <StackPanel MaxWidth="440" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Couldn't open this conversation" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"
+                <TextBlock Text="{Binding ErrorTitle}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"
                     AutomationProperties.LiveSetting="Polite" />
                 <TextBlock Text="{Binding Error}" TextWrapping="Wrap" IsTextSelectionEnabled="True"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <controls:ActionButton Content="Retry" Command="{Binding RetryCommand}" IsEnabled="{Binding CanRetry}" />
+                <TextBlock Text="{Binding ErrorHelp}" TextWrapping="Wrap" FontSize="12"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <controls:ActionButton Content="Reconnect" Command="{Binding RetryCommand}" IsEnabled="{Binding CanRetry}" />
+                    <controls:ActionButton Content="Details" Click="OnErrorDetails" ToolTipService.ToolTip="Copyable diagnostics"/>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
         <Grid Grid.Row="1" Visibility="{Binding IsReady, Converter={StaticResource BooleanToVisibility}}">
@@ -310,6 +316,31 @@
         <Grid Grid.Row="3" Visibility="{Binding IsReady, Converter={StaticResource BooleanToVisibility}}">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <StackPanel Spacing="6">
+            <Border Visibility="{Binding HasQueuedPrompt, Converter={StaticResource BooleanToVisibility}}" Padding="10,8" Margin="0,0,0,6" CornerRadius="8"
+                Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding QueueLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding QueuedPreview}" FontSize="12" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:ActionButton Content="Edit" Command="{Binding EditQueuedCommand}" IsEnabled="{Binding CanChangeQueue}" FontSize="11" Padding="8,3" MinHeight="26" />
+                        <controls:ActionButton Content="Remove" Command="{Binding RemoveQueuedCommand}" IsEnabled="{Binding CanChangeQueue}" FontSize="11" Padding="8,3" MinHeight="26" />
+                        <controls:ActionButton Content="Steer now" Command="{Binding SteerQueuedCommand}" Visibility="{Binding CanSteerQueue, Converter={StaticResource BooleanToVisibility}}" FontSize="11" Padding="8,3" MinHeight="26" />
+                        <controls:ActionButton Content="Resume" Command="{Binding ReleaseQueuedCommand}" Visibility="{Binding CanReleaseQueue, Converter={StaticResource BooleanToVisibility}}" FontSize="11" Padding="8,3" MinHeight="26" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <TextBlock Text="{Binding SteeringLabel}" Visibility="{Binding HasSteering, Converter={StaticResource BooleanToVisibility}}" FontSize="11" Margin="0,0,0,6" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding RecoveredPrompts}">
+                <ItemsControl.ItemTemplate><DataTemplate>
+                    <Grid Padding="8" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <StackPanel><TextBlock Text="Unsent steering message" FontSize="11" /><TextBlock Text="{Binding Preview}" FontSize="12" TextTrimming="CharacterEllipsis" /></StackPanel>
+                        <controls:ActionButton Grid.Column="1" Content="Restore" Click="OnRestoreSteering" Tag="{Binding}" FontSize="11" />
+                    </Grid>
+                </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+            </ScrollViewer>
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                 Visibility="{Binding HasPendingImages, Converter={StaticResource BooleanToVisibility}}" MaxHeight="132">
                 <ItemsControl ItemsSource="{Binding PendingImages}">
@@ -375,7 +406,7 @@
                 TextCompositionStarted="OnCompositionStarted" TextCompositionEnded="OnCompositionEnded"
                 KeyboardAcceleratorPlacementMode="Hidden"
                 PlaceholderText="Message Pi…" AutomationProperties.Name="Message Pi" AcceptsReturn="True"
-                FontSize="13" TextWrapping="Wrap" MinHeight="80" MaxHeight="184" VerticalContentAlignment="Top" Padding="11,9,66,9">
+                FontSize="13" TextWrapping="Wrap" MinHeight="80" MaxHeight="184" VerticalContentAlignment="Top" Padding="11,9,104,9">
                 <TextBox.KeyboardAccelerators>
                     <KeyboardAccelerator Key="Enter" ScopeOwner="{x:Bind Composer}" Invoked="OnSendInvoked" />
                     <KeyboardAccelerator Key="Enter" Modifiers="Control" ScopeOwner="{x:Bind Composer}" Invoked="OnNewLineInvoked" />
@@ -386,7 +417,14 @@
                 Style="{StaticResource ComposerActionStyle}" Width="32" Height="32" MinWidth="32" MinHeight="32"
                 Padding="0" CornerRadius="16" BorderThickness="0" UseLayoutRounding="True"
                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,10">
-                <controls:ComposerActionIcon IsRunning="{Binding IsRunning}" />
+                <controls:ComposerActionIcon IsRunning="{Binding ComposerShowsStop}" />
+            </controls:ComposerActionButton>
+            <controls:ComposerActionButton Grid.Row="1" Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}"
+                Visibility="{Binding ShowSeparateStop, Converter={StaticResource BooleanToVisibility}}"
+                AutomationProperties.Name="Stop" ToolTipService.ToolTip="Stop" Style="{StaticResource ComposerActionStyle}"
+                Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0" CornerRadius="16" BorderThickness="0"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,58,10">
+                <controls:ComposerActionIcon IsRunning="True" />
             </controls:ComposerActionButton>
             <Grid Grid.Row="2" ColumnSpacing="12" Margin="0,8,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>

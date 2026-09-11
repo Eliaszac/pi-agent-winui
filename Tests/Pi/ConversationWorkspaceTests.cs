@@ -190,6 +190,7 @@ public sealed class ConversationWorkspaceTests
         var second = store.GetOrCreate(project, secondId);
         first.Draft = "first draft";
         second.Draft = "second draft";
+        Assert.AreEqual(0, store.ActiveRunCount);
         sessions[0].Emit(new() { Entry = new ChatEntry("a", "Pi", "Background response"), IsRunning = true });
         dispatcher.Drain();
         Assert.AreSame(first, store.GetOrCreate(project, firstId));
@@ -199,6 +200,10 @@ public sealed class ConversationWorkspaceTests
         Assert.AreEqual(0, second.Entries.Count);
         Assert.IsTrue(first.IsRunning);
         Assert.IsFalse(second.IsRunning);
+        Assert.AreEqual(1, store.ActiveRunCount);
+        sessions[0].Emit(new() { IsRunning = false, TurnCompleted = true });
+        dispatcher.Drain();
+        Assert.AreEqual(0, store.ActiveRunCount);
         await store.DisposeAsync();
         Assert.IsTrue(sessions.All(session => session.Disposed));
     }

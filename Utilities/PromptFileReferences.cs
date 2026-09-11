@@ -28,5 +28,6 @@ public sealed class PromptFileReferences
         });
     }
     public static string Display(string text) => References.Replace(text, match => "@" + FileName(match.Groups[1].Value));
+    public string Restore(string text) => References.Replace(text, match => "@" + Add(match.Groups[1].Value));
     private static string FileName(string path) => path.Replace('\\', '/').Split('/')[^1];
 }

@@ -7,7 +7,7 @@ public static class PermissionModesSupport
 {
     public const string Package = "@georgedong32/permission-modes";
     public const string Version = "2.6.3";
-    public const string InstallCommand = "pi install npm:@georgedong32/permission-modes@2.6.3";
+    public static string InstallCommand => PermissionModesCompatibility.SetupCommand;
     public const string Website = "https://github.com/GeorgeDong32/pi-permission-modes";
     public static IReadOnlyList<string> Modes { get; } = ["ask", "plan", "auto", "bypass"];
     public static string AgentDirectory => PiAgentDirectory.Resolve(Environment.GetEnvironmentVariable("PI_CODING_AGENT_DIR"),
@@ -35,7 +35,10 @@ public static class PermissionModesSupport
         using var document = JsonDocument.Parse(File.ReadAllText(manifest));
         if (PiJson.Text(document.RootElement, "name") != Package) return ("Configured globally · package identity could not be verified", true);
         var version = PiJson.Text(document.RootElement, "version");
-        return version == Version ? ($"Installed globally · {version}", false) : ($"Installed globally · {version} (supported: {Version})", true);
+        if (version != Version) return ($"Installed globally · {version} (supported: {Version})", true);
+        return PermissionModesCompatibility.IsInstalled(Path.GetDirectoryName(manifest)!)
+            ? ($"Installed globally · {version}", false)
+            : ($"Installed globally · {version} · compatibility setup required", true);
     }
 
     public static bool IsSupportedCommand(JsonElement command)
@@ -58,7 +61,8 @@ public static class PermissionModesSupport
         var manifest = Path.Combine(Path.GetDirectoryName(path)!, "package.json");
         if (!File.Exists(manifest)) return false;
         using var document = JsonDocument.Parse(File.ReadAllText(manifest));
-        return PiJson.Text(document.RootElement, "name") == Package && PiJson.Text(document.RootElement, "version") == Version;
+        return PiJson.Text(document.RootElement, "name") == Package && PiJson.Text(document.RootElement, "version") == Version
+            && PermissionModesCompatibility.IsInstalled(Path.GetDirectoryName(manifest)!);
     }
 
     public static string? ReadMode(JsonElement entries)

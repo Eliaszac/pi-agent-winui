@@ -8,7 +8,7 @@ using PiAgentGui.Utilities;
 namespace PiAgentGui.ViewModels.Conversations;
 
 /// <summary>Retains transcript, composer, and run state independently of the selected conversation.</summary>
-public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
+public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly IConversationSession session;
     public ProcessIdentity? ProcessIdentity => session.ProcessIdentity;
@@ -91,6 +91,11 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     public string ApprovalStatus => approvalStatus;
     public bool CanChangeApprovalMode => IsReady && !busy && !running && !disposed && approvalAvailable;
     private string error = "";
+    private string errorDiagnostics = "";
+    private ErrorPresentation? errorPresentation;
+    public string ErrorTitle => errorPresentation?.Title ?? "Couldn't open this conversation";
+    public string ErrorHelp => errorPresentation?.Help ?? "Reconnect to reopen the saved session. No prompt will be resent.";
+    public string ErrorDiagnosticReport => $"Category: {errorPresentation?.Category ?? "connection"}\nConnected: {connected}\nRunning: {running}\n" + errorDiagnostics;
     private string warning = "";
     public string Warning => warning;
     public bool HasInlineWarning => IsReady && warning.Length > 0;
@@ -103,7 +108,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         {
             if (!SetProperty(ref draft, value)) return;
             OnPropertyChanged(nameof(CanSend));
-            OnPropertyChanged(nameof(CanUseComposerAction));
+            NotifyQueue();
         }
     }
     public string Status => status;
@@ -116,16 +121,19 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     public bool HasError => error.Length > 0;
     public bool NeedsAttention => HasError || Prompts.Count > 0;
     public bool IsRunning => running;
+    public bool HasActiveWork => running || operationInFlight || dispatchingQueue || !SendCommand.CanExecute(null) || Prompts.Any(prompt => prompt.IsPending);
     public bool IsConnected => connected;
     public bool IsReady => connected && !preparing;
     public bool IsLoading => preparing || (!connected && !HasError);
     public bool ShowRecovery => !IsLoading && !connected;
     public bool HasInlineError => IsReady && HasError;
-    public bool CanSend => IsReady && !busy && !running && !disposed && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages);
+    public bool CanSend => IsReady && !busy && !stopping && !disposed && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages);
     public bool CanStop => connected && running && (!busy || operationInFlight) && !stopping;
-    public AsyncRelayCommand ComposerActionCommand => running ? StopCommand : SendCommand;
-    public bool CanUseComposerAction => running ? CanStop : CanSend;
-    public string ComposerActionLabel => running ? "Stop" : "Send";
+    public bool ComposerShowsStop => running && string.IsNullOrWhiteSpace(Draft) && !HasPendingImages;
+    public bool ShowSeparateStop => running && !ComposerShowsStop;
+    public AsyncRelayCommand ComposerActionCommand => ComposerShowsStop ? StopCommand : SendCommand;
+    public bool CanUseComposerAction => ComposerShowsStop ? CanStop : CanSend;
+    public string ComposerActionLabel => ComposerShowsStop ? "Stop" : IsSteeringDraft ? "Steer" : running ? "Queue follow-up" : "Send";
     public string ComposerActionGlyph => running ? "\uE71A" : "\uE72A";
     public bool CanRetry => ShowRecovery && !busy && !disposed;
     public bool IsEmpty => Entries.Count == 0 && !previewCompacting && !compacting;
@@ -202,6 +210,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         this.previewCompacting = previewCompacting;
         this.session = session;
         this.dispatcher = dispatcher;
+        InitializeQueue();
         session.Updated += Enqueue;
         ForkCommand = new AsyncRelayCommand(_ => RequestDuplicateAsync(true), ReportError);
         CloneCommand = new AsyncRelayCommand(_ => RequestDuplicateAsync(false), ReportError);
@@ -211,6 +220,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
             if (!CanSend) return;
             var submitted = Draft;
             var images = PendingImages.ToArray();
+            if (await HandlePendingSendAsync(submitted, images)) return;
             if (images.Length == 0 && HandleComposerCommand is { } handler && await handler(submitted)) return;
             if (images.Length > 0 && submitted.TrimStart().StartsWith('/'))
                 throw new InvalidOperationException("Send screenshots with a message rather than a slash command.");
@@ -228,6 +238,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         StopCommand = new AsyncRelayCommand(async _ =>
         {
             if (!CanStop) return;
+            queueHeld = true;
             stopping = true;
             NotifyState();
             try { await Task.Run(() => session.StopAsync()); }
@@ -274,13 +285,13 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         if (busy || disposed || connected) return;
         preparing = true;
         busy = true;
-        error = "";
+        SetError("");
         NotifyState();
         try { await Task.Run(() => session.ConnectAsync()); }
         catch (Exception exception)
         {
             // Keep failures behind preceding startup events in the same ordered presentation queue.
-            Enqueue(new() { IsConnected = false, Error = exception.Message });
+            Enqueue(new() { IsConnected = false, Error = exception.Message, ErrorDiagnostics = Utilities.ErrorDiagnostics.Create(exception) });
         }
         finally
         {
@@ -294,17 +305,24 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     {
         if (busy || disposed) return;
         busy = true;
-        error = "";
+        SetError("");
         NotifyState();
         try { await Task.Run(operation); }
-        finally { busy = false; NotifyState(); }
+        finally { busy = false; NotifyState(); dispatcher.Post(TryDispatchQueued); }
     }
 
     private void ReportError(Exception exception)
     {
-        error = exception.Message;
+        SetError(exception.Message, Utilities.ErrorDiagnostics.Create(exception));
         if (!connected) status = "Disconnected";
         NotifyState();
+    }
+    private void SetError(string message, string? diagnostics = null)
+    {
+        if (message.Length == 0) { error = ""; errorPresentation = null; errorDiagnostics = ""; return; }
+        errorPresentation = ConversationErrors.Describe(message);
+        error = errorPresentation.Message;
+        errorDiagnostics = diagnostics ?? Utilities.ErrorDiagnostics.Create();
     }
 
     private void Enqueue(ConversationUpdate update)
@@ -386,12 +404,22 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                         ViewedRunCompleted?.Invoke();
                 }
             }
+            if (update.TurnCompleted)
+            {
+                queueReady = true;
+                if (Entries.LastOrDefault(entry => entry.IsAssistant)?.Status is { Length: > 0 }) queueHeld = true;
+            }
+            if (update.SteeringQueue is not null) { steeringCount = update.SteeringQueue.Count; OnPropertyChanged(nameof(SteeringLabel)); OnPropertyChanged(nameof(HasSteering)); }
+            if (update.RecoveredPrompts is not null)
+                foreach (var recovered in update.RecoveredPrompts)
+                    RecoveredPrompts.Add(recovered with { Text = FileReferences.Restore(recovered.Message) });
+            if (update.IsConnected == false || !string.IsNullOrEmpty(update.Error)) { queueHeld = true; queueReady = false; }
             if (update.IsConnected is bool isConnected)
             {
                 connected = isConnected;
                 if (!connected) { ClearPrompts(); compacting = false; changed = true; }
             }
-            if (update.Error is not null) error = update.Error;
+            if (update.Error is not null) SetError(update.Error, update.ErrorDiagnostics);
             if (update.Warning is not null) warning = update.Warning;
             if (update.HasThinkingLevelUpdate) thinkingLevel = update.ThinkingLevel;
             if (update.ThinkingLevels is not null && !ThinkingLevels.SequenceEqual(update.ThinkingLevels))
@@ -426,6 +454,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
         }
         NotifyState();
         OnPropertyChanged(nameof(RunChanges));
+        TryDispatchQueued();
         OnPropertyChanged(nameof(HasRunChanges));
         if (changed)
         {
@@ -481,6 +510,8 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
 
     private void NotifyState()
     {
+        NotifyQueue();
+        OnPropertyChanged(nameof(ErrorTitle)); OnPropertyChanged(nameof(ErrorHelp)); OnPropertyChanged(nameof(ErrorDiagnosticReport));
         var latest = IsReady && !running && Prompts.Count == 0
             ? Entries.LastOrDefault(entry => entry.IsAssistant || entry.IsUser) : null;
         if (latest is not { CanCopyResponse: true, Status.Length: 0 }) latest = null;

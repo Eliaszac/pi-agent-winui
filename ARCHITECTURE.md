@@ -19,6 +19,9 @@ Windows x64 distribution uses an unpackaged per-user Inno Setup installer. `Inst
 
 ## Markdown streaming crash diagnosis
 
+- Conversation errors now use bounded presentation messages with common credential redaction, specific titles, and recovery guidance for authentication, limits, extension failures, storage, protocol faults, timeouts and exits. Both inline errors and disconnected recovery provide Details with a copyable report. Reports contain timestamp/reference, app/runtime/OS versions, exception types/HRESULTs, method-only stack frames, and Pi exit code where available; they exclude raw exception/provider messages, prompts, paths, and session identifiers. Existing reconnect behavior preserves drafts and never automatically resends requests, especially after acknowledgement timeouts.
+- ProcessPiTransport drains stderr into an 8 KB in-memory tail only. On unexpected EOF it waits at most 200 ms for trailing stderr and reports a fixed dependency/access/memory hint plus exit code where available; raw stderr is not persisted or included in copied reports. CrashReportWriter uses the same metadata-only report format for last-ui-crash.txt. Error-dialog failures leave the app open rather than throwing another native callback exception.
+
 The intermittent crash observed around automatic naming was traced with a full local dump to `MarkdownMessage.Render`: `String.Substring` received a Markdig block span outside the current streamed text. The exception escaped a `DispatcherQueueTimer` callback as native `0xc000027b` / `0x8000000B`, bypassing the application's managed unhandled-exception report. `MarkdownBlockSignature` validates span bounds and falls back to the complete text snapshot for invalid spans, preserving cache invalidation without unsafe slicing. Regression tests cover malformed spans and all streaming prefixes of representative Markdown. Ordinary Windows minidumps omitted the original exception's stack memory; a full dump plus SOS retained the managed exception stack.
 
 ## Terminal side panel
@@ -77,6 +80,8 @@ The native project shell and first Pi conversation pass are implemented. Convers
 - Verification commands: `dotnet test Tests/PiAgentGui.Tests.csproj --no-restore --verbosity minimal`; `dotnet build PiAgentGui.csproj --no-restore -p:Platform=x64 --verbosity minimal`. No GUI or Pi process has been launched during this implementation.
 
 ## Implemented shell behavior
+
+- Closing with active conversations (including pending sends/approval prompts) or running/queued research asks for confirmation before stopping anything or detaching terminal displays. Keep open is the default; Stop and close enters the existing shutdown path. Background conversations count even when not selected. If another modal prevents confirmation, the close is cancelled. Idle apps close without this prompt; drafts remain memory-only.
 
 - Sidebar context menus support inline rename for conversations and projects, deletion, and conversation settle/restore. Enter or focus loss saves inline names; Escape cancels. Empty names and save failures keep the editor open. Persisted names update sidebar labels, the selected conversation heading, and the native window title.
 - Each project shows active conversations first and a subtle, initially collapsed `Settled — (count)` group below them when nonempty. `ConversationDraft.IsSettled` is a typed catalog field (default false for older catalogs), independent of Pi's `agent_settled` event. Settling is organization, not cancellation; it preserves the runtime and session. Settling the selected conversation returns to the project view. Settled conversations can be opened or restored from their context menu.
@@ -303,6 +308,8 @@ Protocol and CLI behavior were checked against current official Pi documentation
 
 ## Composer screenshots and file references
 
+- Draft retention is deliberately limited to the current app lifetime: each conversation keeps its own unsent text and screenshots when switching conversations. The user explicitly does not want draft restoration across app restarts; do not add disk persistence for composer drafts.
+
 - Pasting a clipboard bitmap attaches a removable preview to that conversation's in-memory draft. Image-only prompts are allowed. Successful prompt acceptance clears submitted attachments; a failed send retains them. Unsent screenshots are not persisted across application restarts.
 - ClipboardScreenshotReader normalizes screenshots to PNG, scales the longest edge to at most 2,560 pixels, and limits each encoded image to 2 MiB, with four images per prompt. PiImageContent sends the documented RPC `images` array. Pi owns image persistence in its session JSONL; PiTranscript restores image blocks from history. ScreenshotPreview decodes images only while mounted. The RPC record limit is 128 MiB to accommodate image-bearing history responses.
 - Typing an `@` token anywhere in the composer opens a debounced file picker. It searches up to 8,000 project entries, returns up to 30 matches, skips common generated directories and directory symlinks, and supports arrow keys, Enter/Tab, and Escape. Browse uses the native file picker and permits files outside the project.
@@ -317,6 +324,10 @@ Protocol and CLI behavior were checked against current official Pi documentation
 - FileChangeParser also accepts native edit details.patch; PiTranscript retains assistant tool-call arguments for saved-history filenames. FileDiffView shows a selectable colored unified patch, and tool summaries include file plus added/removed counts. Legacy writes lacking baselines report unavailable rather than infer a diff from current disk state.
 - Restart the GUI to load the bundled extension into new Pi processes after this upgrade. Pi 0.85.1 public extension exports were checked; no Pi process was launched during verification. Node capture unit tests: node --test Tests/PiExtensions/WriteDiffCapture.test.ts.
 
+
+## Permission Modes compatibility
+
+- Permission Modes setup now ships the targeted Codex compatibility repair in its self-contained, copyable PowerShell command. It installs pinned 2.6.3, resolves PI_CODING_AGENT_DIR including tilde paths, verifies package identity/version and the expected source line, backs up classifier-client.ts, and replaces only the unconditional temperature option with a Codex-specific omission. Existing repaired installs are accepted; unknown source layouts stop without modification. Reinstalling can erase the repair, so extension-card and runtime command discovery verify its presence and request setup again. Approval rules, classifier configuration, and failClosed are not rewritten. Fixture tests run the exact setup command with a mocked Pi installer, including repeated setup, install failure, unexpected source/version, and reinstall detection; they never install packages or make model calls.
 
 ## Optional language diagnostics
 
@@ -355,6 +366,14 @@ Protocol and CLI behavior were checked against current official Pi documentation
 - More actions provides manual refresh, fetch all remotes, and fast-forward-only pull with automatic stashing disabled. Clicking the branch header opens a searchable local/remote branch dialog. Each row offers checkout, create-and-checkout from that ref, fetch its remote upstream, and merge into the current branch. Fetch only updates remote-tracking information, not the working branch. The Changes file context menu offers confirmed Revert: tracked files restore only the working tree from the index, while individual untracked files move to the Recycle Bin using the existing project path/link guards. Staged and conflicted entries do not offer Revert. Repository identity and current file status are checked before the operation. No reset-hard, forced checkout or force push is offered. Conflicts remain for resolution in the user's editor and subsequent staging/commit.
 - Services/SourceControl owns the cancellable Git CLI runner and repository operations; ViewModels/SourceControl owns serialized presentation actions and selection guards. Direct argument lists and literal pathspecs preserve filenames without shell interpolation. Polling every five seconds while open is local/read-only; remote and mutating operations require explicit UI actions. Branch identity is rechecked before working-tree operations. Selection changes discard stale read results, and shutdown cancels owned commands.
 - Verification uses fake Git command responses and unit tests for parsing, index-only commits, unstage behavior including unborn repositories, refspecs, branch guards, error reporting and draft retention. The application and real repository mutations/network operations were not launched during implementation at the user's request.
+
+## Follow-up queue and steering
+
+- Sending a message during a run reserves one follow-up slot in that conversation's view model. A second follow-up never replaces the first; the composer retains the new draft. The card supports edit, remove, and sending its content as steering. Editing requires an empty composer to avoid losing another draft or screenshot.
+- Follow-ups dispatch once after Pi's `agent_settled` event, not `agent_end`, so retries and compaction finish first. The local slot keeps cancellation and editing deterministic without attempting to modify Pi's internal follow-up queue. Stop, disconnection, and run failures pause it; resuming requires an explicit action. An uncertain send is never retried automatically.
+- `/steer <message>` uses `prompt` with `streamingBehavior: steer`, handling the race where the active run finishes before the command arrives. At idle it sends normally. Nested slash commands are rejected because Pi can execute extension commands immediately. Steering remains available when the follow-up slot is occupied; its picker action inserts the prefix rather than executing a command dialog.
+- Stop sends `clear_queue` before `abort`. Removed steering messages are offered for restoration, with locally retained screenshots and abbreviated file references. Pi remains the transcript source of truth: messages appear only when Pi emits them, not when locally queued.
+- Drafts, queued follow-ups, and recovered steering messages survive switching conversations only; they are intentionally not persisted across application restarts. The composer retains a separate Stop action while entering a queued or steering message.
 
 ## Running processes panel
 

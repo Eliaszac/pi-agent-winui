@@ -6,6 +6,9 @@ namespace PiAgentGui.Tests.Pi;
 
 internal sealed class FakeConversationSession : IConversationSession
 {
+    public List<string> Steered { get; } = [];
+    public Task SteerAsync(string message, IReadOnlyList<ChatImage> images, CancellationToken cancellationToken = default)
+    { if (SendError is not null) throw SendError; Steered.Add(message); return Task.CompletedTask; }
     public List<(string Destination, string Title)> Copies { get; } = [];
     public Exception? CopyError { get; set; }
     public Task CopySessionAsync(string destination, string title, CancellationToken cancellationToken = default)

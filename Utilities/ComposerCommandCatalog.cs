@@ -10,6 +10,7 @@ public static class ComposerCommandCatalog
     {
         var result = new List<ComposerCommand>
         {
+            new("steer", "Send a correction to the active run", "app", "steer"),
             new("session", "View model, token usage, cost, and context usage", "app", "details"),
             new("compact", "Compact context, with optional instructions", "app", "compact"),
             new("export", "Save this conversation as HTML", "app", "export"),

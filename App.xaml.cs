@@ -106,6 +106,30 @@ public partial class App : Application
         args.Cancel = true;
         if (closing) return;
         closing = true;
+        try
+        {
+            var researchCount = research is null ? 0 : await research.GetPendingCountAsync();
+            var runCount = workspaces?.ActiveRunCount ?? 0;
+            if (runCount > 0 || researchCount > 0)
+            {
+                var dialog = new Controls.ActionContentDialog
+                {
+                    XamlRoot = (window!.Content as FrameworkElement)!.XamlRoot,
+                    Title = "Work is still running",
+                    Content = $"Active conversations: {runCount}\nRunning or queued research tasks: {researchCount}\n\nClosing Pi Agent will stop this work and close any open terminals.",
+                    PrimaryButtonText = "Stop and close",
+                    CloseButtonText = "Keep open",
+                    DefaultButton = ContentDialogButton.Close
+                };
+                if (await dialog.ShowAsync() != ContentDialogResult.Primary) { closing = false; return; }
+            }
+        }
+        catch (Exception)
+        {
+            // Another modal may already own the XamlRoot. Never stop work when confirmation could not be shown.
+            closing = false;
+            return;
+        }
         (window?.Content as MainPage)?.CloseTerminalDisplays();
         try
         {
@@ -127,7 +151,8 @@ public partial class App : Application
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close
             };
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) { closing = false; return; }
+            try { if (await dialog.ShowAsync() != ContentDialogResult.Primary) { closing = false; return; } }
+            catch (Exception) { closing = false; return; }
         }
         canClose = true;
         window?.Close();

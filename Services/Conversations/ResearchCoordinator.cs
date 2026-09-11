@@ -15,6 +15,13 @@ public sealed class ResearchCoordinator(ResearchStore store, IResearchRunner run
     public event Action<IReadOnlyList<ResearchTask>>? Changed;
     public event Action<string>? Failed;
 
+    public async Task<int> GetPendingCountAsync()
+    {
+        await gate.WaitAsync();
+        try { return tasks.Count(task => task.Status is "Queued" or "Running"); }
+        finally { gate.Release(); }
+    }
+
     public async Task InitializeAsync()
     {
         await gate.WaitAsync();

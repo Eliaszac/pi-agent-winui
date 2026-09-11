@@ -234,6 +234,25 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
         catch (Exception exception) { await DisconnectAsync().ConfigureAwait(false); OnFault(exception); }
     }
 
+    private readonly List<PendingPrompt> pendingSteering = [];
+    public async Task SteerAsync(string message, IReadOnlyList<ChatImage> images, CancellationToken cancellationToken = default)
+    {
+        if (images.Count == 0) ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        if (message.TrimStart().StartsWith('/')) throw new InvalidOperationException("Steering accepts a message, not a slash command.");
+        var payload = new JsonObject { ["message"] = message, ["streamingBehavior"] = "steer" };
+        if (images.Count > 0) payload["images"] = PiImageContent.Serialize(images);
+        PiRpcClient current;
+        var pending = new PendingPrompt(message, message, images.ToArray());
+        lock (stateGate)
+        {
+            current = connected && client is not null ? client : throw new IOException("Pi is disconnected.");
+            pendingSteering.Add(pending);
+        }
+        try { await current.RequestAsync("prompt", payload, cancellationToken).ConfigureAwait(false); }
+        catch (PiCommandException) { lock (stateGate) pendingSteering.Remove(pending); throw; }
+        catch (Exception exception) { await DisconnectAsync().ConfigureAwait(false); OnFault(exception); throw; }
+    }
+
     private void ApplyState(JsonElement packet)
     {
         lock (stateGate)
@@ -340,9 +359,31 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
     {
         var current = client ?? throw new IOException("Pi is disconnected.");
         Publish(new() { Status = "Stopping…" });
+        PendingPrompt[] beforeStop;
+        lock (stateGate) beforeStop = pendingSteering.ToArray();
         try
         {
-            await current.RequestAsync("clear_queue", cancellationToken: cancellationToken).ConfigureAwait(false);
+            await current.RequestAsync("clear_queue", cancellationToken: cancellationToken, applyResponse: packet =>
+            {
+                var data = PiJson.Field(packet, "data");
+                var recovered = new List<PendingPrompt>();
+                var saved = beforeStop.ToList();
+                foreach (var name in new[] { "steering", "followUp" })
+                {
+                    var values = PiJson.Field(data, name);
+                    if (values.ValueKind != JsonValueKind.Array) continue;
+                    foreach (var value in values.EnumerateArray())
+                    {
+                        if (value.ValueKind != JsonValueKind.String) continue;
+                        var text = value.GetString()!;
+                        var match = saved.FirstOrDefault(item => item.Message == text);
+                        if (match is not null) saved.Remove(match);
+                        recovered.Add(match ?? new(text, text, []));
+                    }
+                }
+                lock (stateGate) pendingSteering.Clear();
+                Publish(new() { RecoveredPrompts = recovered, SteeringQueue = [] });
+            }).ConfigureAwait(false);
             await current.RequestAsync("abort", cancellationToken: cancellationToken).ConfigureAwait(false);
             lock (stateGate) { awaitingSettled = false; running = false; Publish(new() { Status = "Stopped", IsRunning = false, DismissPrompts = true }); }
         }
@@ -374,6 +415,15 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             if (entry is not null) Publish(new() { Entry = entry });
             switch (PiJson.Text(packet, "type"))
             {
+                case "queue_update":
+                    var steering = PiJson.Field(packet, "steering");
+                    if (steering.ValueKind == JsonValueKind.Array)
+                    {
+                        var texts = steering.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String).Select(item => item.GetString()!).ToArray();
+                        pendingSteering.RemoveAll(item => !texts.Contains(item.Message));
+                        Publish(new() { SteeringQueue = texts });
+                    }
+                    break;
                 case "session_info_changed":
                     if (PiJson.Text(packet, "name") is { Length: > 0 } name) Publish(new() { SessionName = name });
                     break;
@@ -432,6 +482,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             awaitingSettled = false;
             runUsage.Reset();
             Publish(new() { Status = "Disconnected", IsConnected = false, IsRunning = false,
+                ErrorDiagnostics = Utilities.ErrorDiagnostics.Create(exception),
                 Error = exception is JsonException ? "Pi sent invalid JSON. Reconnect to reopen the session." : exception.Message });
         }
     }
@@ -440,6 +491,8 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
 
     private async Task ReleaseClientAsync()
     {
+        lock (stateGate) pendingSteering.Clear();
+        Publish(new() { SteeringQueue = [] });
         if (client is null) return;
         var previous = client;
         client = null;

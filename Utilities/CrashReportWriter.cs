@@ -11,7 +11,7 @@ internal static class CrashReportWriter
             Directory.CreateDirectory(folder);
             // Omit exception messages, which may include prompts, provider responses, or credentials.
             File.WriteAllText(Path.Combine(folder, "last-ui-crash.txt"),
-                $"UTC: {DateTimeOffset.UtcNow:O}\nType: {exception.GetType().FullName}\nHRESULT: 0x{exception.HResult:X8}\nStack:\n{exception.StackTrace}");
+                ErrorDiagnostics.Create(exception));
         }
         catch (Exception) { /* Reporting must not replace the original failure. */ }
     }
