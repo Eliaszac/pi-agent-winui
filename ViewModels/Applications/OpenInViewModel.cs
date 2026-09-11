@@ -65,6 +65,14 @@ public sealed class OpenInViewModel(IApplicationLocator locator, OpenInPreferenc
         finally { opening = false; Notify(); }
     }
 
+    public Task OpenFileAsync(string path)
+    {
+        var editor = selected?.Kind is ApplicationKind.Editor or ApplicationKind.SolutionEditor ? selected
+            : Applications.FirstOrDefault(app => app.Kind is ApplicationKind.Editor or ApplicationKind.SolutionEditor);
+        if (editor is null) throw new IOException("No editor was detected. Choose an installed editor from Open in.");
+        return Task.Run(() => launcher.OpenFile(editor, path));
+    }
+
     private void Notify()
     {
         OnPropertyChanged(nameof(Label));

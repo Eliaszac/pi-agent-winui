@@ -28,6 +28,9 @@
   <ItemGroup>
     <Compile Include="../Models/Applications/*.cs" Link="Production/Models/Applications/%(Filename)%(Extension)" />
     <Compile Include="../Services/Applications/*.cs" Link="Production/Services/Applications/%(Filename)%(Extension)" />
+    <Compile Include="../Services/Files/*.cs" Link="Production/Services/Files/%(Filename)%(Extension)" />
+    <Compile Include="../Models/SourceControl/*.cs" Link="Production/Models/SourceControl/%(Filename)%(Extension)" />
+    <Compile Include="../Services/SourceControl/*.cs" Link="Production/Services/SourceControl/%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="../PiExtensions/*.ts" Link="PiExtensions/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

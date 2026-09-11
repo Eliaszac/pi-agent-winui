@@ -6,6 +6,7 @@ namespace PiAgentGui.Services.Conversations;
 /// <summary>The agent runtime boundary for one independent conversation.</summary>
 public interface IConversationSession : IAsyncDisposable
 {
+    Models.Pi.ProcessIdentity? ProcessIdentity => null;
     event Action<ConversationUpdate>? Updated;
     Task ConnectAsync(CancellationToken cancellationToken = default);
     Task SendAsync(string message, CancellationToken cancellationToken = default);

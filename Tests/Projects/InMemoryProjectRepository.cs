@@ -6,6 +6,13 @@ namespace PiAgentGui.Tests.Projects;
 
 internal sealed class InMemoryProjectRepository(params Project[] projects) : IProjectRepository
 {
+    public Task TouchConversationAsync(Guid projectId, Guid conversationId, DateTimeOffset usedAt, CancellationToken cancellationToken = default)
+    {
+        var index = Projects.FindIndex(project => project.Id == projectId);
+        Projects[index] = Projects[index] with { Conversations = Projects[index].Conversations.Select(conversation => conversation.Id == conversationId
+            ? conversation with { LastUsedAt = usedAt } : conversation).ToArray() };
+        return Task.CompletedTask;
+    }
     public Exception? CopyRegistrationError { get; set; }
     public Task AddConversationCopyAsync(Guid projectId, Guid sourceId, ConversationDraft conversation, CancellationToken cancellationToken = default)
     {

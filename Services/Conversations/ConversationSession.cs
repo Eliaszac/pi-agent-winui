@@ -31,6 +31,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
     private readonly PiTranscript transcript = new();
     private readonly RunUsageTracker runUsage = new();
     private PiRpcClient? client;
+    public Models.Pi.ProcessIdentity? ProcessIdentity => client?.ProcessIdentity;
     private bool connected;
     private bool running;
     private bool changingModel;

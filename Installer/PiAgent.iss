@@ -27,6 +27,7 @@ UninstallDisplayName=Pi Agent
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+LicenseFile=..\Assets\FileTypes\VisualStudioImageLibrary-EULA.rtf
 CloseApplications=yes
 RestartApplications=no
 SetupLogging=yes

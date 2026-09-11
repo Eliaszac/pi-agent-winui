@@ -14,6 +14,7 @@ public sealed class ProcessPiTransport(PiProcessStartInfoFactory startInfoFactor
     private FileStream? sessionLease;
     private Task stderrTask = Task.CompletedTask;
     private int disposed;
+    public ProcessIdentity? ProcessIdentity { get; private set; }
 
     public Task StartAsync(PiLaunchRequest request, CancellationToken cancellationToken = default)
     {
@@ -28,6 +29,7 @@ public sealed class ProcessPiTransport(PiProcessStartInfoFactory startInfoFactor
             catch (IOException exception) { throw new IOException("This session is in use by another app window, or its storage is unavailable. Disconnect it there before retrying.", exception); }
             process = new Process { StartInfo = info };
             if (!process.Start()) throw new IOException("Pi could not start.");
+            ProcessIdentity = new(process.Id, process.StartTime.ToUniversalTime());
             process.StandardInput.NewLine = "\n";
             stderrTask = DrainStderrAsync(process.StandardError);
             return Task.CompletedTask;

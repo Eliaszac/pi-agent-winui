@@ -310,8 +310,19 @@
                                         <FontIcon Glyph="&#xE756;" />
                                     </controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="File Explorer" Click="OnFilesClicked">
+                                    <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B7;"/></controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="Background research" Click="OnResearchClicked">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE721;" /></controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Processes" Click="OnProcessesClicked">
+                                    <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE9D9;"/></controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Source Control" Click="OnSourceControlClicked">
+                                    <controls:ActionMenuFlyoutItem.Icon>
+                                        <PathIcon Style="{StaticResource GitIconStyle}"/>
+                                    </controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
                             </MenuFlyout>
                         </controls:ActionButton.Flyout>
@@ -367,6 +378,12 @@
                     Visibility="{x:Bind Terminals.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:ResearchPanel x:Name="ResearchPane" Grid.Column="2" Grid.RowSpan="3"
                     Visibility="{x:Bind Research.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                <views:FileExplorerPanel x:Name="FilesPane" Grid.Column="2" Grid.RowSpan="3"
+                    Visibility="{x:Bind Files.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                <views:ProcessesPanel x:Name="ProcessesPane" Grid.Column="2" Grid.RowSpan="3"
+                    Visibility="{x:Bind Processes.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                <views:SourceControlPanel x:Name="SourceControlPane" Grid.Column="2" Grid.RowSpan="3"
+                    Visibility="{x:Bind SourceControl.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
         </Grid>
         </Grid>
     </SplitView>

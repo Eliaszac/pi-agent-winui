@@ -83,8 +83,8 @@ public sealed class ProjectItemViewModel : ObservableObject
 
     internal void RefreshGroups()
     {
-        ObservableCollectionSynchronizer.Synchronize(ActiveConversations, Conversations.Where(item => !item.IsSettled).ToArray());
-        ObservableCollectionSynchronizer.Synchronize(SettledConversations, Conversations.Where(item => item.IsSettled).ToArray());
+        ObservableCollectionSynchronizer.Synchronize(ActiveConversations, Conversations.Where(item => !item.IsSettled).OrderByDescending(item => item.LastUsedAt).ToArray());
+        ObservableCollectionSynchronizer.Synchronize(SettledConversations, Conversations.Where(item => item.IsSettled).OrderByDescending(item => item.LastUsedAt).ToArray());
         OnPropertyChanged(nameof(HasNoConversations));
         OnPropertyChanged(nameof(HasSettledConversations));
         OnPropertyChanged(nameof(SettledLabel));

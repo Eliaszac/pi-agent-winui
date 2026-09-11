@@ -1,0 +1,69 @@
+<controls:ActionContentDialog x:Class="PiAgentGui.Views.MergeConflictDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls"
+    PrimaryButtonText="Apply and stage" CloseButtonText="Cancel" DefaultButton="Close" PrimaryButtonClick="OnApply">
+    <controls:ActionContentDialog.Resources>
+        <x:Double x:Key="ContentDialogMaxWidth">1800</x:Double>
+        <x:Double x:Key="ContentDialogMaxHeight">10000</x:Double>
+        <Style x:Key="MergeEditor" TargetType="TextBox">
+            <Setter Property="FontFamily" Value="Consolas"/><Setter Property="FontSize" Value="12"/>
+            <Setter Property="AcceptsReturn" Value="True"/><Setter Property="TextWrapping" Value="NoWrap"/>
+            <Setter Property="Padding" Value="10"/><Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="Background" Value="{ThemeResource SolidBackgroundFillColorBaseBrush}"/>
+            <Setter Property="SelectionHighlightColor" Value="{ThemeResource ControlStrongFillColorDefaultBrush}"/>
+            <Setter Property="IsSpellCheckEnabled" Value="False"/><Setter Property="IsTextPredictionEnabled" Value="False"/>
+        </Style>
+    </controls:ActionContentDialog.Resources>
+    <Grid x:Name="Body" RowSpacing="8">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding Status}" FontSize="12" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                <controls:ActionButton Click="OnPrevious" IsEnabled="{Binding HasBlocks}" Style="{StaticResource ShellIconButtonStyle}" ToolTipService.ToolTip="Previous conflict" AutomationProperties.Name="Previous conflict"><FontIcon Glyph="&#xE70E;" FontSize="12"/></controls:ActionButton>
+                <controls:ActionButton Click="OnNext" IsEnabled="{Binding HasBlocks}" Style="{StaticResource ShellIconButtonStyle}" ToolTipService.ToolTip="Next conflict" AutomationProperties.Name="Next conflict"><FontIcon Glyph="&#xE70D;" FontSize="12"/></controls:ActionButton>
+                <controls:ActionButton Content="Undo choice" Click="OnUndo" IsEnabled="{Binding CanUndo}" FontSize="12"/>
+                <controls:ActionButton Content="Mark reviewed" Click="OnReviewed" FontSize="12" ToolTipService.ToolTip="Confirm a manually resolved file after reviewing it"/>
+            </StackPanel>
+        </Grid>
+        <TextBlock x:Name="ErrorText" Grid.Row="1" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Visibility="Collapsed"/>
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+            <Grid MinWidth="850" ColumnSpacing="8">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Grid RowSpacing="6">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock Text="{Binding LeftLabel}" FontSize="12" FontWeight="SemiBold"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4">
+                        <controls:ActionButton Content="Accept →" Tag="left" Click="OnAccept" IsEnabled="{Binding HasBlocks}" FontSize="12" ToolTipService.ToolTip="Use ours for the selected conflict"/>
+                        <controls:ActionButton Content="Use entire file" Tag="left" Click="OnAcceptFile" FontSize="12"/>
+                    </StackPanel>
+                    <TextBox x:Name="LeftEditor" Grid.Row="2" IsReadOnly="True" Style="{StaticResource MergeEditor}" AutomationProperties.Name="Ours, read only"/>
+                </Grid>
+                <Grid Grid.Column="1" RowSpacing="6">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock Text="Result · editable" FontSize="12" FontWeight="SemiBold"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4">
+                        <controls:ActionButton Content="Accept both" Tag="both" Click="OnAccept" IsEnabled="{Binding HasBlocks}" FontSize="12" ToolTipService.ToolTip="Insert ours followed by theirs"/>
+                        <controls:ActionButton Content="Use base" Tag="base" Click="OnAccept" IsEnabled="{Binding HasSelectedBase}" FontSize="12" ToolTipService.ToolTip="Use the common ancestor for this conflict"/>
+                    </StackPanel>
+                    <TextBox x:Name="ResultEditor" Grid.Row="2" TextChanged="OnResultChanged" MaxLength="256000" Style="{StaticResource MergeEditor}" AutomationProperties.Name="Editable merge result"/>
+                </Grid>
+                <Grid Grid.Column="2" RowSpacing="6">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock Text="{Binding RightLabel}" FontSize="12" FontWeight="SemiBold"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4">
+                        <controls:ActionButton Content="← Accept" Tag="right" Click="OnAccept" IsEnabled="{Binding HasBlocks}" FontSize="12" ToolTipService.ToolTip="Use theirs for the selected conflict"/>
+                        <controls:ActionButton Content="Use entire file" Tag="right" Click="OnAcceptFile" FontSize="12"/>
+                    </StackPanel>
+                    <TextBox x:Name="RightEditor" Grid.Row="2" IsReadOnly="True" Style="{StaticResource MergeEditor}" AutomationProperties.Name="Theirs, read only"/>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+        <TextBlock Grid.Row="3" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+            Text="Non-conflicting edits are kept in the result. Applying writes and stages this file; it does not commit or continue a rebase. During rebase, ours is the rebased-onto version and theirs is the replayed commit."/>
+    </Grid>
+</controls:ActionContentDialog>

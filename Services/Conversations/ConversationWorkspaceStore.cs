@@ -11,6 +11,7 @@ public sealed class ConversationWorkspaceStore(
     private bool disposed;
     public event Action<Guid, Guid, string>? SessionNameChanged;
     public event Action<Guid, Guid, string>? ExplicitSessionNameChanged;
+    public event Action? ViewedRunCompleted;
     public Func<ConversationViewModel, bool, Task>? CopyRequested { get; set; }
     public void InvalidateProviderModels()
     {
@@ -26,6 +27,7 @@ public sealed class ConversationWorkspaceStore(
             workspace = new ConversationViewModel(sessionFactory(project, conversation), dispatcher, previewCompacting);
             workspace.WorkingDirectory = project.Path;
             workspace.ResearchOwnerId = conversation.Id;
+            workspace.ViewedRunCompleted += () => ViewedRunCompleted?.Invoke();
             workspace.SessionNameChanged += name => SessionNameChanged?.Invoke(project.Id, conversation.Id, name);
             workspace.ExplicitSessionNameChanged += name => ExplicitSessionNameChanged?.Invoke(project.Id, conversation.Id, name);
             workspace.DuplicateConversation = open => CopyRequested?.Invoke(workspace, open)

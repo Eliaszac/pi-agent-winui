@@ -23,7 +23,7 @@ public sealed partial class ConversationView : UserControl
         followTail = false;
         tailScrollPending = false;
         if (sender.DataContext is ChangedFileViewModel file && sender.Content is StackPanel { Children.Count: 1 } panel)
-            panel.Children.Add(new Controls.FileDiffView { Patch = file.Patch });
+            panel.Children.Add(new Controls.FileDiffView { Patch = file.Patch, FileName = file.Path, ShowFileName = false });
     }
     private void OnFileDiffCollapsed(Expander sender, ExpanderCollapsedEventArgs args)
     {

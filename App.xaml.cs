@@ -71,6 +71,7 @@ public partial class App : Application
             },
             new DispatcherQueueUiDispatcher(window.DispatcherQueue));
         var projectService = new ProjectService(repository);
+        workspaces.ViewedRunCompleted += () => { if (!closing && !windowClosed) CompletionSound.Play(); };
         var shell = new ShellViewModel(repository, workspaces, paths);
         providers = new ProviderService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "management"));
@@ -90,7 +91,13 @@ public partial class App : Application
         var github = new ViewModels.GitHub.GitHubViewModel(new Services.GitHub.GitHubAuthentication(githubOptions, githubApi,
             new Services.GitHub.WindowsGitHubCredentialStore(githubOptions.ClientId)), githubApi, new Services.GitHub.GitBranchReader());
         terminals = new(directory => new Services.Terminal.ConPtySession(directory));
-        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel);
+        var files = new ViewModels.Files.FileExplorerViewModel(new DispatcherQueueUiDispatcher(window.DispatcherQueue));
+        window.Closed += (_, _) => files.Dispose();
+        var processReader = new AgentProcessReader();
+        var processes = new ViewModels.Processes.ProcessesPanelViewModel(processReader, new AgentProcessStopper(processReader.Read, WindowsProcessTerminator.Stop));
+        var sourceControl = new ViewModels.SourceControl.SourceControlViewModel(new Services.SourceControl.GitRepositoryService(new Services.SourceControl.GitCommandRunner()));
+        window.Closed += (_, _) => sourceControl.Dispose();
+        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl);
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)

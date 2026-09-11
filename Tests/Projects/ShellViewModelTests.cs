@@ -110,7 +110,7 @@ public sealed class ShellViewModelTests
         await shell.LoadAsync();
         Assert.IsTrue(shell.Projects[0].IsExpanded);
         Assert.IsFalse(shell.Projects[1].IsExpanded);
-        Assert.AreEqual("First", shell.WorkspaceTitle);
+        Assert.AreEqual("Second", shell.WorkspaceTitle);
         Assert.IsTrue(shell.IsReady);
     }
 

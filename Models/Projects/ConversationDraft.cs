@@ -13,6 +13,8 @@ public sealed record ConversationDraft
 
     /// <summary>Gets the UTC creation time.</summary>
     public required DateTimeOffset CreatedAt { get; init; }
+    /// <summary>Gets the most recent explicit opening time; older catalogs fall back to creation time.</summary>
+    public DateTimeOffset? LastUsedAt { get; init; }
     /// <summary>Gets whether the user has moved this conversation into the settled group.</summary>
     public bool IsSettled { get; init; }
 }

@@ -24,6 +24,8 @@ public sealed class ConversationItemViewModel : ObservableObject
     internal ConversationDraft Conversation { get; private set; }
     /// <summary>Gets the displayed title.</summary>
     public string Title => Conversation.Title;
+    internal DateTimeOffset LastUsedAt => Conversation.LastUsedAt ?? Conversation.CreatedAt;
+    internal void MarkUsed(DateTimeOffset usedAt) => Conversation = Conversation with { LastUsedAt = usedAt };
     /// <summary>Gets the conversation selection command.</summary>
     public RelayCommand SelectCommand { get; }
     public ConversationViewModel? Workspace { get; }

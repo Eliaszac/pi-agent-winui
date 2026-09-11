@@ -6,6 +6,7 @@ namespace PiAgentGui.Repositories.Projects;
 /// <summary>Persists projects without exposing the storage format to callers.</summary>
 public interface IProjectRepository
 {
+    Task TouchConversationAsync(Guid projectId, Guid conversationId, DateTimeOffset usedAt, CancellationToken cancellationToken = default);
     Task AddConversationCopyAsync(Guid projectId, Guid sourceId, ConversationDraft conversation, CancellationToken cancellationToken = default);
     Task RenameProjectAsync(Guid projectId, string name, CancellationToken cancellationToken = default);
     Task DeleteProjectAsync(Guid projectId, CancellationToken cancellationToken = default);

@@ -22,6 +22,11 @@ public sealed partial class MainPage : Page
     public ViewModels.GitHub.GitHubViewModel GitHub { get; }
     public ViewModels.Terminal.TerminalPanelViewModel Terminals { get; }
     public ViewModels.Conversations.ResearchPanelViewModel Research { get; }
+    public ViewModels.Files.FileExplorerViewModel Files { get; }
+    public ViewModels.Processes.ProcessesPanelViewModel Processes { get; }
+    public ViewModels.SourceControl.SourceControlViewModel SourceControl { get; }
+    private readonly DispatcherTimer sourceControlTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private readonly DispatcherTimer processesTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private double terminalWidth = 400;
     private readonly Configuration.GitHubOptions githubOptions;
     private readonly CancellationToken githubCancellation;
@@ -33,18 +38,54 @@ public sealed partial class MainPage : Page
     /// <param name="picker">The window-owned folder picker.</param>
     public MainPage(ShellViewModel viewModel, Func<CreateProjectViewModel> createProjectForm, FolderPickerService picker, ViewModels.Applications.OpenInViewModel openIn,
         ViewModels.GitHub.GitHubViewModel github, Configuration.GitHubOptions githubOptions, CancellationToken githubCancellation,
-        ViewModels.Terminal.TerminalPanelViewModel terminals, ViewModels.Conversations.ResearchPanelViewModel research)
+        ViewModels.Terminal.TerminalPanelViewModel terminals, ViewModels.Conversations.ResearchPanelViewModel research,
+        ViewModels.Files.FileExplorerViewModel files, ViewModels.Processes.ProcessesPanelViewModel processes,
+        ViewModels.SourceControl.SourceControlViewModel sourceControl)
     {
         ViewModel = viewModel;
         OpenIn = openIn;
         GitHub = github;
         Terminals = terminals;
         Research = research;
+        Files = files;
+        Processes = processes;
+        SourceControl = sourceControl;
         this.githubOptions = githubOptions;
         this.githubCancellation = githubCancellation;
         this.createProjectForm = createProjectForm;
         this.picker = picker;
         InitializeComponent();
+        SourceControlPane.DataContext = SourceControl;
+        sourceControlTimer.Tick += async (_, _) => await SourceControl.RefreshAsync();
+        SourceControl.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName != nameof(SourceControl.IsOpen)) return;
+            if (SourceControl.IsOpen) { sourceControlTimer.Start(); _ = SourceControl.RefreshAsync(); }
+            else sourceControlTimer.Stop();
+            UpdateTerminalLayout();
+        };
+        Unloaded += (_, _) => { sourceControlTimer.Stop(); SourceControl.IsOpen = false; };
+        ProcessesPane.DataContext = Processes;
+        processesTimer.Tick += async (_, _) => await RefreshProcessesAsync();
+        Processes.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName != nameof(Processes.IsOpen)) return;
+            if (Processes.IsOpen) { processesTimer.Start(); _ = RefreshProcessesAsync(); }
+            else processesTimer.Stop();
+            UpdateTerminalLayout();
+        };
+        ViewModel.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == nameof(ViewModel.Chat))
+            {
+                Processes.Select(ViewModel.Chat?.ProcessIdentity);
+                if (Processes.IsOpen) _ = RefreshProcessesAsync();
+            }
+        };
+        Unloaded += (_, _) => { processesTimer.Stop(); Processes.IsOpen = false; };
+        FilesPane.DataContext = Files;
+        FilesPane.OpenFile = OpenIn.OpenFileAsync;
+        Files.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Files.IsOpen)) UpdateTerminalLayout(); };
         ResearchPane.DataContext = Research;
         ResearchPane.ShareRequested += text => { if (ViewModel.Chat is { } chat) chat.Draft += (string.IsNullOrWhiteSpace(chat.Draft) ? "" : "\n\n") + text; };
         Research.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Research.IsOpen)) UpdateTerminalLayout(); };
@@ -71,6 +112,9 @@ public sealed partial class MainPage : Page
             if (args.PropertyName == nameof(ShellViewModel.SelectedProject)) _ = OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);
             if (args.PropertyName == nameof(ShellViewModel.SelectedProject))
             {
+                Files.SelectProject(ViewModel.SelectedProject?.Path);
+                SourceControl.SelectProject(ViewModel.SelectedProject?.Path);
+                if (SourceControl.IsOpen) _ = SourceControl.RefreshAsync();
                 GitHub.Select(ViewModel.SelectedProject?.Path);
                 _ = RefreshGitHubAsync();
             }
@@ -82,6 +126,7 @@ public sealed partial class MainPage : Page
         if (initialized) return;
         initialized = true;
         await ViewModel.LoadAsync();
+        Files.SelectProject(ViewModel.SelectedProject?.Path);
         await OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);
         GitHub.Initialize();
         GitHub.Select(ViewModel.SelectedProject?.Path);
@@ -136,11 +181,17 @@ public sealed partial class MainPage : Page
 
     private void OnTerminalClicked(object sender, RoutedEventArgs args)
     {
+        SourceControl.IsOpen = false;
+        Processes.IsOpen = false;
+        Files.IsOpen = false;
         Research.IsOpen = false;
         if (ViewModel.SelectedProject?.Path is { } directory) Terminals.Toggle(directory);
     }
     private void OnResearchClicked(object sender, RoutedEventArgs args)
     {
+        SourceControl.IsOpen = false;
+        Processes.IsOpen = false;
+        Files.IsOpen = false;
         Terminals.Hide();
         Research.SelectConversation(ViewModel.Chat?.ResearchOwnerId);
         Research.IsOpen = !Research.IsOpen;
@@ -149,6 +200,15 @@ public sealed partial class MainPage : Page
     {
         terminalWidth = Math.Clamp(terminalWidth - delta, 280, Math.Max(280, WorkspaceContent.ActualWidth * 0.6));
         UpdateTerminalLayout();
+    }
+
+    private void OnFilesClicked(object sender, RoutedEventArgs args)
+    {
+        SourceControl.IsOpen = false;
+        Processes.IsOpen = false;
+        Terminals.Hide(); Research.IsOpen = false;
+        Files.SelectProject(ViewModel.SelectedProject?.Path);
+        Files.IsOpen = !Files.IsOpen;
     }
     private void OnTerminalResizeKeyDown(object sender, KeyRoutedEventArgs args)
     {
@@ -160,8 +220,20 @@ public sealed partial class MainPage : Page
     {
         var wide = WorkspaceContent.ActualWidth >= 780;
         var width = Math.Min(terminalWidth, Math.Max(0, WorkspaceContent.ActualWidth * (wide ? 0.6 : 1)));
-        TerminalColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen) && wide ? width : 0);
-        TerminalSplitterColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen) && wide ? 6 : 0);
+        TerminalColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen || Files.IsOpen || Processes.IsOpen || SourceControl.IsOpen) && wide ? width : 0);
+        TerminalSplitterColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen || Files.IsOpen || Processes.IsOpen || SourceControl.IsOpen) && wide ? 6 : 0);
+        Grid.SetColumn(SourceControlPane, wide ? 2 : 0);
+        Grid.SetColumnSpan(SourceControlPane, wide ? 1 : 3);
+        SourceControlPane.Width = width;
+        SourceControlPane.HorizontalAlignment = HorizontalAlignment.Right;
+        Grid.SetColumn(ProcessesPane, wide ? 2 : 0);
+        Grid.SetColumnSpan(ProcessesPane, wide ? 1 : 3);
+        ProcessesPane.Width = width;
+        ProcessesPane.HorizontalAlignment = HorizontalAlignment.Right;
+        Grid.SetColumn(FilesPane, wide ? 2 : 0);
+        Grid.SetColumnSpan(FilesPane, wide ? 1 : 3);
+        FilesPane.Width = width;
+        FilesPane.HorizontalAlignment = HorizontalAlignment.Right;
         Grid.SetColumn(ResearchPane, wide ? 2 : 0);
         Grid.SetColumnSpan(ResearchPane, wide ? 1 : 3);
         ResearchPane.Width = width;
@@ -171,7 +243,28 @@ public sealed partial class MainPage : Page
         TerminalPane.Width = width;
         TerminalPane.HorizontalAlignment = HorizontalAlignment.Right;
     }
-    public void CloseTerminalDisplays() => TerminalPane.CloseDisplays();
+    public void CloseTerminalDisplays() { sourceControlTimer.Stop(); SourceControl.Dispose(); processesTimer.Stop(); Processes.IsOpen = false; TerminalPane.CloseDisplays(); }
+
+    private void OnSourceControlClicked(object sender, RoutedEventArgs args)
+    {
+        Terminals.Hide(); Research.IsOpen = false; Files.IsOpen = false; Processes.IsOpen = false;
+        SourceControl.SelectProject(ViewModel.SelectedProject?.Path);
+        SourceControl.IsOpen = !SourceControl.IsOpen;
+    }
+
+    private void OnProcessesClicked(object sender, RoutedEventArgs args)
+    {
+        SourceControl.IsOpen = false;
+        Terminals.Hide(); Research.IsOpen = false; Files.IsOpen = false;
+        Processes.Select(ViewModel.Chat?.ProcessIdentity);
+        Processes.IsOpen = !Processes.IsOpen;
+    }
+
+    private async Task RefreshProcessesAsync()
+    {
+        Processes.Select(ViewModel.Chat?.ProcessIdentity);
+        await Processes.RefreshAsync();
+    }
 
     private void UpdateGitHubLogo() => HeaderGitHubLogo.Source = Controls.ApplicationLogoSource.Create("github-light.svg", ActualTheme);
 

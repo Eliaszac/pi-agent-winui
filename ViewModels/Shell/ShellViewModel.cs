@@ -156,7 +156,7 @@ public sealed class ShellViewModel : ObservableObject
             var projectId = selectedProject?.Project.Id;
             var conversationId = selectedConversation?.Conversation.Id;
             var loadedProjects = new ObservableCollection<ProjectItemViewModel>();
-            foreach (var project in saved)
+            foreach (var project in saved.Reverse())
             {
                 var item = CreateProjectItem(project);
                 item.IsExpanded = expanded.TryGetValue(project.Id, out var wasExpanded) ? wasExpanded : loadedProjects.Count == 0;
@@ -185,7 +185,7 @@ public sealed class ShellViewModel : ObservableObject
     {
         var item = CreateProjectItem(project);
         item.IsExpanded = true;
-        Projects.Add(item);
+        Projects.Insert(0, item);
         SelectProject(item);
         // Keep narrow workspaces visible rather than opening an overlay above the new selection.
         Sidebar.IsOpen = !Sidebar.IsOverlay;
@@ -209,8 +209,22 @@ public sealed class ShellViewModel : ObservableObject
 
     private void SelectConversation(ProjectItemViewModel project, ConversationItemViewModel conversation)
     {
+        var usedAt = DateTimeOffset.UtcNow;
+        conversation.MarkUsed(usedAt);
+        project.RefreshGroups();
+        _ = PersistConversationUsageAsync(project.Project.Id, conversation.Conversation.Id, usedAt);
         SetSelection(project, conversation);
         if (Sidebar.IsOverlay) Sidebar.IsOpen = false;
+    }
+
+    private readonly SemaphoreSlim usageWrites = new(1, 1);
+
+    private async Task PersistConversationUsageAsync(Guid projectId, Guid conversationId, DateTimeOffset usedAt)
+    {
+        await usageWrites.WaitAsync();
+        try { await repository.TouchConversationAsync(projectId, conversationId, usedAt); }
+        catch (Exception exception) { ReportError(exception); }
+        finally { usageWrites.Release(); }
     }
 
     private void SetSelection(ProjectItemViewModel? project, ConversationItemViewModel? conversation)

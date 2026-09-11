@@ -16,6 +16,7 @@ public sealed class PiRpcClient(IPiTransport transport, TimeSpan requestTimeout)
     private Exception? failure;
     public event Action<JsonElement>? EventReceived;
     public event Action<Exception>? Faulted;
+    public ProcessIdentity? ProcessIdentity => transport.ProcessIdentity;
 
     public async Task StartAsync(PiLaunchRequest request, CancellationToken cancellationToken = default)
     {

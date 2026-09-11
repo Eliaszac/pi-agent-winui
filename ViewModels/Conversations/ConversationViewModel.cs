@@ -11,6 +11,7 @@ namespace PiAgentGui.ViewModels.Conversations;
 public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly IConversationSession session;
+    public ProcessIdentity? ProcessIdentity => session.ProcessIdentity;
     private readonly IUiDispatcher dispatcher;
     private readonly ConcurrentQueue<ConversationUpdate> updates = new();
     private readonly Dictionary<string, ChatEntryViewModel> entries = [];
@@ -26,6 +27,7 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
     private bool running;
     private bool connected;
     private bool isViewed;
+    public event Action? ViewedRunCompleted;
     private bool unseenCompletion;
     private readonly HashSet<string> runEntryIds = [];
     private bool trackingRun;
@@ -378,6 +380,10 @@ public sealed class ConversationViewModel : ObservableObject, IAsyncDisposable
                     RunChanges = new(changes, runVerification.Labels, runVerification.DiagnosticsLabel(changes, WorkingDirectory));
                     trackingRun = false;
                     changed = true;
+                    var finalResponse = Entries.LastOrDefault(entry => runEntryIds.Contains(entry.Id) && entry.IsAssistant);
+                    if (isViewed && finalResponse is { CanCopyResponse: true, Status.Length: 0 }
+                        && string.IsNullOrEmpty(update.Error) && !HasError)
+                        ViewedRunCompleted?.Invoke();
                 }
             }
             if (update.IsConnected is bool isConnected)

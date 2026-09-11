@@ -149,6 +149,10 @@ public sealed class JsonProjectRepository : IProjectRepository
     public Task DeleteConversationAsync(Guid projectId, Guid conversationId, CancellationToken cancellationToken = default) =>
         ChangeProjectAsync(projectId, project => ChangeConversation(project, conversationId, _ => null), cancellationToken);
 
+    public Task TouchConversationAsync(Guid projectId, Guid conversationId, DateTimeOffset usedAt, CancellationToken cancellationToken = default) =>
+        ChangeProjectAsync(projectId, project => ChangeConversation(project, conversationId,
+            conversation => conversation with { LastUsedAt = conversation.LastUsedAt > usedAt ? conversation.LastUsedAt : usedAt }), cancellationToken);
+
     private static Project ChangeConversation(Project project, Guid conversationId, Func<ConversationDraft, ConversationDraft?> change)
     {
         var conversations = project.Conversations.ToList();
