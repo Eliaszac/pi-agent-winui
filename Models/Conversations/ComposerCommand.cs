@@ -4,5 +4,5 @@ namespace PiAgentGui.Models.Conversations;
 public sealed record ComposerCommand(string Name, string Description, string Source, string Action = "")
 {
     public string Label => "/" + Name;
-    public string Origin => Source switch { "app" => "Pi Agent", "extension" => "Extension", "skill" => "Skill", "prompt" => "Template", _ => "Pi" };
+    public string Origin => Source switch { "app" => "Pi desktop", "extension" => "Extension", "skill" => "Skill", "prompt" => "Template", _ => "Pi" };
 }

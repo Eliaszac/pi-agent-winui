@@ -21,7 +21,7 @@ public sealed class McpImportDialog : ActionContentDialog
         Title = "Add MCP servers globally"; PrimaryButtonText = "Preview"; CloseButtonText = "Cancel";
         var names = runtimeNames.ToArray();
         var body = new StackPanel { Spacing = 12 };
-        body.Children.Add(new TextBlock { Text = "Add a server globally, then restart Pi Agent to load it. Existing server names are preserved.", TextWrapping = TextWrapping.Wrap });
+        body.Children.Add(new TextBlock { Text = "Add a server globally, then restart Pi desktop to load it. Existing server names are preserved.", TextWrapping = TextWrapping.Wrap });
         var browse = new ActionButton { Content = "Choose JSON file" };
         var import = new StackPanel { Spacing = 12, Visibility = Visibility.Collapsed };
         import.Children.Add(browse); import.Children.Add(json);

@@ -14,7 +14,7 @@ public sealed class ResearchStore(string directory)
         try { return new FileStream(Path.Combine(directory, "research.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
         catch (IOException exception)
         {
-            throw new IOException("Research storage could not be locked. Another Pi Agent window may own it. Close that window and restart this one; if the problem remains, check access to the app data folder.", exception);
+            throw new IOException("Research storage could not be locked. Another Pi desktop window may own it. Close that window and restart this one; if the problem remains, check access to the app data folder.", exception);
         }
     }
     public string PreferencePath => Path.Combine(directory, "research-enabled.json");

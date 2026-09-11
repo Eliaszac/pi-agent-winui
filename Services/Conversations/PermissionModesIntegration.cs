@@ -62,7 +62,7 @@ public sealed class PermissionModesIntegration(Action<ConversationUpdate> publis
         {
             Available = false;
             publish(new() { ApprovalAvailable = false, HasApprovalModeUpdate = true, ApprovalStatus = "Extension unavailable · view setup" });
-            throw new InvalidOperationException("The approval extension is no longer loaded. Restart Pi Agent after checking setup.");
+            throw new InvalidOperationException("The approval extension is no longer loaded. Restart Pi desktop after checking setup.");
         }
         await client.RequestAsync("prompt", new JsonObject { ["message"] = "/mode " + mode }, cancellationToken).ConfigureAwait(false);
         await RefreshAsync(client, cancellationToken).ConfigureAwait(false);

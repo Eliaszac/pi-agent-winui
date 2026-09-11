@@ -18,7 +18,7 @@ public sealed partial class CapabilitiesPanel : UserControl
         {
             var dialog = new AddSkillDialog(Imports, PickSkillFolder) { XamlRoot = XamlRoot };
             await dialog.ShowAsync();
-            if (dialog.Saved && DataContext is CapabilitiesPanelViewModel model) model.ReportError("Added globally · restart Pi Agent to load the new skills.");
+            if (dialog.Saved && DataContext is CapabilitiesPanelViewModel model) model.ReportError("Added globally · restart Pi desktop to load the new skills.");
         }
         catch (Exception) { if (DataContext is CapabilitiesPanelViewModel model) model.ReportError("Couldn't open skill setup. Close any other dialog and try again."); }
         finally { dialogOpen = false; }
@@ -31,7 +31,7 @@ public sealed partial class CapabilitiesPanel : UserControl
         {
             var dialog = new McpImportDialog(Imports.Mcp, model.KnownServerNames) { XamlRoot = XamlRoot };
             await dialog.ShowAsync();
-            if (dialog.Saved) model.ReportError("Configured globally · restart Pi Agent to load the imported MCP servers.");
+            if (dialog.Saved) model.ReportError("Configured globally · restart Pi desktop to load the imported MCP servers.");
         }
         catch (Exception) { model.ReportError("Couldn't open MCP import. Close any other dialog and try again."); }
         finally { dialogOpen = false; }
@@ -72,7 +72,7 @@ public sealed partial class CapabilitiesPanel : UserControl
             var document = await store.ReadAsync(item.File.Path);
             var dialog = new InstructionFileDialog(item, document, store) { XamlRoot = XamlRoot };
             await dialog.ShowAsync();
-            if (dialog.Saved) { await model.Instructions.RefreshAsync(); model.ReportError("Saved to disk · restart Pi Agent to load the updated instructions."); }
+            if (dialog.Saved) { await model.Instructions.RefreshAsync(); model.ReportError("Saved to disk · restart Pi desktop to load the updated instructions."); }
         }
         catch (Exception) { model.ReportError("Couldn't open this instruction file. It may be unavailable, linked, or use an unsupported encoding."); }
         finally { dialogOpen = false; }

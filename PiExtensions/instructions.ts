@@ -11,7 +11,7 @@ export default function registerInstructions(pi: ExtensionAPI): void {
         ctx.ui.setStatus("pi-gui-instructions-v1", JSON.stringify(snapshot));
     };
     pi.registerCommand("pi-gui-instructions", {
-        description: "Internal loaded instruction inventory for Pi Agent",
+        description: "Internal loaded instruction inventory for Pi desktop",
         handler(_args, ctx) {
             publish(ctx, typeof ctx.getSystemPromptOptions === "function" ? ctx.getSystemPromptOptions().contextFiles ?? [] : undefined);
         }

@@ -37,7 +37,7 @@ try {
     }
     & $CompilerPath /Q "/DAppVersion=$Version" "/DPublishDir=$publishPath" "/DOutputDir=$outputRoot" "/DBootstrapper=$bootstrapper" (Join-Path $PSScriptRoot 'PiAgent.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
-    $installer = Join-Path $outputRoot "PiAgent-Setup-$Version-x64.exe"
+    $installer = Join-Path $outputRoot "PiDesktop-Setup-$Version-x64.exe"
     $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
     "$hash  $([IO.Path]::GetFileName($installer))" | Set-Content -LiteralPath "$installer.sha256" -Encoding ascii
     Write-Output "Installer: $installer"

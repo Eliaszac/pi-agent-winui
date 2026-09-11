@@ -3,7 +3,7 @@ import { SessionCopy } from "./SessionCopy.ts";
 
 export default function registerSessionCopy(pi: ExtensionAPI): void {
     pi.registerCommand("pi-gui-copy-session", {
-        description: "Internal Pi Agent conversation copy",
+        description: "Internal Pi desktop conversation copy",
         handler: async (args, ctx) => {
             if (!ctx.isIdle()) throw new Error("Wait for the conversation to finish before copying it.");
             const request: unknown = JSON.parse(args);

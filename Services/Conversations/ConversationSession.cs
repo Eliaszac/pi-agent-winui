@@ -67,7 +67,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             var packet = await current.RequestAsync("get_commands", cancellationToken: linked.Token).ConfigureAwait(false);
             var commands = PiJson.Field(PiJson.Field(packet, "data"), "commands");
             if (commands.ValueKind != JsonValueKind.Array || !commands.EnumerateArray().Any(item => PiJson.Text(item, "name") == "pi-gui-copy-session"))
-                throw new InvalidOperationException("Restart Pi Agent to load the conversation-copy integration.");
+                throw new InvalidOperationException("Restart Pi desktop to load the conversation-copy integration.");
             var request = new JsonObject { ["target"] = destination, ["title"] = title.Trim() };
             await current.RequestAsync("prompt", new JsonObject { ["message"] = "/pi-gui-copy-session " + request.ToJsonString() }, linked.Token).ConfigureAwait(false);
             if (!File.Exists(destination)) throw new IOException("Pi couldn't create the conversation copy. The original is unchanged.");
@@ -115,7 +115,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
                 var discovery = await current.RequestAsync("get_commands", cancellationToken: linked.Token).ConfigureAwait(false);
                 var commands = PiJson.Field(PiJson.Field(discovery, "data"), "commands");
                 if (commands.ValueKind != JsonValueKind.Array || !commands.EnumerateArray().Any(item => PiJson.Text(item, "name") == expected))
-                    throw new InvalidOperationException("Restart Pi Agent to load this integration in the conversation.");
+                    throw new InvalidOperationException("Restart Pi desktop to load this integration in the conversation.");
             }
             JsonObject? arguments = operation switch
             {

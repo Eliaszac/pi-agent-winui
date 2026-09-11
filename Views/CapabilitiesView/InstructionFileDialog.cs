@@ -33,7 +33,7 @@ public sealed class InstructionFileDialog : Controls.ActionContentDialog
         body.Children.Add(error);
         var description = new TextBlock { Text = item.Scope + " · Saved file on disk\n" +
             (string.Equals(document.ContentHash, item.File.Hash, StringComparison.OrdinalIgnoreCase) ? "Loaded · matches disk" : "Disk differs · reload required") +
-            "\nEdits affect all sessions that load this file. Restart Pi Agent to apply saved changes.",
+            "\nEdits affect all sessions that load this file. Restart Pi desktop to apply saved changes.",
             TextWrapping = TextWrapping.Wrap, FontSize = 12 };
         Grid.SetRow(description, 1); body.Children.Add(description);
         preview = new ScrollViewer { Content = new Controls.MarkdownMessage { Text = document.Text }, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };

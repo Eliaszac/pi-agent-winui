@@ -21,7 +21,7 @@ public sealed class GitHubConnectDialog : ActionContentDialog
         var copy = new ActionButton { Content = "Copy code", IsEnabled = false };
         copy.Click += (_, _) => { var data = new DataPackage(); data.SetText(code.Text); Clipboard.SetContent(data); copy.Content = "Copied"; };
         var content = new StackPanel { Spacing = 16, MaxWidth = 420 };
-        content.Children.Add(new TextBlock { Text = "Enter this code on GitHub to authorize Pi Agent. Only approve a code you requested here.", TextWrapping = TextWrapping.Wrap });
+        content.Children.Add(new TextBlock { Text = "Enter this code on GitHub to authorize Pi desktop. Only approve a code you requested here.", TextWrapping = TextWrapping.Wrap });
         content.Children.Add(code);
         content.Children.Add(copy);
         content.Children.Add(status);

@@ -16,7 +16,7 @@ public sealed partial class ExtensionSetupDialog : Controls.ActionContentDialog
         Sections.Children.Add(new Controls.ActionHyperlinkButton { Content = "Documentation", NavigateUri = definition.Documentation });
         Sections.Children.Add(new Controls.ActionHyperlinkButton { Content = "Source code", NavigateUri = definition.Source });
         Sections.Children.Add(new TextBlock { Text = "Installation and configuration", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        Sections.Children.Add(new TextBlock { Text = "Finish active runs, run this command in your terminal to install globally, then restart Pi Agent.", TextWrapping = TextWrapping.Wrap });
+        Sections.Children.Add(new TextBlock { Text = "Finish active runs, run this command in your terminal to install globally, then restart Pi desktop.", TextWrapping = TextWrapping.Wrap });
         Sections.Children.Add(new Controls.CodeBlockView("PowerShell", definition.InstallCommand));
         Sections.Children.Add(new TextBlock { Text = definition.Configuration, TextWrapping = TextWrapping.Wrap });
         if (!string.IsNullOrWhiteSpace(definition.ConfigurationJson))

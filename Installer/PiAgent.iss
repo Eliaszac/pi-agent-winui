@@ -8,9 +8,9 @@
 
 [Setup]
 AppId={#AppIdentity}
-AppName=Pi Agent
+AppName=Pi desktop
 AppVersion={#AppVersion}
-AppVerName=Pi Agent {#AppVersion}
+AppVerName=Pi desktop {#AppVersion}
 VersionInfoVersion={#AppVersion}
 DefaultDirName={localappdata}\Programs\Pi Agent
 DisableDirPage=yes
@@ -20,10 +20,10 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.19041
 OutputDir={#OutputDir}
-OutputBaseFilename=PiAgent-Setup-{#AppVersion}-x64
+OutputBaseFilename=PiDesktop-Setup-{#AppVersion}-x64
 SetupIconFile=..\Assets\Pi.ico
 UninstallDisplayIcon={app}\PiAgentGui.exe
-UninstallDisplayName=Pi Agent
+UninstallDisplayName=Pi desktop
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -43,12 +43,16 @@ Name: desktopicon; Description: "Create a desktop shortcut"; GroupDescription: "
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
 Source: "{#Bootstrapper}"; Flags: dontcopy
 
+[InstallDelete]
+Type: files; Name: "{userprograms}\Pi Agent.lnk"
+Type: files; Name: "{userdesktop}\Pi Agent.lnk"
+
 [Icons]
-Name: "{userprograms}\Pi Agent"; Filename: "{app}\PiAgentGui.exe"; WorkingDir: "{app}"
-Name: "{userdesktop}\Pi Agent"; Filename: "{app}\PiAgentGui.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{userprograms}\Pi desktop"; Filename: "{app}\PiAgentGui.exe"; WorkingDir: "{app}"
+Name: "{userdesktop}\Pi desktop"; Filename: "{app}\PiAgentGui.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\PiAgentGui.exe"; Description: "Launch Pi Agent"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\PiAgentGui.exe"; Description: "Launch Pi desktop"; Flags: nowait postinstall skipifsilent
 
 [Code]
 const
@@ -64,7 +68,7 @@ begin
   if RegQueryStringValue(HKCU64, UninstallKey, 'DisplayVersion', Installed) then
     if StrToVersion(Installed, InstalledVersion) and StrToVersion('{#AppVersion}', NewVersion) then
       if ComparePackedVersion(InstalledVersion, NewVersion) > 0 then begin
-        MsgBox('A newer version of Pi Agent is already installed. Uninstall it first if you intend to downgrade. Your conversation data will be preserved.', mbError, MB_OK);
+        MsgBox('A newer version of Pi desktop is already installed. Uninstall it first if you intend to downgrade. Your conversation data will be preserved.', mbError, MB_OK);
         Result := False;
       end;
 end;

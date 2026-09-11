@@ -50,7 +50,7 @@ public static class PermissionModesCompatibility
                     Move-Item -LiteralPath $piTemporary -Destination $piFile -Force
                 } finally { if (Test-Path -LiteralPath $piTemporary) { Remove-Item -LiteralPath $piTemporary } }
             }
-            Write-Host 'Permission Modes compatibility ready. Configure a connected classifier model, then restart Pi Agent.'
+            Write-Host 'Permission Modes compatibility ready. Configure a connected classifier model, then restart Pi desktop.'
         }
         """;
 }

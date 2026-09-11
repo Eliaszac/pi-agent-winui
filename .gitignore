@@ -40,6 +40,8 @@ Installer/Output/
 *.wixpdb
 PiAgent-Setup-*.exe
 PiAgent-Setup-*.exe.sha256
+PiDesktop-Setup-*.exe
+PiDesktop-Setup-*.exe.sha256
 *.appx
 *.appxbundle
 *.msix

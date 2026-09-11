@@ -31,8 +31,8 @@
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(PlatformTarget)' == 'ARM64'">win-arm64</RuntimeIdentifier>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationIcon>Assets\Pi.ico</ApplicationIcon>
-        <Product>Pi Agent</Product>
-        <Title>Pi Agent</Title>
+        <Product>Pi desktop</Product>
+        <Title>Pi desktop</Title>
         <Version>0.1.1</Version>
         <PublishProfile>win-$(Platform).pubxml</PublishProfile>
         <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)')) >= 8">win-x86;win-x64;win-arm64</RuntimeIdentifiers>

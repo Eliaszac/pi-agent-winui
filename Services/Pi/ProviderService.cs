@@ -35,7 +35,7 @@ public sealed class ProviderService(Func<PiRpcClient> clientFactory, string work
             var commands = await client.RequestAsync("get_commands", cancellationToken: token).ConfigureAwait(false);
             var list = PiJson.Field(PiJson.Field(commands, "data"), "commands");
             if (list.ValueKind != JsonValueKind.Array || !list.EnumerateArray().Any(item => PiJson.Text(item, "name") == "pi-gui-providers"))
-                throw new InvalidOperationException("The Providers integration couldn't load. Update Pi and restart Pi Agent.");
+                throw new InvalidOperationException("The Providers integration couldn't load. Update Pi and restart Pi desktop.");
             var request = new JsonObject { ["action"] = action, ["provider"] = provider, ["method"] = method };
             var processing = ReadResultAsync();
             try

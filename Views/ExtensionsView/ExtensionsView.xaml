@@ -59,7 +59,7 @@
             <StackPanel Spacing="12" Margin="0,20,12,20" HorizontalAlignment="Stretch"
                 Visibility="{Binding HasOtherExtensions, Converter={StaticResource BooleanToVisibility}}">
                 <TextBlock Text="Other installed extensions" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <TextBlock Text="Third-party extensions found in your global Pi installation. These are not managed or specifically supported by Pi Agent. Presence on disk does not confirm they are enabled or loaded. Project-local extensions are not listed here."
+                <TextBlock Text="Third-party extensions found in your global Pi installation. These are not managed or specifically supported by Pi desktop. Presence on disk does not confirm they are enabled or loaded. Project-local extensions are not listed here."
                     TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <ItemsControl ItemsSource="{Binding OtherExtensions}">
                     <ItemsControl.ItemTemplate>

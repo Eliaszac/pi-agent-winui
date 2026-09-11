@@ -10,7 +10,7 @@ $outputRoot = Join-Path $projectRoot 'artifacts/installer'
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PiAgentGui.Desktop_is1'
 
 if (Get-Process -Name PiAgentGui -ErrorAction SilentlyContinue) {
-    throw 'Finish active runs and close Pi Agent, including development windows, then run this script again.'
+    throw 'Finish active runs and close Pi desktop, including development windows, then run this script again.'
 }
 
 $installed = if (Test-Path -LiteralPath $uninstallKey) { Get-ItemProperty -LiteralPath $uninstallKey } else { $null }
@@ -29,18 +29,18 @@ if (([version]$Version).Major -gt 65535 -or ([version]$Version).Minor -gt 65535 
     throw 'Each version component must be between 0 and 65535. Specify a new version with -Version.'
 }
 
-Write-Host "Building Pi Agent $Version for local installation..."
+Write-Host "Building Pi desktop $Version for local installation..."
 $buildParameters = @{ Version = $Version }
 if ($CompilerPath) { $buildParameters.CompilerPath = $CompilerPath }
 & (Join-Path $PSScriptRoot 'Build-Installer.ps1') @buildParameters
 
-$installer = Join-Path $outputRoot "PiAgent-Setup-$Version-x64.exe"
+$installer = Join-Path $outputRoot "PiDesktop-Setup-$Version-x64.exe"
 $expectedHash = ((Get-Content -LiteralPath "$installer.sha256" -Raw).Trim() -split '\s+')[0]
 if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $expectedHash) {
     throw 'The installer checksum does not match. Installation was not started.'
 }
 if (Get-Process -Name PiAgentGui -ErrorAction SilentlyContinue) {
-    throw "The installer was built, but Pi Agent is now running. Close it and run $installer to install."
+    throw "The installer was built, but Pi desktop is now running. Close it and run $installer to install."
 }
 
 $dataHashes = @{}
@@ -51,7 +51,7 @@ if (Test-Path -LiteralPath $dataDirectory) {
     }
 }
 $installLog = Join-Path $outputRoot ("install-$Version-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
-Write-Host "Installing Pi Agent $Version..."
+Write-Host "Installing Pi desktop $Version..."
 $setup = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART',
     '/NOCLOSEAPPLICATIONS', '/SP-', ('/LOG="' + $installLog + '"')) -WindowStyle Hidden -Wait -PassThru
 if ($setup.ExitCode -ne 0) {
@@ -69,8 +69,8 @@ foreach ($dataPath in $dataHashes.Keys) {
         throw "Installation finished, but application data changed: $([IO.Path]::GetFileName($dataPath)). See $installLog"
     }
 }
-Write-Host "Installed Pi Agent $Version successfully. Verified $($dataHashes.Count) unchanged application data files."
+Write-Host "Installed Pi desktop $Version successfully. Verified $($dataHashes.Count) unchanged application data files."
 Write-Host "Application: $executable"
 Write-Host "Installer: $installer"
 Write-Host "Log: $installLog"
-Write-Host 'Open Pi Agent from Start when ready to test.'
+Write-Host 'Open Pi desktop from Start when ready to test.'

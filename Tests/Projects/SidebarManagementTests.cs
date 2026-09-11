@@ -34,7 +34,7 @@ public sealed class SidebarManagementTests
         dispatcher.Drain();
         await updated.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.AreEqual("Generated title", item.Title);
-        Assert.AreEqual("Pi Agent — Generated title", shell.WindowTitle);
+        Assert.AreEqual("Pi desktop — Generated title", shell.WindowTitle);
         CollectionAssert.AreEquivalent(new[] { "WorkspaceTitle", "WindowTitle" }, changes.ToArray());
         Assert.AreSame(item.Workspace, shell.Chat);
     }
@@ -51,7 +51,7 @@ public sealed class SidebarManagementTests
         item.Rename.Draft = "  Fix sidebar  ";
         await item.Rename.SaveCommand.ExecuteAsync();
         Assert.AreEqual("Fix sidebar", item.Title);
-        Assert.AreEqual("Pi Agent — Fix sidebar", shell.WindowTitle);
+        Assert.AreEqual("Pi desktop — Fix sidebar", shell.WindowTitle);
         Assert.IsFalse(item.Rename.IsEditing);
         shell.Projects[0].Rename.BeginCommand.Execute(null);
         shell.Projects[0].Rename.Draft = "Renamed project";
@@ -112,7 +112,7 @@ public sealed class SidebarManagementTests
         Assert.IsTrue(sessions[1].Disposed);
         Assert.IsNull(shell.SelectedProject);
         Assert.IsTrue(shell.ShowEmptyProjects);
-        Assert.AreEqual("Pi Agent", shell.WindowTitle);
+        Assert.AreEqual("Pi desktop", shell.WindowTitle);
     }
 
     [TestMethod]

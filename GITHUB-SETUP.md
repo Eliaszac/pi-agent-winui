@@ -1,6 +1,6 @@
 # GitHub connection setup
 
-Pi Agent uses a GitHub App's device flow directly from the Windows app. Users click **Connect to GitHub** in the conversation header, copy the displayed code, open GitHub, and authorize it. No server, `gh`, client secret, private key, or manually pasted user token is needed.
+Pi desktop uses a GitHub App's device flow directly from the Windows app. Users click **Connect to GitHub** in the conversation header, copy the displayed code, open GitHub, and authorize it. No server, `gh`, client secret, private key, or manually pasted user token is needed.
 
 ## Register the app
 

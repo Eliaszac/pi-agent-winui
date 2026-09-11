@@ -52,7 +52,7 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator, Fun
         if (request.ManageProviders)
         {
             var extension = Path.Combine(AppContext.BaseDirectory, "PiExtensions", "providers.ts");
-            if (!File.Exists(extension)) throw new FileNotFoundException("The bundled Providers integration is missing. Rebuild or reinstall Pi Agent.");
+            if (!File.Exists(extension)) throw new FileNotFoundException("The bundled Providers integration is missing. Rebuild or reinstall Pi desktop.");
             foreach (var flag in new[] { "--no-session", "--no-tools", "--no-extensions", "--no-skills", "--no-prompt-templates", "--no-context-files" }) info.ArgumentList.Add(flag);
             info.ArgumentList.Add("--extension");
             info.ArgumentList.Add(extension);
@@ -69,7 +69,7 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator, Fun
             info.ArgumentList.Add("--extension"); info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "PiExtensions", "research-dispatch.ts"));
         }
         var writeDiffExtension = Path.Combine(AppContext.BaseDirectory, "PiExtensions", "write-diff.ts");
-        if (!File.Exists(writeDiffExtension)) throw new FileNotFoundException("The bundled write-diff extension is missing. Rebuild or reinstall Pi Agent.", writeDiffExtension);
+        if (!File.Exists(writeDiffExtension)) throw new FileNotFoundException("The bundled write-diff extension is missing. Rebuild or reinstall Pi desktop.", writeDiffExtension);
         info.ArgumentList.Add("--extension");
         info.ArgumentList.Add(writeDiffExtension);
         info.ArgumentList.Add("--session");

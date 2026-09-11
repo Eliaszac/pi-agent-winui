@@ -38,7 +38,7 @@ public sealed class CapabilitiesPanelViewModel : ObservableObject
     public string McpMessage => owner?.IsConnected != true ? "Conversation disconnected · server status unavailable."
         : owner.McpStatus is not null ? (owner.McpStatus.Servers.Count == 0 ? "No MCP servers configured in this conversation."
             : Servers.Count == 0 ? "No MCP servers match this view." : "")
-        : !adapterLoaded ? "MCP Adapter is not loaded in this conversation. Install it, then restart Pi Agent."
+        : !adapterLoaded ? "MCP Adapter is not loaded in this conversation. Install it, then restart Pi desktop."
         : adapterSetup;
 
     public void Select(ConversationViewModel? conversation)
@@ -107,12 +107,12 @@ public sealed class CapabilitiesPanelViewModel : ObservableObject
                     var installation = await Task.Run(installationState);
                     if (request != revision) return;
                     adapterSetup = installation.NeedsSetup
-                        ? "Update MCP Adapter for live status, then restart Pi Agent. " + installation.Status
-                        : "Waiting for adapter status. If it does not arrive, restart Pi Agent to load the updated adapter.";
+                        ? "Update MCP Adapter for live status, then restart Pi desktop. " + installation.Status
+                        : "Waiting for adapter status. If it does not arrive, restart Pi desktop to load the updated adapter.";
                 }
                 catch (Exception)
                 {
-                    if (request == revision) adapterSetup = "Live status unavailable. Check the adapter setup and restart Pi Agent.";
+                    if (request == revision) adapterSetup = "Live status unavailable. Check the adapter setup and restart Pi desktop.";
                 }
             }
         }

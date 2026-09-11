@@ -32,9 +32,9 @@ public sealed class InstructionsPanelViewModel : ObservableObject
     {
         var request = ++revision;
         if (!connected) { Message = "Conversation disconnected · loaded instructions unavailable."; return; }
-        if (snapshot is null) { Message = "Refresh while Pi is idle to inspect loaded instructions, or start a run. Restart Pi Agent if this integration was just added."; return; }
+        if (snapshot is null) { Message = "Refresh while Pi is idle to inspect loaded instructions, or start a run. Restart Pi desktop if this integration was just added."; return; }
         if (!snapshot.Available) { Message = "This Pi version cannot report its loaded instructions. Update Pi, then restart the app."; return; }
-        if (snapshot.Files.Count == 0) { Message = "No instruction files were loaded. Add a global or project AGENTS.md and restart Pi Agent to load it."; return; }
+        if (snapshot.Files.Count == 0) { Message = "No instruction files were loaded. Add a global or project AGENTS.md and restart Pi desktop to load it."; return; }
         Message = "Checking saved files…";
         var directory = workingDirectory;
         var rows = await Task.WhenAll(snapshot.Files.Select(async file =>

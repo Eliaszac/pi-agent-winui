@@ -4,7 +4,7 @@ The first distribution target is Windows x64 (Windows 10 build 19041 or later). 
 
 ## Build
 
-For the complete local build-and-install workflow, close Pi Agent and run this from the repository in PowerShell as your normal Windows user:
+For the complete local build-and-install workflow, close Pi desktop and run this from the repository in PowerShell as your normal Windows user:
 
 ```powershell
 ./Installer/Install-Local.ps1
@@ -22,7 +22,7 @@ Install the .NET 10 SDK, Windows build tooling used by the project, and Inno Set
 
 Use `-CompilerPath 'C:\path\ISCC.exe'` for a custom compiler location. This machine's local compiler is under `artifacts/installer/tools/inno/`. The script locates it automatically. Generated tooling, prerequisites, publish directories, installers, hashes and logs live under ignored `artifacts/installer/`. Each publish uses a fresh directory to avoid accidentally packaging obsolete files from previous builds.
 
-The resulting file is `artifacts/installer/PiAgent-Setup-0.1.1-x64.exe` with an adjacent SHA-256 checksum. The version parameter stamps both application and installer. Use an increasing three-part numeric version for each release. Dependencies are pinned to the baseline already restored in this project.
+The resulting file is `artifacts/installer/PiDesktop-Setup-0.1.1-x64.exe` with an adjacent SHA-256 checksum. The version parameter stamps both application and installer. Use an increasing three-part numeric version for each release. Dependencies are pinned to the baseline already restored in this project.
 
 Version 0.1.1 adds exclusive research-store ownership across app windows. Close all older app builds before using it; pre-0.1.1 processes do not participate in the ownership protocol. Its two new regression tests cover competing coordinators and failed initialization recovery.
 
@@ -33,8 +33,9 @@ Local testing update on 2026-09-11: built the current workspace as version 0.1.2
 - Run the installer normally, without administrator elevation. It installs for the current user under `%LOCALAPPDATA%\Programs\Pi Agent`.
 - A stable `AppId=PiAgentGui.Desktop` ensures subsequent installers update the same installation and Windows Installed apps entry. Do not change this identity for subsequent releases.
 - Newer versions replace application files in place. The same version can be installed again to repair its files. Older versions are rejected using the installed version registry entry.
-- Setup uses Windows Restart Manager for files in use; finish active runs and close Pi Agent before installing. It does not automatically relaunch processes after an update. Interactive setup offers an optional launch at the end; silent setup never launches the app.
+- Setup uses Windows Restart Manager for files in use; finish active runs and close Pi desktop before installing. It does not automatically relaunch processes after an update. Interactive setup offers an optional launch at the end; silent setup never launches the app.
 - A Start menu shortcut is installed; a desktop shortcut is optional and its selection is retained for upgrades.
+- Shortcuts and installer labels use Pi desktop. Setup removes the legacy Pi Agent Start menu and desktop shortcuts; the existing installation directory and AppId remain unchanged for upgrade compatibility.
 - Uninstall through Windows Installed apps. The uninstaller removes tracked application files and shortcuts, preserving `%LOCALAPPDATA%\PiAgentGui` and all Pi configuration, extensions, sessions and credentials in the user's Pi directory. It never uninstalls Pi or the shared WebView2 runtime.
 - Keep application-owned runtime data outside the installation directory. If a future release removes or renames shipped files, add explicit obsolete-file cleanup to the installer for those known paths; ordinary file replacement does not remove files absent from a newer payload.
 

@@ -121,7 +121,7 @@ public partial class App : Application
                 {
                     XamlRoot = (window!.Content as FrameworkElement)!.XamlRoot,
                     Title = "Work is still running",
-                    Content = $"Active conversations: {runCount}\nRunning or queued research tasks: {researchCount}\n\nClosing Pi Agent will stop this work and close any open terminals.",
+                    Content = $"Active conversations: {runCount}\nRunning or queued research tasks: {researchCount}\n\nClosing Pi desktop will stop this work and close any open terminals.",
                     PrimaryButtonText = "Stop and close",
                     CloseButtonText = "Keep open",
                     DefaultButton = ContentDialogButton.Close

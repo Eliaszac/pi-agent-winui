@@ -21,7 +21,7 @@ public static class ProjectCatalogLock
             catch (IOException exception) when ((exception.HResult & 0xffff) is 32 or 33)
             {
                 if (elapsed.Elapsed >= TimeSpan.FromSeconds(5))
-                    throw new IOException("The project catalog is busy. Wait a moment and try again, or close other Pi Agent windows if this continues.", exception);
+                    throw new IOException("The project catalog is busy. Wait a moment and try again, or close other Pi desktop windows if this continues.", exception);
                 await Task.Delay(50, cancellationToken).ConfigureAwait(false);
             }
         }
