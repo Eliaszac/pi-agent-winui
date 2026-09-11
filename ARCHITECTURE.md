@@ -1,5 +1,7 @@
 # Architecture and MVP
 
+- Provider onboarding stays hidden while initial credential discovery is pending. It appears only after a completed check confirms no configured provider, or a failed check supplies an error; startup uncertainty never displays a sign-in/setup prompt.
+
 - The empty workspace is a project-focused landing surface: project name without its path, a prominent create-project/new-conversation action, contextual provider setup, and up to four recent unsettled conversations ordered by last use (creation time fallback). Recent rows reuse the existing conversation-selection command. Providers and Extensions remain accessible through compact footer actions. Native theme resources and a bounded scrolling single-column layout support both themes and narrow windows.
 
 - Sending an ordinary idle-conversation prompt with confirmed missing provider configuration opens Providers and preserves the draft and screenshots. This uses the live onboarding inventory, not a credential-validity guess; unknown inventory does not block sending. Local composer commands remain available, and connecting never auto-sends the preserved prompt. The view-scoped navigation callback is detached when the conversation view unloads or switches owners.

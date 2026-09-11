@@ -17,7 +17,8 @@ public sealed class GettingStartedViewModel : ObservableObject, IDisposable
     public string Error { get; private set; } = "";
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
     public bool NeedsProvider => providers.HasInventory && !providers.HasConfiguredProvider;
-    public bool ShowProviderSetup => initialized && (!providers.HasInventory || NeedsProvider);
+    public bool ShowProviderSetup => initialized && !providers.IsBusy &&
+        (NeedsProvider || !providers.HasInventory && providers.Error.Length > 0);
     public bool ShowRecommendations => initialized && providers.HasInventory && providers.HasConfiguredProvider && extensionsChecked && !dismissed && Missing.Count > 0;
     public bool IsVisible => ShowProviderSetup || ShowRecommendations;
     public string ProviderTitle => NeedsProvider ? "Get started" : "Provider setup";

@@ -17,8 +17,10 @@ public sealed class ProjectScriptsViewModel(IProjectRepository repository, Termi
     private bool loaded;
     private string error = "";
     public ObservableCollection<ProjectScript> Scripts { get; } = [];
-    public string Label => Scripts.FirstOrDefault(item => item.Id == selectedId)?.Name ?? Scripts.FirstOrDefault()?.Name ?? "Run";
+    public string Label => Scripts.FirstOrDefault(item => item.Id == selectedId)?.Name ?? Scripts.FirstOrDefault()?.Name ?? "Add scripts";
     public bool CanUse => projectId is not null && loaded && !loading && !saving;
+    public string ActionHint => Scripts.Count == 0 ? "Add project scripts" : "Run the selected project script";
+    public string ActionGlyph => Scripts.Count == 0 ? "\uE710" : "\uE768";
     public string Error => error;
     public bool HasError => error.Length > 0;
 
@@ -106,6 +108,7 @@ public sealed class ProjectScriptsViewModel(IProjectRepository repository, Termi
     private void Notify()
     {
         OnPropertyChanged(nameof(Label)); OnPropertyChanged(nameof(CanUse));
+        OnPropertyChanged(nameof(ActionHint)); OnPropertyChanged(nameof(ActionGlyph));
         OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError));
     }
 }

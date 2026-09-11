@@ -296,9 +296,9 @@
                         </StackPanel>
                     </controls:ActionButton>
                     <controls:ActionSplitButton Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Height="32"
-                        Click="OnRunScriptClicked" AutomationProperties.Name="Run project script" ToolTipService.ToolTip="Run the selected project script">
+                        Click="OnRunScriptClicked" AutomationProperties.Name="{x:Bind Scripts.ActionHint, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind Scripts.ActionHint, Mode=OneWay}">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <FontIcon Glyph="&#xE768;" FontSize="12" />
+                            <FontIcon Glyph="{x:Bind Scripts.ActionGlyph, Mode=OneWay}" FontSize="12" />
                             <TextBlock Text="{x:Bind Scripts.Label, Mode=OneWay}" FontSize="12" MaxWidth="120" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <controls:ActionSplitButton.Flyout><MenuFlyout x:Name="ScriptsMenu" Opening="OnScriptsMenuOpening" /></controls:ActionSplitButton.Flyout>

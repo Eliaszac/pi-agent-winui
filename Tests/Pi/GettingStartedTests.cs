@@ -9,6 +9,25 @@ namespace PiAgentGui.Tests.Pi;
 [TestClass]
 public sealed class GettingStartedTests
 {
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task StartupDoesNotShowProviderPromptWhileInventoryIsPending(bool configured)
+    {
+        var barrier = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var service = new FakeProviderService { ReadBarrier = barrier.Task, Providers = configured ? [Provider("oauth")] : [] };
+        var providers = new ProvidersViewModel(service);
+        using var model = new GettingStartedViewModel(providers, Extensions(() => false), Path.Combine(root, "onboarding.json"));
+        var flashed = false;
+        model.PropertyChanged += (_, _) => { if (!barrier.Task.IsCompleted && model.ShowProviderSetup) flashed = true; };
+        var loading = model.InitializeAsync();
+        Assert.IsFalse(model.ShowProviderSetup);
+        barrier.SetResult();
+        await loading;
+        Assert.IsFalse(flashed);
+        Assert.AreEqual(!configured, model.ShowProviderSetup);
+    }
+
     private string root = "";
     [TestInitialize] public void Setup() => root = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "PiAgentGui.Tests", Guid.NewGuid().ToString("N"))).FullName;
     [TestCleanup] public void Cleanup()
