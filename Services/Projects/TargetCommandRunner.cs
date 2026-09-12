@@ -33,11 +33,12 @@ public sealed class TargetCommandRunner
         return start;
     }
 
-    public Task<GitResult> RunAsync(ExecutionTarget target, string command, CancellationToken cancellationToken = default) =>
-        RunProcessAsync(CreateStartInfo(target, command), cancellationToken);
+    public Task<GitResult> RunAsync(ExecutionTarget target, string command, CancellationToken cancellationToken = default, bool trackChanges = true) =>
+        RunProcessAsync(CreateStartInfo(target, command), cancellationToken, trackChanges);
 
-    public static async Task<GitResult> RunProcessAsync(ProcessStartInfo start, CancellationToken cancellationToken = default)
+    public static async Task<GitResult> RunProcessAsync(ProcessStartInfo start, CancellationToken cancellationToken = default, bool trackChanges = true)
     {
+        using var activity = WorkspaceActivityLease.Acquire(false, trackChanges: trackChanges);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromMinutes(5));
         using var process = new Process { StartInfo = start };

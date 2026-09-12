@@ -4,6 +4,12 @@ namespace PiAgentGui.ViewModels.Extensions;
 
 public static class SupportedExtensions
 {
+    public static ExtensionDefinition Checkpoints { get; } = new(
+        "Workspace checkpoints", "Pi desktop", "1.0.0",
+        "Optional recovery for Local Windows, WSL and Linux SSH projects. Review created, modified and deleted files, revert captured changes, and undo a revert.",
+        "Captures bounded file snapshots on the execution target, outside your project. It preserves Git staging and conversation history. Later edits, incomplete capture and overlapping conversations prevent automatic restoration. Requires Python 3 and Git on each target; no configuration-file editing is needed.",
+        "", "", "", new("https://pi.dev/docs/latest/extensions"), new("https://pi.dev/docs/latest/extensions"),
+        () => (CheckpointSettings.IsEnabled() ? "Enabled · readiness checked per conversation" : "Disabled · no snapshots captured", true), Bundled: true);
     public static ExtensionDefinition Permissions { get; } = new(
         "Permission Modes", "GeorgeDong32", PermissionModesSupport.Version,
         "Control when Pi asks before changing files or running commands. Switch between manual approval, planning, automatic review, and bypass from the conversation input.",
@@ -69,5 +75,5 @@ public static class SupportedExtensions
         new("https://github.com/larsderidder/pi-browser"),
         () => PiBrowserSupport.GetInstallationState(), RecommendationOnly: true);
 
-    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Permissions, AutomaticTitles, Search, Mcp, Lsp, Browser];
+    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Checkpoints, Permissions, AutomaticTitles, Search, Mcp, Lsp, Browser];
 }

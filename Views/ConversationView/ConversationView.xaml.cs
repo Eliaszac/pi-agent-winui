@@ -32,14 +32,6 @@ public sealed partial class ConversationView : UserControl
     private bool synchronizingThinking;
     private bool synchronizingApproval;
     public event EventHandler? ApprovalSetupRequested;
-    private void OnAskAgentToRevert(object sender, RoutedEventArgs args)
-    {
-        if (sender is FrameworkElement { DataContext: RunChangesViewModel summary } && ViewModel?.PrepareRunRevert(summary) == true)
-        {
-            Composer.Focus(FocusState.Programmatic);
-            Composer.Select(0, 0);
-        }
-    }
     private void OnFileDiffExpanding(Expander sender, ExpanderExpandingEventArgs args)
     {
         followTail = false;

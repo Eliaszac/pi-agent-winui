@@ -12,6 +12,6 @@ public sealed class TargetGitCommandRunner(ExecutionTarget target, TargetCommand
         if (!directory.StartsWith('/')) throw new ArgumentException("Git requires a target-native directory.");
         var args = new[] { "git", "--no-pager", "--literal-pathspecs", "-c", "color.ui=false" }.Concat(arguments);
         return runner.RunAsync(target, "cd -- " + PosixShell.Quote(directory) +
-            " && GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never GIT_OPTIONAL_LOCKS=0 GIT_MERGE_AUTOEDIT=no LC_ALL=C " + string.Join(" ", args.Select(PosixShell.Quote)), cancellationToken);
+            " && GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never GIT_OPTIONAL_LOCKS=0 GIT_MERGE_AUTOEDIT=no LC_ALL=C " + string.Join(" ", args.Select(PosixShell.Quote)), cancellationToken, GitWorkspaceActivity.MayWrite(arguments));
     }
 }

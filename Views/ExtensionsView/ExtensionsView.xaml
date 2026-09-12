@@ -18,7 +18,7 @@
                         <FontIcon Glyph="&#xE72C;" FontSize="16" />
                     </controls:ActionButton>
                 </Grid>
-                <TextBlock Text="These are third-party Pi extensions, created and maintained by independent authors, not by us. Some have dedicated UI here; others are recommendations for use with Pi. Install globally to use them across your projects." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="Optional Pi extensions for your projects. Workspace checkpoints is maintained by Pi desktop; third-party extensions are attributed to their independent authors. Enable or set up each feature below." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <TextBlock Text="{Binding Error}" TextWrapping="Wrap" />
             </StackPanel>
         </GridView.Header>
@@ -48,7 +48,7 @@
                         <TextBlock Text="{x:Bind Status, Mode=OneWay}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:ActionButton Content="Details" Click="OnDetailsClicked" />
-                            <controls:ActionButton Content="Set up" Click="OnSetupClicked"
+                            <controls:ActionButton Content="{Binding SetupLabel}" Click="OnSetupClicked"
                                 Visibility="{x:Bind NeedsSetup, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                         </StackPanel>
                     </StackPanel>

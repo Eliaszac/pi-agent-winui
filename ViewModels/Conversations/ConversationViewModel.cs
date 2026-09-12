@@ -156,7 +156,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     public string ComposerActionLabel => ComposerShowsStop ? "Stop" : IsSteeringDraft ? "Steer" : running ? "Queue follow-up" : "Send";
     public string ComposerActionGlyph => running ? "\uE71A" : "\uE72A";
     public bool CanRetry => ShowRecovery && !busy && !disposed;
-    public bool IsEmpty => Entries.Count == 0 && !previewCompacting && !compacting;
+    public bool IsEmpty => Entries.Count == 0 && !busy && !running && !previewCompacting && !compacting;
     private readonly bool previewCompacting;
     private bool compacting;
     public AsyncRelayCommand RetryCommand { get; }
@@ -225,8 +225,9 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         if (generatedTitle is not null) ExplicitSessionNameChanged?.Invoke(generatedTitle);
     }
 
-    public ConversationViewModel(IConversationSession session, IUiDispatcher dispatcher, bool previewCompacting = false)
+    public ConversationViewModel(IConversationSession session, IUiDispatcher dispatcher, bool previewCompacting = false, TimeProvider? clock = null)
     {
+        processingClock = clock ?? TimeProvider.System;
         this.previewCompacting = previewCompacting;
         this.session = session;
         this.dispatcher = dispatcher;
@@ -376,6 +377,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         for (var count = 0; count < 128 && updates.TryDequeue(out var update); count++)
         {
             if (disposed) continue;
+            if (update.Checkpoint is { } checkpoint) { ObserveCheckpoint(checkpoint); checkpointSummaries.Clear(); changed = true; }
             if (update.McpStatus is { } mcpStatus) { McpStatus = mcpStatus; OnPropertyChanged(nameof(McpStatus)); }
             if (update.Instructions is { } instructions) { Instructions = instructions; OnPropertyChanged(nameof(Instructions)); }
             if (update.IsConnected == false) { Instructions = null; OnPropertyChanged(nameof(Instructions)); }
@@ -421,6 +423,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
                     changed = true;
                 }
                 running = isRunning;
+                SynchronizeProcessingTime();
                 if (isRunning) unseenCompletion = false;
             }
             if (update.TurnCompleted)
@@ -496,7 +499,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         if (changed)
         {
             var rows = presentation.Project(Entries, running || compacting || previewCompacting,
-                compacting || previewCompacting ? "Compacting context…" : "Processing…");
+                ProcessingLabel);
             for (var index = 0; index < rows.Count; index++)
             {
                 if (index < DisplayEntries.Count && ReferenceEquals(DisplayEntries[index], rows[index])) continue;
@@ -547,6 +550,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
 
     private void NotifyState()
     {
+        SynchronizeProcessingTime();
+        OnPropertyChanged(nameof(IsEmpty));
         NotifyQueue();
         OnPropertyChanged(nameof(ErrorTitle)); OnPropertyChanged(nameof(ErrorHelp)); OnPropertyChanged(nameof(ErrorDiagnosticReport));
         var latest = IsReady && !running && Prompts.Count == 0
@@ -565,6 +570,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             latest.ShowInlineActions = true;
         }
         OnPropertyChanged(nameof(SummaryResponse));
+        ApplyCheckpointSummaries();
         OnPropertyChanged(nameof(CanDuplicateConversation));
         OnPropertyChanged(nameof(Warning));
         OnPropertyChanged(nameof(HasInlineWarning));
@@ -585,6 +591,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         if (disposed) return;
         disposed = true;
+        processingTimer?.Dispose();
         session.Updated -= Enqueue;
         ClearPrompts();
         await session.DisposeAsync();

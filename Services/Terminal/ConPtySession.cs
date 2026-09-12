@@ -18,6 +18,7 @@ public sealed class ConPtySession(string directory, string? command = null, Mode
     private Task? reader;
     private Task? writer;
     private Task? monitor;
+    private Utilities.WorkspaceActivityLease? activity;
     private volatile bool disposed;
     public event Action<string>? Output;
     public event Action? Exited;
@@ -29,12 +30,15 @@ public sealed class ConPtySession(string directory, string? command = null, Mode
         {
             ObjectDisposedException.ThrowIf(disposed, this);
             if (console != 0) return;
-            await Task.Run(() => Start(columns, rows));
+            activity = Utilities.WorkspaceActivityLease.Acquire(false);
+            try { await Task.Run(() => Start(columns, rows)); }
+            catch { activity.Dispose(); activity = null; throw; }
             reader = Task.Run(ReadOutput);
             writer = Task.Run(WriteInputAsync);
             monitor = Task.Run(() =>
             {
                 ConPtyNative.WaitForSingleObject(process, uint.MaxValue);
+                Interlocked.Exchange(ref activity, null)?.Dispose();
                 if (!disposed) Exited?.Invoke();
             });
         }
@@ -152,6 +156,7 @@ public sealed class ConPtySession(string directory, string? command = null, Mode
             inputStream?.Dispose();
             outputStream?.Dispose();
             if (process != 0) { ConPtyNative.CloseHandle(process); process = 0; }
+            Interlocked.Exchange(ref activity, null)?.Dispose();
         }
         finally { lifecycle.Release(); }
     }

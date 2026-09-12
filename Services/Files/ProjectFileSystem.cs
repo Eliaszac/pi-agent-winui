@@ -23,6 +23,7 @@ public sealed class ProjectFileSystem(string root, Action<string, bool> recycle)
 
     public string Create(string parent, string name, bool folder)
     {
+        using var activity = Utilities.WorkspaceActivityLease.Acquire(false);
         Validate(parent, allowRoot: true);
         var target = Child(parent, name);
         if (Path.Exists(target)) throw new IOException("An item with that name already exists.");
@@ -41,6 +42,7 @@ public sealed class ProjectFileSystem(string root, Action<string, bool> recycle)
 
     private string MoveTo(string path, string target)
     {
+        using var activity = Utilities.WorkspaceActivityLease.Acquire(false);
         Validate(path);
         Validate(Path.GetDirectoryName(target)!, allowRoot: true);
         if (string.Equals(path, target, StringComparison.Ordinal)) return path;
@@ -55,6 +57,7 @@ public sealed class ProjectFileSystem(string root, Action<string, bool> recycle)
 
     public void Delete(string path)
     {
+        using var activity = Utilities.WorkspaceActivityLease.Acquire(false);
         Validate(path);
         recycle(path, Directory.Exists(path));
     }

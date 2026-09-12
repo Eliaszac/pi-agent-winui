@@ -7,7 +7,8 @@ public sealed class ExtensionCardViewModel : ObservableObject
     private string status = "Checking global configuration…";
     private bool needsSetup;
     public ExtensionDefinition Definition { get; }
-    public string Attribution => $"Third-party · by {Definition.Author}";
+    public string SetupLabel => Definition.Bundled ? "Manage" : "Set up";
+    public string Attribution => Definition.Bundled ? "Optional · maintained by Pi desktop" : $"Third-party · by {Definition.Author}";
     public string VersionLabel => $"{(Definition.RecommendationOnly ? "Recommended version" : "Supported version")} {Definition.Version}";
     public string Status { get => status; private set => SetProperty(ref status, value); }
     public bool NeedsSetup { get => needsSetup; private set => SetProperty(ref needsSetup, value); }

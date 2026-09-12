@@ -48,6 +48,7 @@ public sealed class GitConflictService(IGitCommandRunner runner)
 
     public async Task ApplyAsync(MergeConflict conflict, string result, bool delete, CancellationToken token)
     {
+        using var activity = WorkspaceActivityLease.Acquire(false);
         ValidateText(result);
         if (!delete && ConflictMarkers.HasMarkers(result)) throw new InvalidOperationException("Resolve all conflict markers before applying.");
         if (delete && conflict.Left is not null && conflict.Right is not null) throw new InvalidOperationException("Neither side deleted this file.");

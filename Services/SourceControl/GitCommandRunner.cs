@@ -9,6 +9,7 @@ public sealed class GitCommandRunner : IGitCommandRunner
 {
     public async Task<GitResult> RunAsync(string directory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
+        using var activity = Utilities.WorkspaceActivityLease.Acquire(false, trackChanges: Utilities.GitWorkspaceActivity.MayWrite(arguments));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromMinutes(2));
         var start = new ProcessStartInfo("git")

@@ -19,14 +19,14 @@ public sealed class CompactionPresentationTests
         session.Emit(new() { Entry = new("u", "You", "Prompt", IsUser: true), IsRunning = true });
         dispatcher.Drain();
         var indicator = vm.DisplayEntries.Single(entry => entry.IsProcessing);
-        Assert.AreEqual("Processing…", indicator.Text);
+        Assert.AreEqual("Processing… 0s", indicator.Text);
         session.Emit(new() { IsCompacting = true });
         dispatcher.Drain();
         Assert.AreSame(indicator, vm.DisplayEntries[1]);
-        Assert.AreEqual("Compacting context…", indicator.Text);
+        Assert.AreEqual("Compacting context… 0s", indicator.Text);
         session.Emit(new() { IsCompacting = false });
         dispatcher.Drain();
-        Assert.AreEqual("Processing…", indicator.Text);
+        Assert.AreEqual("Processing… 0s", indicator.Text);
         session.Emit(new() { IsRunning = false });
         dispatcher.Drain();
         Assert.IsFalse(vm.DisplayEntries.Any(entry => entry.IsProcessing));
@@ -44,7 +44,7 @@ public sealed class CompactionPresentationTests
         Assert.IsFalse(vm.IsRunning);
         Assert.IsTrue(vm.CanSend);
         Assert.IsFalse(vm.IsEmpty);
-        Assert.AreEqual("Compacting context…", vm.DisplayEntries.Single().Text);
+        Assert.AreEqual("Compacting context… 0s", vm.DisplayEntries.Single().Text);
         Assert.AreEqual(0, session.Sent.Count);
     }
 

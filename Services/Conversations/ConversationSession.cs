@@ -8,7 +8,7 @@ using PiAgentGui.Utilities;
 namespace PiAgentGui.Services.Conversations;
 
 /// <summary>Coordinates one Pi process and its persistent session, never a shared selected-session process.</summary>
-public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient> clientFactory, Func<bool>? permissionConfigured = null) : IConversationSession
+public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient> clientFactory, Func<bool>? permissionConfigured = null) : IConversationSession
 {
     private volatile bool targetVerified;
     public Func<JsonElement, Task>? ResearchRequested { get; init; }
@@ -32,6 +32,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
     private readonly PiTranscript transcript = new();
     private readonly RunUsageTracker runUsage = new();
     private PiRpcClient? client;
+    private WorkspaceActivityLease? activityLease;
     public Models.Pi.ProcessIdentity? ProcessIdentity => client?.ProcessIdentity;
     private bool connected;
     private bool running;
@@ -250,13 +251,14 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
         {
             if (running || changingModel) throw new InvalidOperationException("This conversation is busy. Wait before sending again.");
             current = connected && client is not null ? client : throw new IOException("Pi is disconnected.");
+            activityLease ??= WorkspaceActivityLease.Acquire(false, launch.SessionFile);
             running = true;
             Publish(new() { Status = "Sending…", IsRunning = true, Error = "" });
         }
         try { await current.RequestAsync("prompt", payload, cancellationToken).ConfigureAwait(false); }
         catch (PiCommandException)
         {
-            lock (stateGate) { running = false; Publish(new() { Status = "Ready", IsRunning = false }); }
+            lock (stateGate) { running = false; activityLease?.Dispose(); activityLease = null; Publish(new() { Status = "Ready", IsRunning = false }); }
             throw;
         }
         catch (Exception exception)
@@ -304,6 +306,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             if (file.Length == 0 || !StringComparer.OrdinalIgnoreCase.Equals(Path.GetFullPath(file), Path.GetFullPath(launch.SessionFile)))
                 throw new InvalidDataException("Pi did not open this conversation's session file.");
             running = awaitingSettled || PiJson.Flag(state, "isStreaming") || PiJson.Flag(state, "isCompacting");
+            if (!running) { activityLease?.Dispose(); activityLease = null; }
             var model = PiJson.Field(state, "model");
             if (PiJson.Text(state, "sessionName") is { Length: > 0 } sessionName) Publish(new() { SessionName = sessionName });
             Publish(new() { Status = running ? "Working" : "Ready", IsRunning = running,
@@ -477,6 +480,7 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
                 case "agent_end": Publish(new() { Status = "Finishing…" }); break;
                 case "agent_settled":
                     awaitingSettled = false; running = false;
+                    activityLease?.Dispose(); activityLease = null;
                     Publish(new() { Status = "Ready", IsRunning = false, IsCompacting = false, DismissPrompts = true, TurnCompleted = true, RunUsage = runUsage.Complete() });
                     _ = Task.Run(RefreshExtensionStateAsync);
                     break;
@@ -494,6 +498,11 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
 
     private void HandleExtension(JsonElement packet)
     {
+        if (PiJson.Text(packet, "method") == "setStatus" && PiJson.Text(packet, "statusKey") == "pi-gui-checkpoints-v1")
+        {
+            HandleCheckpointPacket(PiJson.Text(packet, "statusText"));
+            return;
+        }
         if (PiJson.Text(packet, "method") == "setStatus" && PiJson.Text(packet, "statusKey") == "pi-gui-target-ready")
         {
             targetVerified = PiJson.Text(packet, "statusText") == launch.Target?.Id.ToString("D");
@@ -568,12 +577,13 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
     {
         lock (stateGate) pendingSteering.Clear();
         Publish(new() { SteeringQueue = [] });
-        if (client is null) return;
+        if (client is null) { activityLease?.Dispose(); activityLease = null; return; }
         var previous = client;
         client = null;
         previous.EventReceived -= OnEvent;
         previous.Faulted -= OnFault;
         await previous.DisposeAsync().ConfigureAwait(false);
+        activityLease?.Dispose(); activityLease = null;
     }
 
     public async Task DisconnectAsync()

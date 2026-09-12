@@ -39,6 +39,6 @@ public sealed partial class ExtensionsView : UserControl
         if (dialogOpen || sender is not FrameworkElement { DataContext: ExtensionCardViewModel card }) return;
         dialogOpen = true;
         try { await new ExtensionSetupDialog(card.Definition, details) { XamlRoot = XamlRoot }.ShowAsync(); }
-        finally { dialogOpen = false; }
+        finally { dialogOpen = false; await card.RefreshCommand.ExecuteAsync(); }
     }
 }

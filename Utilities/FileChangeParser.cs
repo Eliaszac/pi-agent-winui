@@ -25,6 +25,7 @@ public static class FileChangeParser
             if (line.StartsWith('-')) removed++;
         }
         return new(path, patch, added, removed, patch is not null ? null :
-            PiJson.Text(capture, "unavailable") is { Length: > 0 } reason ? reason : "Diff unavailable for this saved tool result.");
+            PiJson.Text(capture, "unavailable") is { Length: > 0 } reason ? reason : "Diff unavailable for this saved tool result.",
+            PiJson.Text(capture, "kind") is "created" ? "created" : "modified");
     }
 }

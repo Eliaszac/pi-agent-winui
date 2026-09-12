@@ -8,6 +8,8 @@ public sealed class TranscriptPresentation
     private readonly Dictionary<string, ChatEntryViewModel> groups = [];
     private readonly ChatEntryViewModel processing = new(new ChatEntry("presentation:processing", "", "")) { IsProcessing = true };
 
+    public void UpdateProcessingLabel(string label) => processing.Update(new ChatEntry("presentation:processing", "", label));
+
     public IReadOnlyList<ChatEntryViewModel> Project(IEnumerable<ChatEntryViewModel> entries, bool isRunning = false, string processingLabel = "Processing…")
     {
         var rows = new List<ChatEntryViewModel>();

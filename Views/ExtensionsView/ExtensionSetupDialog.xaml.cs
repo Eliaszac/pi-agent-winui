@@ -10,6 +10,26 @@ public sealed partial class ExtensionSetupDialog : Controls.ActionContentDialog
     {
         InitializeComponent();
         Title = details ? definition.Name : $"Set up {definition.Name}";
+        if (definition.Bundled)
+        {
+            Title = $"Manage {definition.Name}";
+            Sections.Children.Add(new TextBlock { Text = definition.Details, TextWrapping = TextWrapping.Wrap });
+            Sections.Children.Add(new TextBlock { Text = "Default limits: 8 MiB per file and 1 GiB of snapshot content per target user. Generated files, dependencies, ignored files and common secret files are excluded. Old checkpoints expire after 30 days; pending recovery is preserved. Existing conversations apply the setting before their next request. Older versions require an app restart.", TextWrapping = TextWrapping.Wrap });
+            var toggle = new ToggleSwitch { Header = "Capture workspace checkpoints", IsOn = Utilities.CheckpointSettings.IsEnabled() };
+            var notice = new TextBlock { TextWrapping = TextWrapping.Wrap };
+            toggle.Toggled += async (_, _) =>
+            {
+                var enabled = toggle.IsOn;
+                toggle.IsEnabled = false;
+                try { await Task.Run(() => Utilities.CheckpointSettings.SetEnabled(enabled)); notice.Text = "Saved. Disabling capture keeps existing recovery data."; }
+                catch (Exception error) { notice.Text = "Could not save: " + error.Message; }
+                finally { toggle.IsEnabled = true; }
+            };
+            Sections.Children.Add(toggle);
+            Sections.Children.Add(notice);
+            AddCheckpointDataManagement();
+            return;
+        }
         Sections.Children.Add(new TextBlock { Text = $"Third-party extension by {definition.Author} · {(definition.RecommendationOnly ? "recommended" : "supported")} version {definition.Version}", TextWrapping = TextWrapping.Wrap, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
         Sections.Children.Add(new TextBlock { Text = "Created and maintained by its independent author. We do not develop or own this extension.", TextWrapping = TextWrapping.Wrap });
         Sections.Children.Add(new TextBlock { Text = definition.Details, TextWrapping = TextWrapping.Wrap });

@@ -17,7 +17,7 @@ The display name is **Pi desktop** and the repository name is `pi-agent-winui`. 
 
 - Composer typing updates its draft immediately, but emits send/stop/steering action notifications only when their values change; it does not refresh unrelated queue properties per character. Suggestion updates are coalesced at low dispatcher priority so native text input takes priority. File suggestions reuse the current token search rather than cancelling/restarting for duplicate text/selection events. No debounce is applied to the actual draft or Send path.
 
-- Completed change summaries offer Ask agent to revert. The clicked summary identifies its own original user message and final response, including restored historical cards. A bounded prompt includes those IDs, original request, captured tool evidence and patches, with explicit truncation notices. It asks the agent to inspect current files, preserve earlier/later work, avoid Git history/staging changes and external side-effect reversal, and explain unsafe reversals. This only prepares a normal editable composer draft; the user sends it through the usual model/permission flow. Existing drafts/attachments are preserved and active operations block preparation. No automatic filesystem rollback or RPC request occurs on click.
+- Completed change summaries show Created, Modified, and Deleted files. The optional bundled Workspace checkpoints extension provides a selective Revert changes preview, conflict refusal, Undo revert, and interrupted-write inspection. Restore changes workspace files through the selected Local, WSL, or Linux SSH target while preserving Pi conversation history and Git staging/history. Ask agent to revert and its prompt-generation path have been removed. See CHECKPOINTS.md for defaults and verification status.
 
 ## Remote and WSL execution targets (2026-09-12)
 
@@ -299,14 +299,13 @@ Launching the GUI or Pi requires user permission under `AGENTS.md`; unit tests a
 
 The user considers the existing features and refined UI substantially complete following hands-on testing. The following are possibilities to evaluate, not approved implementation work or committed roadmap items. No priority order has been agreed.
 
-- **Conversation worktree isolation:** optional separate Git worktrees so concurrent conversations can change the same project independently, with an explicit integration workflow.
-- **Durable background execution:** jobs that survive desktop closure or connection loss, with supervised runtime ownership and reconnection to their state.
-- **Scheduled tasks and triggers:** recurring or scheduled runs, and potentially event-driven work such as issue or CI triggers.
-- **Enforced sandboxing:** filesystem, network and process isolation beyond approval prompts and tool capability restrictions.
-- **Workspace checkpoints and rollback:** explicit restoration of a captured workspace state, beyond the existing Ask agent to revert workflow.
-- **Cross-session memory:** deliberately maintained project knowledge shared between conversations, beyond individual session history and instruction files.
+- **Workspace checkpoints and rollback:** optional deterministic restoration of selected captured files, with conflict checks and Undo revert; implementation is present, with final target/UI acceptance pending.
+
+The user supports pursuing checkpoints as an opt-in extension managed through Extensions, with created/modified/deleted summary rows and safe file revert. Local Windows, WSL, and supported Linux SSH targets must all be supported from the first release. Implementation must remove the existing Ask agent to revert feature entirely, with no agent-assisted fallback; missing checkpoints and conflicts get explicit unavailable states or setup guidance. See `CHECKPOINTS.md` for the implemented bundled extension, defaults, prerequisites, and verification gaps; `CHECKPOINT-PLAN.md` records acceptance criteria and `CHECKPOINT-RESEARCH.md` records the extension investigation. A shared app-maintained Python engine runs on Local Windows, WSL, and Linux SSH targets through the existing target transport. The user declined live SSH verification; SSH acceptance is unverified.
 
 **Scope decision:** general-purpose subagents do not have a place in this product and are excluded from these future candidates. This decision does not request removal of the existing opt-in background research feature.
+
+**Sandboxing decision:** product-managed sandboxing is out of scope. Users who want sandboxing can independently choose and configure their own solution.
 
 ## Decisions to resolve during implementation
 

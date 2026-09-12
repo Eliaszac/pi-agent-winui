@@ -8,6 +8,8 @@ public interface IConversationSession : IAsyncDisposable
 {
     Models.Pi.ProcessIdentity? ProcessIdentity => null;
     event Action<ConversationUpdate>? Updated;
+    Task<System.Text.Json.JsonElement> CheckpointAsync(JsonObject request, CancellationToken cancellationToken = default) =>
+        Task.FromException<System.Text.Json.JsonElement>(new NotSupportedException("Workspace checkpoints are unavailable."));
     Task ConnectAsync(CancellationToken cancellationToken = default);
     Task SendAsync(string message, CancellationToken cancellationToken = default);
     Task SendAsync(string message, IReadOnlyList<ChatImage> images, CancellationToken cancellationToken = default);

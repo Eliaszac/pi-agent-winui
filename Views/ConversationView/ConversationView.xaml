@@ -91,11 +91,30 @@
                                         Visibility="{Binding HasUnknownCounts, Converter={StaticResource BooleanToVisibility}}" />
                                 </StackPanel>
                             </StackPanel>
-                            <controls:ActionButton Grid.Column="1" Click="OnAskAgentToRevert" VerticalAlignment="Top" Padding="8,5" FontSize="11"
-                                ToolTipService.ToolTip="Prepare a request in the composer. Review it before sending." AutomationProperties.Name="Ask agent to revert this run">
-                                <StackPanel Orientation="Horizontal" Spacing="6"><FontIcon Glyph="&#xE7A7;" FontSize="11"/><TextBlock Text="Ask agent to revert" FontSize="11"/></StackPanel>
-                            </controls:ActionButton>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Top">
+                                <controls:ActionButton Click="OnRevertChanges" Padding="6,4" MinHeight="28" FontSize="11"
+                                    Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    ToolTipService.ToolTip="Preview checkpoint changes before restoring files." AutomationProperties.Name="Revert this request's file changes">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="&#xE7A7;" FontSize="11" />
+                                        <TextBlock Text="Revert" FontSize="11" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </controls:ActionButton>
+                                <controls:ActionButton Click="OnUndoRevert" Padding="6,4" MinHeight="28" FontSize="11"
+                                    Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    ToolTipService.ToolTip="Undo the file restoration." AutomationProperties.Name="Undo revert"
+                                    Visibility="{Binding CanUndoRevert, Converter={StaticResource BooleanToVisibility}}">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="&#xE7A6;" FontSize="11" />
+                                        <TextBlock Text="Undo" FontSize="11" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </controls:ActionButton>
+                            </StackPanel>
                             </Grid>
+                            <TextBlock Text="{Binding CaptureNotice}" TextWrapping="Wrap" Margin="12,0,12,8" FontSize="11"
+                                Visibility="{Binding HasCaptureNotice, Converter={StaticResource BooleanToVisibility}}" />
                             <ItemsControl ItemsSource="{Binding VisibleFiles}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="chat:ChangedFileViewModel">
@@ -103,7 +122,7 @@
                                             <controls:ActionExpander.Header>
                                                 <Grid ColumnSpacing="12">
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{x:Bind Path}" TextTrimming="CharacterEllipsis" FontSize="11" />
+                                                    <TextBlock Text="{x:Bind Label}" TextTrimming="CharacterEllipsis" FontSize="11" />
                                                     <TextBlock Grid.Column="1" Text="{x:Bind Added}" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontSize="11" />
                                                     <TextBlock Grid.Column="2" Text="{x:Bind Removed}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="11" />
                                                 </Grid>
@@ -202,7 +221,7 @@
                                 <ProgressRing Width="12" Height="12" MinWidth="0" MinHeight="0" IsActive="{x:Bind IsProcessing}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <TextBlock Text="{x:Bind Text, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                                    VerticalAlignment="Center" />
                             </StackPanel>
                             <ContentControl Content="{x:Bind}" ContentTemplate="{StaticResource ToolTemplate}" HorizontalContentAlignment="Stretch" Margin="0,0,0,2"
                                 Visibility="{x:Bind IsTool, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
@@ -467,6 +486,9 @@
         </Grid>
     </Grid>
     <StackPanel VerticalAlignment="Top">
+        <InfoBar IsOpen="{Binding HasCheckpointRecovery}" Severity="Warning" IsClosable="False" Title="Checkpoint recovery" Message="{Binding CheckpointStatus}">
+            <InfoBar.ActionButton><controls:ActionButton Content="Inspect recovery" Click="OnCheckpointRecovery" /></InfoBar.ActionButton>
+        </InfoBar>
         <InfoBar IsOpen="{Binding HasInlineError}" Severity="Error" IsClosable="True" CloseButtonClick="OnDismissError"
             Title="{Binding ErrorTitle}" Message="{Binding Error}">
             <InfoBar.ActionButton><controls:ActionButton Content="Details" Click="OnErrorDetails" ToolTipService.ToolTip="Recovery guidance and copyable diagnostics"/></InfoBar.ActionButton>

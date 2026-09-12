@@ -5,6 +5,7 @@ const maxBytes = 256 * 1024;
 /** Captures the baseline when Pi invokes its serialized write operation. */
 export class WriteDiffCapture {
     patch: string | null = null;
+    kind: "created" | "modified" = "modified";
     private readonly displayPath: string;
     private readonly generatePatch: (path: string, before: string, after: string) => string;
 
@@ -41,7 +42,7 @@ export class WriteDiffCapture {
                 return new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, bytesRead));
             } finally { await file.close(); }
         } catch (error: unknown) {
-            if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") return "";
+            if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") { this.kind = "created"; return ""; }
             return null;
         }
     }

@@ -5,6 +5,10 @@ namespace PiAgentGui.ViewModels.Conversations;
 
 public sealed class RunChangesViewModel : ObservableObject
 {
+    public string? CheckpointId { get; init; }
+    public bool CanUndoRevert { get; init; }
+    public string CaptureNotice { get; init; } = "";
+    public bool HasCaptureNotice => CaptureNotice.Length > 0;
     public static RunChangesViewModel? FromHistory(IReadOnlyList<ChatEntry> history, string? directory = null)
     {
         var start = -1;
@@ -35,7 +39,7 @@ public sealed class RunChangesViewModel : ObservableObject
             OnPropertyChanged(nameof(MoreLabel));
         }
     }
-    public string Title => $"Edited {Files.Count} {(Files.Count == 1 ? "file" : "files")}";
+    public string Title => $"Changed {Files.Count} {(Files.Count == 1 ? "file" : "files")}";
     public string Added => $"+{Files.Sum(file => file.AddedCount)}";
     public string Removed => $"−{Files.Sum(file => file.RemovedCount)}";
     public bool HasUnknownCounts => Files.Any(file => file.HasUnknownCounts);
@@ -45,9 +49,9 @@ public sealed class RunChangesViewModel : ObservableObject
     public bool HasDiagnostics => DiagnosticsLabel is not null;
     public IReadOnlyList<VerificationRow> VerificationRows => VerificationLabels.Select(label => new VerificationRow(label, label.Contains("failed", StringComparison.OrdinalIgnoreCase))).ToArray();
 
-    public RunChangesViewModel(IEnumerable<FileChange> changes, IReadOnlyList<string>? verificationLabels = null, string? diagnosticsLabel = null)
+    public RunChangesViewModel(IEnumerable<FileChange> changes, IReadOnlyList<string>? verificationLabels = null, string? diagnosticsLabel = null, bool caseSensitive = false)
     {
-        Files = changes.GroupBy(change => change.Path.Replace('\\', '/'), StringComparer.OrdinalIgnoreCase)
+        Files = changes.GroupBy(change => change.Path.Replace('\\', '/'), caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase)
             .Select(group => new ChangedFileViewModel(group.ToArray())).ToArray();
         VerificationLabels = Files.Count > 0 ? verificationLabels ?? [] : [];
         DiagnosticsLabel = Files.Count > 0 ? diagnosticsLabel : null;
