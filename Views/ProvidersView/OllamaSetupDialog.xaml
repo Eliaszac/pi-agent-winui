@@ -1,0 +1,40 @@
+<controls:ActionContentDialog x:Class="PiAgentGui.Views.OllamaSetupDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls"
+    Title="Ollama connections" PrimaryButtonText="Connect and sync" CloseButtonText="Close"
+    IsPrimaryButtonEnabled="{Binding CanConnect}" DefaultButton="Close" PrimaryButtonClick="OnImport">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="560">
+        <StackPanel Spacing="12" MinWidth="260">
+            <TextBlock Text="{Binding LocalStatus}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <controls:ActionComboBox x:Name="SavedServers" PlaceholderText="Saved servers" ItemsSource="{Binding SavedEndpoints}"
+                    DisplayMemberPath="AbsoluteUri" SelectionChanged="OnSavedServer" HorizontalAlignment="Stretch" AutomationProperties.Name="Saved Ollama servers" IsEnabled="{Binding CanInteract}"/>
+                <controls:ActionButton Grid.Column="1" Content="Use local" Click="OnLocal" IsEnabled="{Binding CanInteract}"/>
+            </Grid>
+            <TextBox Header="Server address" PlaceholderText="http://hostname:11434" Text="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                IsEnabled="{Binding CanInteract}" AutomationProperties.Name="Ollama server address"/>
+            <TextBlock Text="Local and saved servers are checked at startup. New tool-capable models are imported automatically. Use Connect and sync to check this server now. Existing model settings and favorites are preserved." TextWrapping="Wrap"/>
+            <ProgressBar IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}"/>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+            <StackPanel Spacing="8" Visibility="{Binding HasModels, Converter={StaticResource BooleanToVisibility}}">
+                <TextBlock Text="New models use the loaded context allocation or saved model setting when available; otherwise 4,096 tokens is used as a fallback. This does not change Ollama settings."
+                    FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <ListView ItemsSource="{Binding Models}" SelectionMode="None" IsTabStop="False" IsEnabled="{Binding CanInteract}"
+                    MaxHeight="260" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Ollama models">
+                    <ListView.ItemContainerStyle><Style TargetType="ListViewItem">
+                        <Setter Property="IsTabStop" Value="False"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    </Style></ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate><DataTemplate>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ContextDetail}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                    </DataTemplate></ListView.ItemTemplate>
+                </ListView>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</controls:ActionContentDialog>

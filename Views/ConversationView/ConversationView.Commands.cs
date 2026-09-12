@@ -200,7 +200,7 @@ public sealed partial class ConversationView
                     await owner.RunOperationAsync(ConversationOperation.ExportHtml, path);
                     if (ReferenceEquals(ViewModel, owner)) ShowCommandNotice("Conversation exported as HTML.");
                     break;
-                case "model": ModelSelector.Focus(FocusState.Programmatic); ModelSelector.IsDropDownOpen = true; break;
+                case "model": ModelSelector.Open(); break;
                 case "thinking": ThinkingSelector.Focus(FocusState.Programmatic); ThinkingSelector.IsDropDownOpen = true; break;
                 case "copy":
                     var response = owner.Entries.LastOrDefault(entry => entry.CanCopyResponse)?.Text;

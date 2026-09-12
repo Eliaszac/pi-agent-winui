@@ -72,13 +72,23 @@ public partial class App : Application
                     PiJson.Text(payload, "title"), PiJson.Text(payload, "question"), PiJson.Text(payload, "provider"), PiJson.Text(payload, "model"),
                     PiJson.Text(payload, "effort"), "Queued", "", DateTimeOffset.UtcNow))
             },
-            new DispatcherQueueUiDispatcher(window.DispatcherQueue));
+            new DispatcherQueueUiDispatcher(window.DispatcherQueue), modelFavorites: new ModelFavoritesStore(
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "model-favorites.json")));
         var projectService = new ProjectService(repository);
         workspaces.ViewedRunCompleted += () => { if (!closing && !windowClosed) CompletionSound.Play(); };
         var shell = new ShellViewModel(repository, workspaces, paths);
         providers = new ProviderService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "management"));
-        shell.Providers = new ViewModels.Providers.ProvidersViewModel(providers);
+        var ollamaHttp = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+        window.Closed += (_, _) => ollamaHttp.Dispose();
+        var ollama = new ViewModels.Providers.OllamaSetupViewModel(new OllamaClient(ollamaHttp),
+            new OllamaModelImporter(PermissionModesSupport.AgentDirectory), () =>
+            {
+                workspaces.InvalidateProviderModels();
+                if (shell.Providers is { IsRefreshing: false } currentProviders) _ = currentProviders.RefreshCatalogAsync();
+            }, githubLifetime.Token);
+        shell.Providers = new ViewModels.Providers.ProvidersViewModel(providers, ollama);
+        _ = ollama.SyncKnownAsync(githubLifetime.Token);
         providers.CredentialsChanged += () => window.DispatcherQueue.TryEnqueue(() => workspaces.InvalidateProviderModels());
         window.Title = shell.WindowTitle;
         shell.PropertyChanged += (_, change) =>

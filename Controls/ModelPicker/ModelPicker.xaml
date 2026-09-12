@@ -1,0 +1,97 @@
+<UserControl x:Class="PiAgentGui.Controls.ModelPicker"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls">
+    <controls:ActionButton x:Name="PickerButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+        Background="Transparent" BorderThickness="0" Padding="6,4" MinWidth="0" MinHeight="32" CornerRadius="8"
+        FontSize="12" AutomationProperties.Name="Choose model">
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock x:Name="CurrentModel" Text="Select model" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+            <FontIcon Grid.Column="1" Glyph="&#xE70D;" FontSize="10"/>
+        </Grid>
+        <controls:ActionButton.Flyout>
+            <Flyout x:Name="PickerFlyout" Placement="TopEdgeAlignedLeft" Opening="OnOpening" Opened="OnOpened">
+                <Flyout.FlyoutPresenterStyle>
+                    <Style TargetType="FlyoutPresenter">
+                        <Setter Property="Padding" Value="8"/>
+                        <Setter Property="MaxWidth" Value="640"/>
+                        <Setter Property="MaxHeight" Value="560"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    </Style>
+                </Flyout.FlyoutPresenterStyle>
+                <Grid x:Name="PickerContent" Width="560" Height="400" RowSpacing="8">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBox x:Name="SearchBox" PlaceholderText="Search all models" Text="{Binding Search, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        AutomationProperties.Name="Search all models" KeyDown="OnSearchKeyDown"/>
+                    <Grid Grid.Row="1" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions><ColumnDefinition x:Name="ProviderColumn" Width="176"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <ListView x:Name="ProviderList" ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider, Mode=TwoWay}"
+                            SelectionMode="Single" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Model providers"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListView.Resources>
+                                <ResourceDictionary><ResourceDictionary.ThemeDictionaries>
+                                    <ResourceDictionary x:Key="Default">
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorBrush" ResourceKey="TextFillColorPrimaryBrush"/>
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorPointerOverBrush" ResourceKey="TextFillColorPrimaryBrush"/>
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorPressedBrush" ResourceKey="TextFillColorPrimaryBrush"/>
+                                    </ResourceDictionary>
+                                    <ResourceDictionary x:Key="Light">
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorBrush" ResourceKey="TextFillColorPrimaryBrush"/>
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorPointerOverBrush" ResourceKey="TextFillColorPrimaryBrush"/>
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorPressedBrush" ResourceKey="TextFillColorPrimaryBrush"/>
+                                    </ResourceDictionary>
+                                    <ResourceDictionary x:Key="HighContrast">
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorBrush" ResourceKey="SystemControlHighlightAltBaseHighBrush"/>
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorPointerOverBrush" ResourceKey="SystemControlHighlightAltBaseHighBrush"/>
+                                        <StaticResource x:Key="ListViewItemSelectionIndicatorPressedBrush" ResourceKey="SystemControlHighlightAltBaseHighBrush"/>
+                                    </ResourceDictionary>
+                                </ResourceDictionary.ThemeDictionaries></ResourceDictionary>
+                            </ListView.Resources>
+                            <ListView.ItemTemplate><DataTemplate>
+                                <Grid ColumnSpacing="8" Padding="0,4">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <controls:ProviderLogo Provider="{Binding Id}" Width="20" Height="20"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{Binding Name}"/>
+                                </Grid>
+                            </DataTemplate></ListView.ItemTemplate>
+                        </ListView>
+                        <Grid Grid.Column="1" RowSpacing="4">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                            <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" Margin="8,8,8,4"/>
+                            <ListView x:Name="ModelList" Grid.Row="1" ItemsSource="{Binding Items}" SelectionMode="None" IsTabStop="False"
+                                HorizontalContentAlignment="Stretch" AutomationProperties.Name="Models" ScrollViewer.HorizontalScrollBarVisibility="Disabled" KeyDown="OnModelsKeyDown">
+                                <ListView.ItemContainerStyle><Style TargetType="ListViewItem">
+                                    <Setter Property="Padding" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="IsTabStop" Value="False"/>
+                                </Style></ListView.ItemContainerStyle>
+                                <ListView.ItemTemplate><DataTemplate>
+                                    <Grid ColumnSpacing="4">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <controls:ActionButton Click="OnSelectModel" Style="{StaticResource SidebarItemButtonStyle}" AutomationProperties.Name="{Binding SelectionLabel}">
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Name}"/>
+                                                    <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Detail}"/>
+                                                </StackPanel>
+                                                <FontIcon Grid.Column="1" Glyph="&#xE73E;" FontSize="12" Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibility}}"/>
+                                            </Grid>
+                                        </controls:ActionButton>
+                                        <controls:ActionButton Grid.Column="1" Click="OnFavorite" Style="{StaticResource ShellIconButtonStyle}" VerticalAlignment="Center"
+                                            AutomationProperties.Name="{Binding FavoriteLabel}" ToolTipService.ToolTip="{Binding FavoriteLabel}">
+                                            <FontIcon Glyph="{Binding FavoriteGlyph}" FontSize="16"/>
+                                        </controls:ActionButton>
+                                    </Grid>
+                                </DataTemplate></ListView.ItemTemplate>
+                            </ListView>
+                            <TextBlock Grid.Row="1" Text="{Binding EmptyText}" TextWrapping="Wrap" Margin="8,12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibility}}"/>
+                        </Grid>
+                    </Grid>
+                    <TextBlock Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                </Grid>
+            </Flyout>
+        </controls:ActionButton.Flyout>
+    </controls:ActionButton>
+</UserControl>

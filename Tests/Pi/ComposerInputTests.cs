@@ -8,6 +8,29 @@ namespace PiAgentGui.Tests.Pi;
 public sealed class ComposerInputTests
 {
     [TestMethod]
+    public async Task ComposerClearsBeforeSendCompletesAndPreservesNewDraftOnFailure()
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var session = new FakeConversationSession { SendDelay = completion.Task, SendError = new IOException("Rejected") };
+        var dispatcher = new QueuedUiDispatcher();
+        await using var model = new ConversationViewModel(session, dispatcher);
+        await model.InitializeAsync(); dispatcher.Drain();
+        model.Draft = "First message";
+        var screenshot = new PiAgentGui.Models.Conversations.ChatImage("dGVzdA==");
+        model.AddScreenshot(screenshot);
+        var sending = model.SendCommand.ExecuteAsync();
+        Assert.AreEqual("", model.Draft);
+        Assert.AreEqual(0, model.PendingImages.Count);
+        Assert.IsFalse(sending.IsCompleted);
+        model.Draft = "New draft";
+        completion.SetResult();
+        await sending; dispatcher.Drain();
+        Assert.AreEqual("New draft", model.Draft);
+        Assert.AreEqual("First message", model.RecoveredPrompts.Single().Text);
+        Assert.AreSame(screenshot, model.RecoveredPrompts.Single().Images.Single());
+    }
+
+    [TestMethod]
     public async Task MissingProviderRedirectKeepsDraftAndScreenshotUntilExplicitSend()
     {
         var session = new FakeConversationSession(); var dispatcher = new QueuedUiDispatcher();

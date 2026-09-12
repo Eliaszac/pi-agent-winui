@@ -2,17 +2,19 @@ using PiAgentGui.Models.Pi;
 
 namespace PiAgentGui.ViewModels.Providers;
 
-public sealed class ProviderCardViewModel(PiProvider provider)
+public sealed class ProviderCardViewModel(PiProvider provider, bool isOllama = false, string? status = null, string? source = null)
 {
+    public bool IsOllama => isOllama;
+    public bool ShowDetails => !IsOllama;
     internal PiProvider Provider => provider;
     public string Name => provider.Name;
     public string Id => provider.Id;
-    public string Status => provider.Configured ? "Configured" : "Set up required";
-    public string Source => provider.Configured
+    public string Status => status ?? (provider.Configured ? "Configured" : "Set up required");
+    public string Source => source ?? (provider.Configured
         ? $"{(provider.Method == "oauth" ? "Sign-in" : provider.Method == "api_key" ? "API key" : "Credentials")} · {(provider.Source == "stored" ? "Saved in Pi" : provider.Source)}"
-        : "Available across all projects once configured.";
-    public string ModelCount => $"{provider.Models.Count} models";
-    public string SetupLabel => provider.Configured ? "Manage" : "Set up";
+        : "Available across all projects once configured.");
+    public string ModelCount => $"{provider.Models.Count} {(IsOllama ? "imported models" : "models")}";
+    public string SetupLabel => isOllama ? "Manage connection" : provider.Configured ? "Manage" : "Set up";
     public bool CanSignIn => provider.Oauth;
     public bool CanAddKey => provider.ApiKey;
     public bool CanSignOut => provider.Stored;

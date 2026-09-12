@@ -16,7 +16,9 @@ public sealed class GlobalConfigurationFile(string path)
         await using var lease = await AcquireAsync(token);
         var original = await ReadBytesAsync(token);
         var document = Parse(original);
+        var before = document.DeepClone();
         update(document);
+        if (JsonNode.DeepEquals(before, document)) return;
         var bytes = System.Text.Encoding.UTF8.GetBytes(document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         if (bytes.Length > MaximumBytes) throw new IOException("Configuration exceeds the 2 MB limit.");
         var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";

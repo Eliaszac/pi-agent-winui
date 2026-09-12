@@ -11,6 +11,7 @@ namespace PiAgentGui.ViewModels.Conversations;
 public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly IConversationSession session;
+    public ViewModels.Providers.ModelPickerViewModel? ModelPicker { get; internal set; }
     public McpStatusSnapshot? McpStatus { get; private set; }
     public InstructionSnapshot? Instructions { get; private set; }
     public Task ReadInstructionsAsync() => session.RunOperationAsync(ConversationOperation.Instructions);
@@ -256,16 +257,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (images.Length > 0 && submitted.TrimStart().StartsWith('/'))
                 throw new InvalidOperationException("Send screenshots with a message rather than a slash command.");
             if (TryOpenProviderSetup?.Invoke() == true) return;
-            await ExecuteAsync(async () =>
-            {
-                await session.SendAsync(FileReferences.Expand(submitted), images).ConfigureAwait(false);
-                dispatcher.Post(() =>
-                {
-                    if (Draft == submitted) Draft = "";
-                    foreach (var image in images) PendingImages.Remove(image);
-                    RefreshAttachments();
-                });
-            });
+            var expanded = FileReferences.Expand(submitted);
+            await SendSubmittedAsync(submitted, expanded, images, () => session.SendAsync(expanded, images));
         }, ReportError);
         StopCommand = new AsyncRelayCommand(async _ =>
         {

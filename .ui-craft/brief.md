@@ -31,6 +31,10 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 ## Learned constraints
 
+- 2026-09-12: Providers includes an Ollama card in the existing grid with automatic import of local tool-capable models. Manage connection accepts a remote server once, then syncs it automatically (including initially empty servers). Check automatically only at app startup; keep explicit Connect and sync for manual checks; preserve existing model settings and favorites. Show quiet counts/errors and read-only model statuses, without per-model import controls. Use loaded/saved context when available with a labeled 4,096 fallback. Provider/model search and Configured only never change onboarding inventory. Retain native card/dialog/theme resources.
+
+- 2026-09-12: Model selection uses a two-pane dropdown: vertical provider navigation on the left with Favorites first and recognizable provider brand icons, searchable models on the right, and a separate favorite star per model. Keep the compact composer trigger and existing native system-theme styling. Favorites persist globally; selection remains per conversation.
+
 - Run summaries sit directly beneath the assistant response, not in a viewport-separated footer. Show more/fewer files and tool disclosures stay neutral in checked, hover, and pressed states; retain high-contrast system colors.
 
 - Project expand/collapse is disclosure only: preserve the current page, selected conversation, and open sidebar. Browsing groups must not navigate.
@@ -102,3 +106,7 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 - 2026-09-10: Show whole-run reported tokens and elapsed time beside the final response action buttons only once the run finishes. Use muted 12px text, seconds below one minute, then minutes and seconds. Preserve existing response controls and avoid a live counter or extra response header.
 
+- 2026-09-12: Both provider navigation in the model dropdown and Providers cards prioritize Anthropic, OpenAI, OpenAI Codex, then Ollama. Favorites stays first in the dropdown; other providers retain their existing relative ordering.
+- 2026-09-12: Clear the composer immediately on Send, before RPC acknowledgement or state refresh. Restore failed submissions without overwriting a newer draft.
+- 2026-09-12: Composer send/stop vector fills inherit the button foreground rather than hardcoded white, preserving contrast on inverted dark-mode button backgrounds and disabled states.
+- 2026-09-12 correction: Inherited composer icon Foreground did not resolve contrast in the live app. Explicitly use black send/stop shapes in dark mode (white button), and white shapes in light mode (dark button); update on ActualThemeChanged.

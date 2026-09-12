@@ -29,6 +29,7 @@ internal sealed class FakeConversationSession : IConversationSession
         SentImages.Add(images);
     }
     public Exception? SendError { get; set; }
+    public Task? SendDelay { get; set; }
     public Exception? ModelError { get; set; }
     public Task SetThinkingLevelAsync(string level, CancellationToken cancellationToken = default)
     {
@@ -61,12 +62,12 @@ internal sealed class FakeConversationSession : IConversationSession
         if (ConnectError is not null) throw ConnectError;
         Emit(new() { IsConnected = true, Status = "Ready" });
     }
-    public Task SendAsync(string message, CancellationToken cancellationToken = default)
+    public async Task SendAsync(string message, CancellationToken cancellationToken = default)
     {
-        if (SendError is not null) return Task.FromException(SendError);
+        if (SendDelay is not null) await SendDelay.WaitAsync(cancellationToken);
+        if (SendError is not null) throw SendError;
         Sent.Add(message);
         Emit(new() { IsRunning = true, IsConnected = true, Status = "Working" });
-        return Task.CompletedTask;
     }
     public Task StopAsync(CancellationToken cancellationToken = default) { Emit(new() { IsRunning = false, Status = "Stopped" }); return Task.CompletedTask; }
     public Task DisconnectAsync() { Emit(new() { IsConnected = false, IsRunning = false }); return Task.CompletedTask; }

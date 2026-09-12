@@ -439,14 +439,8 @@
                 </StackPanel>
                 <Grid x:Name="ComposerModelActions" Grid.Column="1" ColumnSpacing="4" HorizontalAlignment="Stretch">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <controls:ActionComboBox x:Name="ModelSelector" Style="{StaticResource ComposerSelectorStyle}" Width="220"
-                        Loaded="OnModelSelectorLoaded" SelectionChanged="OnModelSelectionChanged" HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Stretch"
-                        IsEnabled="{Binding CanChangeModel}" PlaceholderText="Select model" AutomationProperties.Name="Model" ToolTipService.ToolTip="{Binding SelectedModel.DisplayName}">
-                        <controls:ActionComboBox.ItemTemplate><DataTemplate>
-                            <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis"/>
-                        </DataTemplate></controls:ActionComboBox.ItemTemplate>
-                    </controls:ActionComboBox>
+                    <controls:ModelPicker x:Name="ModelSelector" Width="220" Loaded="OnModelSelectorLoaded"
+                        HorizontalAlignment="Stretch" IsEnabled="{Binding CanChangeModel}"/>
                     <controls:ActionComboBox x:Name="ThinkingSelector" Grid.Column="1" Style="{StaticResource ComposerSelectorStyle}" Width="112"
                         Loaded="OnThinkingSelectorLoaded" SelectionChanged="OnThinkingSelectionChanged" IsEnabled="{Binding CanChangeThinkingLevel}"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" PlaceholderText="Effort" AutomationProperties.Name="Reasoning effort" ToolTipService.ToolTip="Reasoning effort">

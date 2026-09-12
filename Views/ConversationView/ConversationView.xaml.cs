@@ -29,7 +29,6 @@ public sealed partial class ConversationView : UserControl
     private bool followTail = true;
     private bool tailScrollPending;
     private bool composing;
-    private bool synchronizingModel;
     private bool synchronizingThinking;
     private bool synchronizingApproval;
     public event EventHandler? ApprovalSetupRequested;
@@ -193,14 +192,6 @@ public sealed partial class ConversationView : UserControl
         Composer.Select(caret + 1, 0);
     }
 
-    private void OnModelSelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        if (synchronizingModel) return;
-        if (sender is ComboBox { SelectedIndex: >= 0 } selector && ViewModel is { CanChangeModel: true } viewModel
-            && selector.SelectedIndex < viewModel.AvailableModels.Count)
-            viewModel.SelectModelCommand.Execute(viewModel.AvailableModels[selector.SelectedIndex]);
-    }
-
     private void OnPresentationChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (args.PropertyName == nameof(ConversationViewModel.IsRunning) && ViewModel?.IsRunning == true) DismissPicker();
@@ -220,18 +211,7 @@ public sealed partial class ConversationView : UserControl
 
     private void SynchronizeModelSelector()
     {
-        // Apply the item source before selection, including when the initially collapsed composer loads.
-        // Independent bindings can clear selection while WinUI replaces the item source.
-        synchronizingModel = true;
-        try
-        {
-            var viewModel = ViewModel;
-            if (!ReferenceEquals(ModelSelector.ItemsSource, viewModel?.ModelOptions))
-                ModelSelector.ItemsSource = viewModel?.ModelOptions;
-            var index = viewModel?.SelectedModelIndex ?? -1;
-            ModelSelector.SelectedIndex = index >= 0 && index < ModelSelector.Items.Count ? index : -1;
-        }
-        finally { synchronizingModel = false; }
+        ModelSelector.Synchronize(ViewModel);
     }
 
     private void OnThinkingSelectionChanged(object sender, SelectionChangedEventArgs args)

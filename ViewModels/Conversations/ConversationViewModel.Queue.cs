@@ -73,10 +73,10 @@ public sealed partial class ConversationViewModel
                 throw new InvalidOperationException("Add a message after /steer.");
             if (message.StartsWith('/')) throw new InvalidOperationException("Use /steer with a message, rather than another slash command.");
             var steer = running;
-            await ExecuteAsync(() => steer
-                ? session.SteerAsync(FileReferences.Expand(message), images)
-                : session.SendAsync(FileReferences.Expand(message), images));
-            ClearSubmitted(submitted, images);
+            var expanded = FileReferences.Expand(message);
+            await SendSubmittedAsync(submitted, expanded, images, () => steer
+                ? session.SteerAsync(expanded, images)
+                : session.SendAsync(expanded, images));
             return true;
         }
         if (!running) return false;
@@ -98,6 +98,20 @@ public sealed partial class ConversationViewModel
         if (Draft == submitted) Draft = "";
         foreach (var image in images) PendingImages.Remove(image);
         RefreshAttachments();
+    }
+
+    private async Task SendSubmittedAsync(string submitted, string expanded, ChatImage[] images, Func<Task> send)
+    {
+        if (busy || disposed) return;
+        ClearSubmitted(submitted, images);
+        try { await ExecuteAsync(send); }
+        catch
+        {
+            var prompt = new PendingPrompt(submitted, expanded, images);
+            if (string.IsNullOrWhiteSpace(Draft) && !HasPendingImages) RestorePrompt(prompt);
+            else RecoveredPrompts.Add(prompt);
+            throw;
+        }
     }
 
     private void TryDispatchQueued()

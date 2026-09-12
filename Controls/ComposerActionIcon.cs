@@ -35,7 +35,8 @@ public sealed class ComposerActionIcon : UserControl
 
     private void Update()
     {
-        var iconBrush = new SolidColorBrush(Microsoft.UI.Colors.White);
+        var iconBrush = new SolidColorBrush(ActualTheme == ElementTheme.Dark
+            ? Microsoft.UI.Colors.Black : Microsoft.UI.Colors.White);
         arrow.Fill = iconBrush;
         stop.Fill = iconBrush;
         arrow.Visibility = IsRunning ? Visibility.Collapsed : Visibility.Visible;

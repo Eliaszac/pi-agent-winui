@@ -5,7 +5,8 @@ namespace PiAgentGui.Services.Conversations;
 
 /// <summary>Owns one workspace per saved identity. Selection does not control process lifetime.</summary>
 public sealed class ConversationWorkspaceStore(
-    Func<Project, ConversationDraft, IConversationSession> sessionFactory, IUiDispatcher dispatcher, bool previewCompacting = false) : IAsyncDisposable
+    Func<Project, ConversationDraft, IConversationSession> sessionFactory, IUiDispatcher dispatcher, bool previewCompacting = false,
+    Pi.ModelFavoritesStore? modelFavorites = null) : IAsyncDisposable
 {
     private readonly Dictionary<(Guid Project, Guid Conversation), ConversationViewModel> workspaces = [];
     private bool disposed;
@@ -26,6 +27,7 @@ public sealed class ConversationWorkspaceStore(
         if (!workspaces.TryGetValue(key, out var workspace))
         {
             workspace = new ConversationViewModel(sessionFactory(project, conversation), dispatcher, previewCompacting);
+            if (modelFavorites is not null) workspace.ModelPicker = new ViewModels.Providers.ModelPickerViewModel(modelFavorites);
             workspace.Target = Utilities.ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id);
             workspace.WorkingDirectory = workspace.Target.Path;
             workspace.ResearchOwnerId = conversation.Id;

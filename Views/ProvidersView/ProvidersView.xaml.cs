@@ -51,7 +51,12 @@ public sealed partial class ProvidersView : UserControl
     {
         if (dialogOpen || DataContext is not ProvidersViewModel { CanInteract: true } vm || sender is not FrameworkElement { DataContext: ProviderCardViewModel card }) return;
         dialogOpen = true;
-        try { await new ProviderSetupDialog(vm, card) { XamlRoot = XamlRoot }.ShowAsync(); }
+        try
+        {
+            if (card.IsOllama && vm.Ollama is { } ollama)
+                await new OllamaSetupDialog(ollama) { XamlRoot = XamlRoot }.ShowAsync();
+            else await new ProviderSetupDialog(vm, card) { XamlRoot = XamlRoot }.ShowAsync();
+        }
         finally { dialogOpen = false; }
     }
 }
