@@ -54,7 +54,7 @@ public sealed partial class MainPage : Page
         ViewModels.Files.FileExplorerViewModel files, ViewModels.Processes.ProcessesPanelViewModel processes,
         ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts, Services.Pi.CapabilityImportServices imports,
         Repositories.Projects.IProjectRepository projectRepository, Services.Projects.WslDistributionCache wslDistributions,
-        ViewModels.Docker.DockerPanelViewModel docker)
+        ViewModels.Docker.DockerPanelViewModel docker, ViewModels.Home.HomeViewModel home)
     {
         ViewModel = viewModel;
         this.projectRepository = projectRepository;
@@ -68,6 +68,7 @@ public sealed partial class MainPage : Page
         Scripts = scripts;
         Research = research;
         Docker = docker;
+        Home = home;
         Files = files;
         Processes = processes;
         SourceControl = sourceControl;
@@ -76,6 +77,7 @@ public sealed partial class MainPage : Page
         this.createProjectForm = createProjectForm;
         this.picker = picker;
         InitializeComponent();
+        InitializeHome();
         var sidebarRows = new SidebarRows(new Services.Windowing.DispatcherQueueUiDispatcher(DispatcherQueue));
         SidebarList.ItemsSource = sidebarRows.Rows;
         sidebarRows.SetProjects(ViewModel.Projects);
@@ -267,6 +269,7 @@ public sealed partial class MainPage : Page
         sourceControlTimer.Stop(); SourceControl.Dispose();
         processesTimer.Stop(); Processes.IsOpen = false;
         dockerTimer.Stop(); Docker.Dispose();
+        homeTimer.Stop(); Home.Dispose();
         TerminalPane.CloseDisplays();
     }
 

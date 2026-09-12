@@ -15,6 +15,10 @@
   </ItemGroup>
   <!-- Compile the UI-independent production files directly; no WinUI runtime is needed. -->
   <ItemGroup>
+    <Compile Include="../Models/Home/*.cs" Link="Production/Models/Home/%(Filename)%(Extension)" />
+    <Compile Include="../Services/Home/*.cs" Link="Production/Services/Home/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="../Models/Docker/*.cs" Link="Production/Models/Docker/%(Filename)%(Extension)" />
     <Compile Include="../Services/Docker/*.cs" Link="Production/Services/Docker/%(Filename)%(Extension)" />
   </ItemGroup>

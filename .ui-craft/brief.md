@@ -31,6 +31,12 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 ## Learned constraints
 
+- 2026-09-12: Approved: the expanded sidebar uses a compact outlined folder-plus at the right of the Projects heading to open the existing New project dialog. It replaces the separate New project button and stays visually distinct from the plain plus used for new conversations. This supersedes the earlier preference against a heading-level add control.
+
+- 2026-09-12: Home has no introductory “Pick up where you left off” sentence. Place the app version below About local usage. Center the complete content vertically when it fits the viewport; preserve scrolling and equal top/bottom padding when it does not.
+
+- 2026-09-12: Global Home is accepted as the startup destination, with recent conversations across projects first, compact new/open/add project actions, then local usage summaries. Preserve project overviews and background conversations. Use native theme resources, a neutral daily usage chart, responsive model/project breakdowns, and explicit empty/partial-data states. Put Home navigation at the top of both sidebar layouts, omit the Home page heading, and show a quiet app version from build metadata. No separate analytics database or uploads; Settings (including the app version) and legal/privacy content remain deferred.
+
 - 2026-09-12: Providers includes an Ollama card in the existing grid with automatic import of local tool-capable models. Manage connection accepts a remote server once, then syncs it automatically (including initially empty servers). Check automatically only at app startup; keep explicit Connect and sync for manual checks; preserve existing model settings and favorites. Show quiet counts/errors and read-only model statuses, without per-model import controls. Use loaded/saved context when available with a labeled 4,096 fallback. Provider/model search and Configured only never change onboarding inventory. Retain native card/dialog/theme resources.
 
 - 2026-09-12: Model selection uses a two-pane dropdown: vertical provider navigation on the left with Favorites first and recognizable provider brand icons, searchable models on the right, and a separate favorite star per model. Keep the compact composer trigger and existing native system-theme styling. Favorites persist globally; selection remains per conversation.

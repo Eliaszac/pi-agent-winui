@@ -12,6 +12,7 @@ public sealed partial class MainPage
         bool Current() => chat is not null && ReferenceEquals(chat, ViewModel.Chat);
         var commands = new List<PaletteCommand>
         {
+            PaletteCommand.Action("home", "Open Home", "Recent conversations and local usage", ViewModel.OpenHome, aliases: "dashboard analytics tokens"),
             PaletteCommand.Action("extensions", "Open Extensions", "Manage optional features and integrations", ViewModel.OpenExtensions, aliases: "plugins addons"),
             PaletteCommand.Action("providers", "Open Providers", "Connect and manage model providers", ViewModel.OpenProviders, aliases: "models authentication login"),
             PaletteCommand.Action("sidebar", "Toggle sidebar", "Collapse or expand projects and conversations", ViewModel.Sidebar.Toggle),

@@ -28,16 +28,21 @@ public sealed class ShellViewModel : ObservableObject
     private ConversationItemViewModel? selectedConversation;
     private bool showExtensions;
     private bool showProviders;
+    private bool showHome = true;
+    public bool ShowHome => showHome;
     public bool ShowProviders => showProviders;
     public ViewModels.Providers.ProvidersViewModel? Providers { get; set; }
     public bool ShowExtensions => showExtensions;
-    public bool ShowWorkspace => !showExtensions && !showProviders;
+    public bool ShowWorkspace => !showExtensions && !showProviders && !showHome;
     public ViewModels.Extensions.ExtensionsViewModel Extensions { get; }
     public void OpenExtensions()
     {
+        showHome = false;
+        OnPropertyChanged(nameof(ShowHome));
         showProviders = false;
         OnPropertyChanged(nameof(ShowProviders));
         showExtensions = true;
+        Chat?.SetViewed(false);
         OnPropertyChanged(nameof(ShowExtensions));
         OnPropertyChanged(nameof(ShowWorkspace));
         _ = Extensions.RefreshCommand.ExecuteAsync();
@@ -45,21 +50,40 @@ public sealed class ShellViewModel : ObservableObject
     }
     public void CloseExtensions()
     {
+        showHome = false;
+        OnPropertyChanged(nameof(ShowHome));
         showProviders = false;
         OnPropertyChanged(nameof(ShowProviders));
         showExtensions = false;
+        Chat?.SetViewed(true);
         OnPropertyChanged(nameof(ShowExtensions));
         OnPropertyChanged(nameof(ShowWorkspace));
     }
 
     public void OpenProviders()
     {
+        showHome = false;
+        OnPropertyChanged(nameof(ShowHome));
         showExtensions = false;
         showProviders = true;
+        Chat?.SetViewed(false);
         OnPropertyChanged(nameof(ShowProviders));
         OnPropertyChanged(nameof(ShowExtensions));
         OnPropertyChanged(nameof(ShowWorkspace));
         if (Providers is not null) _ = Providers.RefreshAsync();
+        if (Sidebar.IsOverlay) Sidebar.IsOpen = false;
+    }
+
+    public void OpenHome()
+    {
+        showExtensions = false;
+        showProviders = false;
+        showHome = true;
+        Chat?.SetViewed(false);
+        OnPropertyChanged(nameof(ShowExtensions));
+        OnPropertyChanged(nameof(ShowProviders));
+        OnPropertyChanged(nameof(ShowHome));
+        OnPropertyChanged(nameof(ShowWorkspace));
         if (Sidebar.IsOverlay) Sidebar.IsOpen = false;
     }
 
@@ -174,6 +198,7 @@ public sealed class ShellViewModel : ObservableObject
             var expanded = Projects.ToDictionary(project => project.Project.Id, project => project.IsExpanded);
             var settledExpanded = Projects.ToDictionary(project => project.Project.Id, project => project.IsSettledExpanded);
             var projectId = selectedProject?.Project.Id;
+            var keepHome = ShowHome;
             var conversationId = selectedConversation?.Conversation.Id;
             var loadedProjects = new ObservableCollection<ProjectItemViewModel>();
             foreach (var project in saved.Reverse())
@@ -188,6 +213,7 @@ public sealed class ShellViewModel : ObservableObject
             var selected = Projects.FirstOrDefault(project => project.Project.Id == projectId) ?? Projects.FirstOrDefault();
             var conversation = selected?.Conversations.FirstOrDefault(item => item.Conversation.Id == conversationId);
             SetSelection(selected, conversation);
+            if (keepHome) OpenHome();
             OnPropertyChanged(nameof(Projects));
             hasLoaded = true;
             OnPropertyChanged(nameof(HasLoaded));
@@ -223,8 +249,9 @@ public sealed class ShellViewModel : ObservableObject
 
     public void SelectProject(ProjectItemViewModel? project)
     {
+        var fromHome = ShowHome;
         CloseExtensions();
-        if (ReferenceEquals(selectedProject, project) && selectedConversation is not null) return;
+        if (!fromHome && ReferenceEquals(selectedProject, project) && selectedConversation is not null) return;
         SetSelection(project, null);
     }
 
