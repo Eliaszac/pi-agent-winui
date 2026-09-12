@@ -13,6 +13,8 @@ public sealed partial class MainPage : Page
 {
     private readonly Func<CreateProjectViewModel> createProjectForm;
     private readonly FolderPickerService picker;
+    private readonly Repositories.Projects.IProjectRepository projectRepository;
+    private readonly Services.Projects.WslDistributionCache wslDistributions;
     private bool dialogOpen;
     private bool initialized;
     private double dragWidth;
@@ -49,9 +51,13 @@ public sealed partial class MainPage : Page
         ViewModels.GitHub.GitHubViewModel github, Configuration.GitHubOptions githubOptions, CancellationToken githubCancellation,
         ViewModels.Terminal.TerminalPanelViewModel terminals, ViewModels.Conversations.ResearchPanelViewModel research,
         ViewModels.Files.FileExplorerViewModel files, ViewModels.Processes.ProcessesPanelViewModel processes,
-        ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts, Services.Pi.CapabilityImportServices imports)
+        ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts, Services.Pi.CapabilityImportServices imports,
+        Repositories.Projects.IProjectRepository projectRepository, Services.Projects.WslDistributionCache wslDistributions)
     {
         ViewModel = viewModel;
+        this.projectRepository = projectRepository;
+        this.wslDistributions = wslDistributions;
+        ViewModel.ChooseTargetAsync = ChooseConversationTargetAsync;
         GettingStarted = new(viewModel.Providers!, viewModel.Extensions,
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "onboarding.json"));
         OpenIn = openIn;
@@ -74,7 +80,7 @@ public sealed partial class MainPage : Page
         CapabilitiesPane.Imports = imports;
         CapabilitiesPane.PickSkillFolder = picker.PickAsync;
         Capabilities.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Capabilities.IsOpen)) UpdateTerminalLayout(); };
-        ViewModel.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(ViewModel.Chat)) Capabilities.Select(ViewModel.Chat); };
+        ViewModel.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(ViewModel.Chat)) Capabilities.Select(ViewModel.Chat?.IsRemoteTarget == true ? null : ViewModel.Chat); };
         Unloaded += (_, _) => { Capabilities.IsOpen = false; Capabilities.Select(null); };
         SourceControlPane.DataContext = SourceControl;
         sourceControlTimer.Tick += async (_, _) => await SourceControl.RefreshAsync();
@@ -99,20 +105,20 @@ public sealed partial class MainPage : Page
         {
             if (change.PropertyName == nameof(ViewModel.Chat))
             {
-                Processes.Select(ViewModel.Chat?.ProcessIdentity);
+                Processes.Select(ViewModel.SelectedTarget is { IsLocal: false } ? null : ViewModel.Chat?.ProcessIdentity);
                 if (Processes.IsOpen) _ = RefreshProcessesAsync();
             }
         };
         Unloaded += (_, _) => { processesTimer.Stop(); Processes.IsOpen = false; };
         FilesPane.DataContext = Files;
-        FilesPane.OpenFile = OpenIn.OpenFileAsync;
+        FilesPane.OpenFile = OpenTargetFileAsync;
         Files.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Files.IsOpen)) UpdateTerminalLayout(); };
         ResearchPane.DataContext = Research;
         ResearchPane.ShareRequested += text => { if (ViewModel.Chat is { } chat) chat.Draft += (string.IsNullOrWhiteSpace(chat.Draft) ? "" : "\n\n") + text; };
         Research.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Research.IsOpen)) UpdateTerminalLayout(); };
         ViewModel.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(ViewModel.Chat)) Research.SelectConversation(ViewModel.Chat?.ResearchOwnerId); };
         TerminalPane.Bind(Terminals);
-        TerminalPane.CurrentDirectory = () => ViewModel.SelectedProject?.Path;
+        TerminalPane.CurrentDirectory = () => ViewModel.SelectedTarget?.Path;
         Terminals.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Terminals.IsOpen)) UpdateTerminalLayout(); };
         WorkspaceContent.SizeChanged += (_, _) => UpdateTerminalLayout();
         OpenIn.PropertyChanged += (_, _) => UpdateOpenInLogo();
@@ -120,8 +126,9 @@ public sealed partial class MainPage : Page
         UpdateGitHubLogo();
         GitHub.PullRequestChanged += (path, pull) =>
         {
-            foreach (var project in ViewModel.Projects.Where(project => string.Equals(project.Path, path, StringComparison.OrdinalIgnoreCase)))
-                foreach (var conversation in project.Conversations) conversation.SetPullRequest(pull);
+            foreach (var conversation in ViewModel.Projects.SelectMany(project => project.Conversations)
+                .Where(conversation => conversation.Target is { IsLocal: true } target && string.Equals(target.Path, path, StringComparison.OrdinalIgnoreCase)))
+                conversation.SetPullRequest(pull);
         };
         githubTimer.Tick += async (_, _) => await RefreshGitHubAsync();
         Unloaded += (_, _) => githubTimer.Stop();
@@ -130,14 +137,16 @@ public sealed partial class MainPage : Page
         ViewModel.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is nameof(ShellViewModel.HeaderRename) or nameof(ShellViewModel.ShowExtensions)) HeaderPath.HidePath();
-            if (args.PropertyName == nameof(ShellViewModel.SelectedProject)) _ = OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);
+            if (args.PropertyName == nameof(ShellViewModel.SelectedProject)) _ = OpenIn.RefreshAsync(ViewModel.LocalWorkspacePath);
             if (args.PropertyName == nameof(ShellViewModel.SelectedProject))
             {
-                _ = Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedProject?.Path);
-                Files.SelectProject(ViewModel.SelectedProject?.Path);
-                SourceControl.SelectProject(ViewModel.SelectedProject?.Path);
+                Terminals.Target = ViewModel.SelectedTarget;
+                Processes.Select(ViewModel.SelectedTarget is { IsLocal: false } ? null : ViewModel.Chat?.ProcessIdentity);
+                _ = Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedTarget?.Path, ViewModel.SelectedTarget);
+                Files.SelectTarget(ViewModel.SelectedTarget);
+                SourceControl.SelectTarget(ViewModel.SelectedTarget);
                 if (SourceControl.IsOpen) _ = SourceControl.RefreshAsync();
-                GitHub.Select(ViewModel.SelectedProject?.Path);
+                GitHub.Select(ViewModel.LocalWorkspacePath);
                 _ = RefreshGitHubAsync();
             }
         };
@@ -149,18 +158,18 @@ public sealed partial class MainPage : Page
         initialized = true;
         await ViewModel.LoadAsync();
         _ = GettingStarted.InitializeAsync();
-        await Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedProject?.Path);
-        Files.SelectProject(ViewModel.SelectedProject?.Path);
-        await OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path);
+        await Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedTarget?.Path, ViewModel.SelectedTarget);
+        Files.SelectTarget(ViewModel.SelectedTarget);
+        await OpenIn.RefreshAsync(ViewModel.LocalWorkspacePath);
         GitHub.Initialize();
-        GitHub.Select(ViewModel.SelectedProject?.Path);
+        GitHub.Select(ViewModel.LocalWorkspacePath);
         githubTimer.Start();
         await RefreshGitHubAsync();
     }
 
     private async Task RefreshGitHubAsync(bool force = false)
     {
-        try { await GitHub.RefreshAsync(ViewModel.Projects.Select(project => project.Path).ToArray(), githubCancellation, force); }
+        try { await GitHub.RefreshAsync(ViewModel.Projects.SelectMany(project => project.Targets).Where(target => target.IsLocal).Select(target => target.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), githubCancellation, force); }
         catch (OperationCanceledException) { }
         catch (Exception) { GitHub.ReportError("Couldn't refresh GitHub. Please try again."); }
     }
@@ -210,10 +219,11 @@ public sealed partial class MainPage : Page
         Processes.IsOpen = false;
         Files.IsOpen = false;
         Research.IsOpen = false;
-        if (ViewModel.SelectedProject?.Path is { } directory) Terminals.Toggle(directory);
+        if (ViewModel.SelectedTarget is { } target) { Terminals.Target = target; Terminals.Toggle(target.Path); }
     }
     private void OnResearchClicked(object sender, RoutedEventArgs args)
     {
+        if (ViewModel.SelectedTarget is { IsLocal: false }) { ViewModel.Chat?.ReportAttachmentError("Background research workers currently support local targets only."); return; }
         Capabilities.IsOpen = false;
         SourceControl.IsOpen = false;
         Processes.IsOpen = false;
@@ -234,7 +244,7 @@ public sealed partial class MainPage : Page
         SourceControl.IsOpen = false;
         Processes.IsOpen = false;
         Terminals.Hide(); Research.IsOpen = false;
-        Files.SelectProject(ViewModel.SelectedProject?.Path);
+        Files.SelectTarget(ViewModel.SelectedTarget);
         Files.IsOpen = !Files.IsOpen;
     }
     private void OnTerminalResizeKeyDown(object sender, KeyRoutedEventArgs args)
@@ -280,22 +290,23 @@ public sealed partial class MainPage : Page
     {
         Capabilities.IsOpen = false;
         Terminals.Hide(); Research.IsOpen = false; Files.IsOpen = false; Processes.IsOpen = false;
-        SourceControl.SelectProject(ViewModel.SelectedProject?.Path);
+        SourceControl.SelectTarget(ViewModel.SelectedTarget);
         SourceControl.IsOpen = !SourceControl.IsOpen;
     }
 
     private void OnProcessesClicked(object sender, RoutedEventArgs args)
     {
+        if (ViewModel.SelectedTarget is { IsLocal: false }) { ViewModel.Chat?.ReportAttachmentError("Use the target terminal to inspect remote processes. This panel shows Windows processes only."); return; }
         Capabilities.IsOpen = false;
         SourceControl.IsOpen = false;
         Terminals.Hide(); Research.IsOpen = false; Files.IsOpen = false;
-        Processes.Select(ViewModel.Chat?.ProcessIdentity);
+        Processes.Select(ViewModel.SelectedTarget is { IsLocal: false } ? null : ViewModel.Chat?.ProcessIdentity);
         Processes.IsOpen = !Processes.IsOpen;
     }
 
     private async Task RefreshProcessesAsync()
     {
-        Processes.Select(ViewModel.Chat?.ProcessIdentity);
+        Processes.Select(ViewModel.SelectedTarget is { IsLocal: false } ? null : ViewModel.Chat?.ProcessIdentity);
         await Processes.RefreshAsync();
     }
 
@@ -318,7 +329,7 @@ public sealed partial class MainPage : Page
         }
         OpenInMenu.Items.Add(new MenuFlyoutSeparator());
         var refresh = new Controls.ActionMenuFlyoutItem { Text = "Refresh applications", Icon = new FontIcon { Glyph = "\uE72C" } };
-        refresh.Click += async (_, _) => await OpenIn.RefreshAsync(ViewModel.SelectedProject?.Path, true);
+        refresh.Click += async (_, _) => await OpenIn.RefreshAsync(ViewModel.LocalWorkspacePath, true);
         OpenInMenu.Items.Add(refresh);
     }
 
@@ -328,7 +339,7 @@ public sealed partial class MainPage : Page
         dialogOpen = true;
         try
         {
-            var dialog = new CreateProjectDialog(createProjectForm(), picker, ViewModel.AddSavedProject) { XamlRoot = XamlRoot };
+            var dialog = new CreateProjectDialog(createProjectForm(), picker, ViewModel.AddSavedProject, wslDistributions) { XamlRoot = XamlRoot };
             await dialog.ShowAsync();
         }
         catch (Exception exception) { ViewModel.ReportError(exception); }

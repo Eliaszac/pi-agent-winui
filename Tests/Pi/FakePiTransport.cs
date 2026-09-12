@@ -20,6 +20,7 @@ internal sealed class FakePiTransport : IPiTransport
     public bool IsStreaming { get; set; }
     public bool StartTurnOnPrompt { get; set; } = true;
     public bool ApplyModeCommands { get; set; }
+    public string? TargetReadyId { get; set; }
     public string ModelId { get; private set; } = "fake";
     public string Provider { get; private set; } = "test";
     public string ExtensionCommands { get; set; } = "[]";
@@ -58,6 +59,8 @@ internal sealed class FakePiTransport : IPiTransport
             if ((command == "set_model" && RejectModel) || (command == "get_entries" && RejectEntries)) { Reply(packet, success: false); return Task.CompletedTask; }
             if (command == "set_model") { ModelId = packet.GetProperty("modelId").GetString()!; Provider = packet.GetProperty("provider").GetString()!; }
             if (command == "prompt") IsStreaming = StartTurnOnPrompt;
+            if (command == "prompt" && packet.GetProperty("message").GetString() == "/pi-gui-target-check" && TargetReadyId is not null)
+                Push(JsonSerializer.Serialize(new { type = "extension_ui_request", method = "setStatus", statusKey = "pi-gui-target-ready", statusText = TargetReadyId }));
             if (command == "prompt" && ApplyModeCommands && packet.GetProperty("message").GetString() is { } message && message.StartsWith("/mode ", StringComparison.Ordinal))
                 SessionEntries = JsonSerializer.Serialize(new[] { new { type = "custom", customType = "modes", data = new { currentMode = message[6..] } } });
             if (command == "abort") IsStreaming = false;

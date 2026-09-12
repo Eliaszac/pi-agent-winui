@@ -9,6 +9,7 @@ export default function (pi: ExtensionAPI): void {
     registerSessionCopy(pi);
     registerModelRefresh(pi);
     registerMcpStatus(pi);
+    if (process.env.PI_GUI_EXECUTION_TARGET) return;
     registerInstructions(pi);
     const base = createWriteToolDefinition(process.cwd());
     pi.registerTool({

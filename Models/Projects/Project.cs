@@ -13,6 +13,8 @@ public sealed record Project
 
     /// <summary>Gets the normalized absolute working directory.</summary>
     public required string Path { get; init; }
+    public IReadOnlyList<ExecutionTarget> Targets { get; init; } = [];
+    public Guid? DefaultTargetId { get; init; }
 
     /// <summary>Gets extensible JSON object data. Do not store credentials here.</summary>
     public JsonElement Metadata { get; init; } = JsonSerializer.SerializeToElement(new { });

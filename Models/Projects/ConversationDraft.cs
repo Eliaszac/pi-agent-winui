@@ -5,6 +5,7 @@ public sealed record ConversationDraft
 {
     /// <summary>Gets the stable local conversation identifier.</summary>
     public required Guid Id { get; init; }
+    public Guid? TargetId { get; init; }
 
     /// <summary>Gets the title displayed in the project list.</summary>
     public required string Title { get; init; }

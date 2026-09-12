@@ -6,7 +6,9 @@ namespace PiAgentGui.Repositories.Projects;
 /// <summary>Persists projects without exposing the storage format to callers.</summary>
 public interface IProjectRepository
 {
-    Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default);
+    Task AddTargetAsync(Guid projectId, ExecutionTarget target, bool makeDefault, CancellationToken cancellationToken = default);
+    Task SetDefaultTargetAsync(Guid projectId, Guid targetId, CancellationToken cancellationToken = default);
+    Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default, Guid? targetId = null);
     Task TouchConversationAsync(Guid projectId, Guid conversationId, DateTimeOffset usedAt, CancellationToken cancellationToken = default);
     Task AddConversationCopyAsync(Guid projectId, Guid sourceId, ConversationDraft conversation, CancellationToken cancellationToken = default);
     Task RenameProjectAsync(Guid projectId, string name, CancellationToken cancellationToken = default);
@@ -35,5 +37,5 @@ public interface IProjectRepository
     /// <param name="projectId">The owning project.</param>
     /// <param name="cancellationToken">Cancels before the atomic commit.</param>
     /// <returns>The persisted draft.</returns>
-    Task<ConversationDraft> AddConversationAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task<ConversationDraft> AddConversationAsync(Guid projectId, CancellationToken cancellationToken = default, Guid? targetId = null);
 }

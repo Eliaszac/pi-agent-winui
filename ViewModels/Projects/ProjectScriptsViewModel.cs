@@ -9,6 +9,10 @@ namespace PiAgentGui.ViewModels.Projects;
 public sealed class ProjectScriptsViewModel(IProjectRepository repository, TerminalPanelViewModel terminals) : ObservableObject
 {
     private Guid? projectId;
+    private ExecutionTarget? target;
+    private Guid? scriptTargetId;
+    public bool IsRemoteTarget => target is { IsLocal: false };
+    public string CommandHeader => IsRemoteTarget ? "Bash command" : "PowerShell command";
     private string projectDirectory = "";
     private Guid? selectedId;
     private int revision;
@@ -26,6 +30,7 @@ public sealed class ProjectScriptsViewModel(IProjectRepository repository, Termi
 
     public Task<IReadOnlyList<PackageScriptCandidate>> PreviewPackageAsync(string file)
     {
+        if (IsRemoteTarget) throw new InvalidOperationException("Package import uses local files. Add a Bash command manually for this target.");
         var directory = projectDirectory;
         return Task.Run(() => PackageScriptImporter.ReadAsync(file, directory));
     }
@@ -40,9 +45,11 @@ public sealed class ProjectScriptsViewModel(IProjectRepository repository, Termi
         return added;
     }
 
-    public async Task SelectAsync(Guid? id, string? directory)
+    public async Task SelectAsync(Guid? id, string? directory, ExecutionTarget? executionTarget = null)
     {
         var request = ++revision;
+        target = executionTarget;
+        scriptTargetId = executionTarget?.Id == id ? null : executionTarget?.Id;
         projectId = id; projectDirectory = directory ?? "";
         Scripts.Clear(); selectedId = null; loaded = false; loading = id is not null; error = ""; Notify();
         if (id is null) return;
@@ -50,7 +57,7 @@ public sealed class ProjectScriptsViewModel(IProjectRepository repository, Termi
         {
             var projects = await repository.GetAllAsync();
             var project = projects.FirstOrDefault(item => item.Id == id) ?? throw new InvalidOperationException("The project no longer exists.");
-            var settings = ProjectScripts.Read(project.Metadata);
+            var settings = ProjectScripts.Read(project.Metadata, scriptTargetId);
             if (request != revision) return;
             Apply(settings); loaded = true;
         }
@@ -67,7 +74,7 @@ public sealed class ProjectScriptsViewModel(IProjectRepository repository, Termi
         if (index >= 0) next[index] = script; else next.Add(script);
         var settings = new ProjectScriptSettings { Scripts = next, SelectedId = selectedId ?? script.Id };
         ProjectScripts.Validate(settings);
-        _ = ProjectScripts.ResolveDirectory(projectDirectory, directory);
+        _ = ProjectScripts.ResolveTargetDirectory(target, projectDirectory, directory);
         await PersistAsync(owner, settings);
     }
 
@@ -83,18 +90,21 @@ public sealed class ProjectScriptsViewModel(IProjectRepository repository, Termi
         if (!CanUse || projectId is not { } owner) return;
         var script = Scripts.FirstOrDefault(item => item.Id == (id ?? selectedId)) ?? (id is null ? Scripts.FirstOrDefault() : null);
         if (script is null) throw new InvalidOperationException("Choose a saved script first.");
-        var directory = ProjectScripts.ResolveDirectory(projectDirectory, script.WorkingDirectory);
+        var savedTarget = target;
+        var directory = ProjectScripts.ResolveTargetDirectory(savedTarget, projectDirectory, script.WorkingDirectory);
         await PersistAsync(owner, new() { Scripts = Scripts.ToArray(), SelectedId = script.Id });
-        terminals.RunScript(owner, script.Id, script.Name, directory, script.Command);
+        terminals.RunScript(owner, script.Id, script.Name, directory, script.Command, savedTarget);
     }
 
     private async Task PersistAsync(Guid owner, ProjectScriptSettings settings)
     {
+        var version = revision;
+        var targetId = scriptTargetId;
         saving = true; error = ""; Notify();
         try
         {
-            await repository.UpdateScriptsAsync(owner, settings);
-            if (projectId == owner) Apply(settings);
+            await repository.UpdateScriptsAsync(owner, settings, targetId: targetId);
+            if (projectId == owner && version == revision) Apply(settings);
         }
         finally { saving = false; Notify(); }
     }

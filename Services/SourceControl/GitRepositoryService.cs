@@ -5,8 +5,10 @@ namespace PiAgentGui.Services.SourceControl;
 
 public sealed class GitRepositoryService(IGitCommandRunner runner, Action<string, bool>? recycle = null)
 {
-    public Task<MergeConflict> ReadConflictAsync(GitSnapshot state, GitChange change, CancellationToken token) => new GitConflictService(runner).ReadAsync(state, change, token);
-    public Task ApplyConflictAsync(MergeConflict conflict, string result, bool delete, CancellationToken token) => new GitConflictService(runner).ApplyAsync(conflict, result, delete, token);
+    public Task<MergeConflict> ReadConflictAsync(GitSnapshot state, GitChange change, CancellationToken token) => runner is TargetGitCommandRunner
+        ? throw new InvalidOperationException("Resolve target conflicts in its terminal, then refresh Source Control.") : new GitConflictService(runner).ReadAsync(state, change, token);
+    public Task ApplyConflictAsync(MergeConflict conflict, string result, bool delete, CancellationToken token) => runner is TargetGitCommandRunner
+        ? throw new InvalidOperationException("Resolve target conflicts in its terminal, then refresh Source Control.") : new GitConflictService(runner).ApplyAsync(conflict, result, delete, token);
     public async Task RevertAsync(GitSnapshot state, GitChange change, CancellationToken token)
     {
         if (!change.CanRevert || !state.Changes.Contains(change)) throw new InvalidOperationException("Refresh the file list before reverting this file.");
@@ -16,6 +18,7 @@ public sealed class GitRepositoryService(IGitCommandRunner runner, Action<string
             throw new InvalidOperationException("The file status changed. Refresh and try again.");
         if (change.Status == '?')
         {
+            if (runner is TargetGitCommandRunner) throw new InvalidOperationException("Remote files cannot be moved to the Windows Recycle Bin. Use the target terminal to remove this untracked file.");
             var files = new Files.ProjectFileSystem(state.Root, recycle ?? Files.RecycleBin.Delete);
             var path = Path.GetFullPath(Path.Combine(state.Root, change.Path));
             files.Validate(path);
@@ -36,7 +39,9 @@ public sealed class GitRepositoryService(IGitCommandRunner runner, Action<string
         if (change.Status == 'U') return new(change.Path, "", description, left, right, "Open this file from the Merge conflicts group to resolve it in the three-way merge editor.");
         if (change.Binary) return new(change.Path, "", description, left, right, "Binary files don't have a text diff.");
         string patch;
-        if (change.Status == '?') patch = await UntrackedFileDiff.ReadAsync(state.Root, change.Path, token);
+        if (change.Status == '?' && runner is TargetGitCommandRunner)
+            return new(change.Path, "", description, left, right, "Open the untracked file in the target file browser or terminal to inspect it before staging.");
+        else if (change.Status == '?') patch = await UntrackedFileDiff.ReadAsync(state.Root, change.Path, token);
         else
         {
             var arguments = new List<string> { "diff", "--patch", "--unified=2147483647", "--no-renames", "--no-ext-diff", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/", "--output-indicator-new=+", "--output-indicator-old=-", "--output-indicator-context= " };
@@ -66,7 +71,7 @@ public sealed class GitRepositoryService(IGitCommandRunner runner, Action<string
         var working = await RequireAsync(root, ["diff", "--numstat", "-z", "--no-renames", "--no-ext-diff", "--no-textconv"], token);
         var changes = GitStatusParser.Parse(status, staged, working).ToArray();
         for (var index = 0; index < changes.Length; index++)
-            if (changes[index].Status == '?') changes[index] = await UntrackedFileStats.ReadAsync(root, changes[index], token);
+            if (changes[index].Status == '?' && runner is not TargetGitCommandRunner) changes[index] = await UntrackedFileStats.ReadAsync(root, changes[index], token);
         var remotes = (await RequireAsync(root, ["remote"], token)).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         var refs = await RequireAsync(root, ["for-each-ref", "--format=%(refname)%00%(symref)%00%(upstream:remotename)%00%(upstream:remoteref)", "refs/heads/", "refs/remotes/"], token);
         if (head != await HeadAsync(root, token)) throw new IOException("The branch changed while refreshing. Refresh again.");

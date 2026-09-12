@@ -6,7 +6,7 @@ using System.Threading.Channels;
 namespace PiAgentGui.Services.Terminal;
 
 /// <summary>Owns one interactive shell and its Windows pseudoconsole. Native I/O stays off the UI thread.</summary>
-public sealed class ConPtySession(string directory, string? command = null) : ITerminalSession
+public sealed class ConPtySession(string directory, string? command = null, Models.Projects.ExecutionTarget? target = null) : ITerminalSession
 {
     private readonly SemaphoreSlim lifecycle = new(1, 1);
     private readonly Channel<string> input = Channel.CreateBounded<string>(new BoundedChannelOptions(128) { SingleReader = true });
@@ -43,7 +43,8 @@ public sealed class ConPtySession(string directory, string? command = null) : IT
 
     private void Start(int columns, int rows)
     {
-        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException();
+        var localDirectory = target is { IsLocal: false } ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) : directory;
+        if (!Directory.Exists(localDirectory)) throw new DirectoryNotFoundException();
         if (!ConPtyNative.CreatePipe(out var inputRead, out var inputWrite, 0, 0)) throw new Win32Exception();
         using (inputRead)
         {
@@ -67,9 +68,20 @@ public sealed class ConPtySession(string directory, string? command = null) : IT
                     var shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "7", "pwsh.exe");
                     if (!File.Exists(shell)) shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
                     var arguments = command is null ? "-NoLogo" : "-NoLogo -NoProfile -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
-                    if (!ConPtyNative.CreateProcessW(shell, new StringBuilder($"\"{shell}\" {arguments}"), 0, 0, false, 0x00080000, 0, directory, ref startup, out var child)) throw new Win32Exception();
-                    process = child.Process;
-                    ConPtyNative.CloseHandle(child.Thread);
+                    if (target is { IsLocal: false })
+                    {
+                        var launch = Utilities.TargetTerminalLaunch.Create(target with { Path = directory }, command);
+                        shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), launch.Executable == "ssh.exe" ? "OpenSSH\\ssh.exe" : launch.Executable);
+                        arguments = launch.Arguments;
+                    }
+                    var environment = target is { Kind: "ssh", HasSshSecret: true } ? Marshal.StringToHGlobalUni(Utilities.SshTerminalEnvironment.Create(target)) : 0;
+                    try
+                    {
+                        if (!ConPtyNative.CreateProcessW(shell, new StringBuilder($"\"{shell}\" {arguments}"), 0, 0, false, 0x00080000 | 0x00000400, environment, localDirectory, ref startup, out var child)) throw new Win32Exception();
+                        process = child.Process;
+                        ConPtyNative.CloseHandle(child.Thread);
+                    }
+                    finally { if (environment != 0) Marshal.FreeHGlobal(environment); }
                 }
                 catch
                 {

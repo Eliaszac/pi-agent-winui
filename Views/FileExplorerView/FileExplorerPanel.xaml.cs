@@ -89,6 +89,7 @@ public sealed partial class FileExplorerPanel : UserControl
     }
     private async Task DeleteAsync(ExplorerItem item)
     {
+        if (Model.IsReadOnlyTarget) return;
         if (item.IsRoot || Model.IsBusy || Model.Editing is not null) return;
         try
         {
@@ -116,7 +117,7 @@ public sealed partial class FileExplorerPanel : UserControl
     private void ShowItemMenu(FrameworkElement anchor, ExplorerItem item, ContextRequestedEventArgs context)
     {
         var menu = new MenuFlyout();
-        if (!item.IsLinked)
+        if (!item.IsLinked && !Model.IsReadOnlyTarget)
         {
             var file = new ActionMenuFlyoutItem { Text = "New file", IsEnabled = !Model.IsBusy && Model.Editing is null };
             file.Click += async (_, _) => await Model.BeginCreateAsync(item, false); menu.Items.Add(file);
@@ -124,7 +125,7 @@ public sealed partial class FileExplorerPanel : UserControl
             folder.Click += async (_, _) => await Model.BeginCreateAsync(item, true); menu.Items.Add(folder);
             if (!item.IsDirectory) { var open = new ActionMenuFlyoutItem { Text = "Open in editor" }; open.Click += async (_, _) => await OpenAsync(item); menu.Items.Add(open); }
         }
-        if (!item.IsRoot && !item.IsLinked)
+        if (!item.IsRoot && !item.IsLinked && !Model.IsReadOnlyTarget)
         {
             menu.Items.Add(new MenuFlyoutSeparator());
             var rename = new ActionMenuFlyoutItem { Text = "Rename", IsEnabled = !Model.IsBusy && Model.Editing is null };
@@ -133,11 +134,17 @@ public sealed partial class FileExplorerPanel : UserControl
             delete.Click += async (_, _) => await DeleteAsync(item); menu.Items.Add(delete);
         }
         var refresh = new ActionMenuFlyoutItem { Text = "Refresh" }; refresh.Click += async (_, _) => await Model.RefreshAsync(); menu.Items.Add(refresh);
+        if (Model.IsReadOnlyTarget && !item.IsDirectory && !item.IsLinked)
+        {
+            var preview = new ActionMenuFlyoutItem { Text = "Preview target file" };
+            preview.Click += async (_, _) => await OpenAsync(item); menu.Items.Add(preview);
+        }
         if (context.TryGetPosition(anchor, out var position)) menu.ShowAt(anchor, new FlyoutShowOptions { Position = position });
         else menu.ShowAt(anchor);
     }
     private void OnDragStarting(UIElement sender, DragStartingEventArgs args)
     {
+        if (Model.IsReadOnlyTarget) { args.Cancel = true; return; }
         if (sender is not FrameworkElement { Tag: ExplorerItem item } || item.IsRoot || item.IsLinked || Model.IsBusy || Model.Editing is not null) { args.Cancel = true; return; }
         args.Data.Properties[DragKey] = item.Path; args.AllowedOperations = DataPackageOperation.Move;
     }

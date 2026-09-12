@@ -5,8 +5,21 @@ using PiAgentGui.Utilities;
 
 namespace PiAgentGui.ViewModels.SourceControl;
 
-public sealed class SourceControlViewModel(GitRepositoryService service) : ObservableObject, IDisposable
+public sealed class SourceControlViewModel : ObservableObject, IDisposable
 {
+    private readonly GitRepositoryService localService;
+    private GitRepositoryService service;
+    public SourceControlViewModel(GitRepositoryService service) { this.service = service; localService = service; }
+    private Models.Projects.ExecutionTarget? target;
+    private string DraftKey => (target?.Id.ToString() ?? "local") + ":" + directory;
+    public void SelectTarget(Models.Projects.ExecutionTarget? selected)
+    {
+        if (selected?.Id == target?.Id && selected?.Path == target?.Path) return;
+        target = selected;
+        service = selected is { IsLocal: false } ? new(new TargetGitCommandRunner(selected, new Services.Projects.TargetCommandRunner())) : localService;
+        directory = "";
+        SelectProject(selected?.Path);
+    }
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly CancellationTokenSource lifetime = new();
     private readonly Dictionary<string, string> drafts = new(StringComparer.OrdinalIgnoreCase);
@@ -29,7 +42,7 @@ public sealed class SourceControlViewModel(GitRepositoryService service) : Obser
     public ObservableCollection<string> Remotes { get; } = [];
     public bool IsOpen { get => open; set => SetProperty(ref open, value); }
     public bool IsBusy { get => busy; private set { if (SetProperty(ref busy, value)) NotifyState(); } }
-    public string CommitMessage { get => message; set { if (SetProperty(ref message, value)) { if (directory is not null) drafts[directory] = value; OnPropertyChanged(nameof(CanCommit)); } } }
+    public string CommitMessage { get => message; set { if (SetProperty(ref message, value)) { if (directory is not null) drafts[DraftKey] = value; OnPropertyChanged(nameof(CanCommit)); } } }
     public string Error { get => error; private set { if (SetProperty(ref error, value)) OnPropertyChanged(nameof(HasError)); } }
     public bool HasError => Error.Length > 0;
     public string Notice { get => notice; private set { if (SetProperty(ref notice, value)) OnPropertyChanged(nameof(HasNotice)); } }
@@ -37,6 +50,7 @@ public sealed class SourceControlViewModel(GitRepositoryService service) : Obser
     public string? SelectedRemote { get => remote; set => SetProperty(ref remote, value); }
     public bool HasRepository => state is not null;
     public string? RepositoryRoot => state?.Root;
+    public string? RepositoryIdentity => state is null ? null : (target?.Id.ToString() ?? "local") + ":" + state.Root;
     public bool ShowEmpty => state is null;
     public string EmptyMessage => !loaded ? "Checking repository…" : HasError ? "Repository information is unavailable." : "This project is not inside a Git repository.";
     public bool CanAct => state is not null && !IsBusy && !disposed;
@@ -57,7 +71,7 @@ public sealed class SourceControlViewModel(GitRepositoryService service) : Obser
         directory = path; revision++; state = null; loaded = false;
         Staged.Clear(); Changes.Clear(); Conflicts.Clear(); Branches.Clear(); Remotes.Clear();
         SelectedRemote = null; Error = ""; Notice = "";
-        CommitMessage = path is not null ? drafts.GetValueOrDefault(path, "") : "";
+        CommitMessage = path is not null ? drafts.GetValueOrDefault(DraftKey, "") : "";
         NotifyState();
     }
 
@@ -72,7 +86,8 @@ public sealed class SourceControlViewModel(GitRepositoryService service) : Obser
     {
         try
         {
-            var result = await Task.Run(() => service.ReadAsync(path, lifetime.Token));
+            var selectedService = service;
+            var result = await Task.Run(() => selectedService.ReadAsync(path, lifetime.Token));
             if (disposed || version != revision) return;
             state = result; loaded = true;
             if (readFailed) { Error = ""; readFailed = false; }
@@ -97,7 +112,8 @@ public sealed class SourceControlViewModel(GitRepositoryService service) : Obser
         try
         {
             if (disposed || version != revision) return null;
-            var conflict = await Task.Run(() => service.ReadConflictAsync(snapshot, change, lifetime.Token));
+            var selectedService = service;
+            var conflict = await Task.Run(() => selectedService.ReadConflictAsync(snapshot, change, lifetime.Token));
             return !disposed && version == revision ? conflict : null;
         }
         catch (Exception exception) { if (!disposed && version == revision) Error = GitErrorMessage.Format(exception.Message); return null; }
@@ -109,7 +125,8 @@ public sealed class SourceControlViewModel(GitRepositoryService service) : Obser
         await RunAsync(async (snapshot, token) =>
         {
             if (snapshot.Root != conflict.Root) throw new InvalidOperationException("The selected repository changed. Reopen the resolver.");
-            await Task.Run(() => service.ApplyConflictAsync(conflict, result, delete, token));
+            var selectedService = service;
+            await Task.Run(() => selectedService.ApplyConflictAsync(conflict, result, delete, token));
             applied = true;
         }, "Conflict resolved and staged. Review remaining files before committing.");
         return applied;
@@ -122,7 +139,8 @@ public sealed class SourceControlViewModel(GitRepositoryService service) : Obser
         try
         {
             if (disposed || version != revision) return null;
-            var content = await Task.Run(() => service.ReadDiffAsync(snapshot, change, lifetime.Token));
+            var selectedService = service;
+            var content = await Task.Run(() => selectedService.ReadDiffAsync(snapshot, change, lifetime.Token));
             return version == revision && !disposed ? content : null;
         }
         catch (OperationCanceledException) when (disposed) { return null; }
@@ -132,7 +150,7 @@ public sealed class SourceControlViewModel(GitRepositoryService service) : Obser
     public Task UnstageAsync(GitChange? change) => RunAsync((snapshot, token) => service.UnstageAsync(snapshot, change, token), "Changes unstaged.");
     public Task RevertAsync(GitChange change, string confirmedRoot) => RunAsync((snapshot, token) =>
     {
-        if (!string.Equals(snapshot.Root, confirmedRoot, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(RepositoryIdentity, confirmedRoot, StringComparison.Ordinal) && !(target is null && string.Equals(snapshot.Root, confirmedRoot, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("The selected repository changed. Reopen the file menu to revert.");
         return service.RevertAsync(snapshot, change, token);
     }, "File changes reverted.");

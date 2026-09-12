@@ -10,6 +10,7 @@ namespace PiAgentGui.Services.Conversations;
 /// <summary>Coordinates one Pi process and its persistent session, never a shared selected-session process.</summary>
 public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient> clientFactory, Func<bool>? permissionConfigured = null) : IConversationSession
 {
+    private volatile bool targetVerified;
     public Func<JsonElement, Task>? ResearchRequested { get; init; }
     private async Task HandleResearchAsync(PiRpcClient current, JsonElement packet)
     {
@@ -176,6 +177,19 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
             next.EventReceived += OnEvent;
             next.Faulted += OnFault;
             await next.StartAsync(launch with { SessionName = manualName }, cancellationToken).ConfigureAwait(false);
+            if (launch.Target is { IsLocal: false })
+            {
+                targetVerified = false;
+                var available = false;
+                await next.RequestAsync("get_commands", cancellationToken: cancellationToken, applyResponse: packet =>
+                {
+                    var commands = PiJson.Field(PiJson.Field(packet, "data"), "commands");
+                    available = commands.ValueKind == JsonValueKind.Array && commands.EnumerateArray().Any(command => PiJson.Text(command, "name") == "pi-gui-target-check");
+                }).ConfigureAwait(false);
+                if (!available) throw new IOException("The execution-target extension did not load. Local execution is disabled for this conversation.");
+                await next.RequestAsync("prompt", new JsonObject { ["message"] = "/pi-gui-target-check" }, cancellationToken).ConfigureAwait(false);
+                if (!targetVerified) throw new IOException("The execution target could not be verified. Check WSL or SSH connectivity and the workspace folder.");
+            }
             var savedSettings = await settingsStore.ReadAsync(cancellationToken).ConfigureAwait(false);
             confirmedSettings = savedSettings ?? new();
             thinking = new(Publish);
@@ -480,6 +494,11 @@ public sealed class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient
 
     private void HandleExtension(JsonElement packet)
     {
+        if (PiJson.Text(packet, "method") == "setStatus" && PiJson.Text(packet, "statusKey") == "pi-gui-target-ready")
+        {
+            targetVerified = PiJson.Text(packet, "statusText") == launch.Target?.Id.ToString("D");
+            return;
+        }
         if (PiJson.Text(packet, "method") == "setStatus" && PiJson.Text(packet, "statusKey") == InstructionSnapshotParser.StatusKey)
         {
             if (InstructionSnapshotParser.Parse(PiJson.Text(packet, "statusText")) is { } snapshot)

@@ -104,13 +104,22 @@ public sealed class ShellViewModel : ObservableObject
     public bool HasError => ErrorMessage.Length > 0;
     /// <summary>Gets the currently selected project.</summary>
     public ProjectItemViewModel? SelectedProject => selectedProject;
+    public ExecutionTarget? SelectedTarget => selectedConversation?.Target ?? selectedProject?.DefaultTarget;
+    public string TargetLabel => SelectedTarget?.Label ?? "";
+    public string? LocalWorkspacePath => SelectedTarget is { IsLocal: true } target ? target.Path : null;
+    public Func<ProjectItemViewModel, Task<Guid?>>? ChooseTargetAsync { get; set; }
+    public async Task RefreshTargetsAsync(ProjectItemViewModel project)
+    {
+        var saved = (await repository.GetAllAsync()).Single(p => p.Id == project.Project.Id);
+        project.SetTargets(saved); NotifySelection();
+    }
     public InlineRenameViewModel HeaderRename { get; private set; } = new(() => "", _ => Task.CompletedTask);
     /// <summary>Gets the workspace header.</summary>
     public string WorkspaceTitle => selectedConversation?.Title ?? selectedProject?.Name ?? "Your workspace";
     /// <summary>Gets the native window title for the selected conversation.</summary>
     public string WindowTitle => selectedConversation is null ? ApplicationIdentity.Name : $"{ApplicationIdentity.Name} — {selectedConversation.Title}";
     /// <summary>Gets the selected working directory.</summary>
-    public string WorkspacePath => selectedProject?.Path ?? "Projects and conversations, in one place.";
+    public string WorkspacePath => SelectedTarget?.Path ?? "Projects and conversations, in one place.";
     /// <summary>Gets the main empty-state heading.</summary>
     public string WelcomeTitle => selectedProject?.Name ?? "Make room for your next idea.";
     public IReadOnlyList<WelcomeConversation> RecentConversations => Projects
@@ -253,9 +262,12 @@ public sealed class ShellViewModel : ObservableObject
         if (!CanManageSidebar || parameter is not ProjectItemViewModel project) return Task.CompletedTask;
         return ChangeSidebarAsync(async () =>
         {
-            var saved = await Task.Run(() => repository.AddConversationAsync(project.Project.Id));
+            var targetId = project.Targets.Count == 1 ? project.Targets[0].Id
+                : ChooseTargetAsync is null ? project.DefaultTarget.Id : await ChooseTargetAsync(project);
+            if (targetId is null) return;
+            var saved = await Task.Run(() => repository.AddConversationAsync(project.Project.Id, targetId: targetId));
             var item = new ConversationItemViewModel(saved, conversation => SelectConversation(project, conversation), workspaces?.GetOrCreate(project.Project, saved),
-                (conversation, title) => RenameConversationAsync(project, conversation, title));
+                (conversation, title) => RenameConversationAsync(project, conversation, title), ProjectTargets.Resolve(project.Project, saved.TargetId));
             project.Conversations.Add(item);
             project.IsExpanded = true;
             SelectConversation(project, item);
@@ -271,13 +283,13 @@ public sealed class ShellViewModel : ObservableObject
         var baseTitle = original.Title + " · " + suffix;
         var title = baseTitle;
         for (var number = 2; project.Conversations.Any(item => item.Title == title); number++) title = baseTitle + " " + number;
-        var saved = new ConversationDraft { Id = Guid.NewGuid(), Title = title, CreatedAt = DateTimeOffset.UtcNow, IsTitleManual = true };
+        var saved = new ConversationDraft { Id = Guid.NewGuid(), TargetId = original.Target?.Id ?? original.Conversation.TargetId ?? project.Project.Id, Title = title, CreatedAt = DateTimeOffset.UtcNow, IsTitleManual = true };
         await source.CopySessionAsync(sessionPaths.GetSessionFile(project.Project.Id, saved.Id), saved.Title);
         // Publish to the catalog only after Pi has produced an independent session file.
         // If registration fails, retain that file for recovery instead of risking deletion after an uncertain commit.
         await Task.Run(() => repository.AddConversationCopyAsync(project.Project.Id, original.Conversation.Id, saved));
         var item = new ConversationItemViewModel(saved, conversation => SelectConversation(project, conversation), workspaces?.GetOrCreate(project.Project, saved),
-            (conversation, name) => RenameConversationAsync(project, conversation, name));
+            (conversation, name) => RenameConversationAsync(project, conversation, name), ProjectTargets.Resolve(project.Project, saved.TargetId));
         project.Conversations.Add(item);
         project.IsExpanded = true;
         if (open && ReferenceEquals(Chat, source)) SelectConversation(project, item);
@@ -380,6 +392,9 @@ public sealed class ShellViewModel : ObservableObject
 
     private void NotifySelection()
     {
+        OnPropertyChanged(nameof(SelectedTarget));
+        OnPropertyChanged(nameof(TargetLabel));
+        OnPropertyChanged(nameof(LocalWorkspacePath));
         OnPropertyChanged(nameof(SelectedProject));
         OnPropertyChanged(nameof(WorkspaceTitle));
         OnPropertyChanged(nameof(WindowTitle));

@@ -17,6 +17,13 @@ public sealed class ProjectItemViewModel : ObservableObject
     public string Name => Project.Name;
     /// <summary>Gets the working directory.</summary>
     public string Path => Project.Path;
+    public IReadOnlyList<ExecutionTarget> Targets => ProjectTargets.All(Project);
+    public ExecutionTarget DefaultTarget => ProjectTargets.Resolve(Project);
+    internal void SetTargets(Project updated)
+    {
+        Project = Project with { Targets = updated.Targets, DefaultTargetId = updated.DefaultTargetId };
+        OnPropertyChanged(nameof(Targets)); OnPropertyChanged(nameof(DefaultTarget));
+    }
     public string RedactedPath => ProjectPathDisplay.Redact(Path);
     /// <summary>Gets the group expansion glyph.</summary>
     public string ExpansionGlyph => IsExpanded ? "\uE70D" : "\uE76C";
@@ -67,7 +74,7 @@ public sealed class ProjectItemViewModel : ObservableObject
         ToggleCommand = new RelayCommand(_ => IsExpanded = !IsExpanded);
         foreach (var conversation in project.Conversations)
             Conversations.Add(new ConversationItemViewModel(conversation, item => selectConversation(this, item), workspaces?.GetOrCreate(project, conversation),
-                (item, name) => renameConversation?.Invoke(this, item, name) ?? Task.CompletedTask));
+                (item, name) => renameConversation?.Invoke(this, item, name) ?? Task.CompletedTask, ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id)));
         Conversations.CollectionChanged += (_, _) => RefreshGroups();
         RefreshGroups();
     }

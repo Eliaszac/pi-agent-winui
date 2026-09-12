@@ -6,10 +6,22 @@ namespace PiAgentGui.Tests.Projects;
 
 internal sealed class InMemoryProjectRepository(params Project[] projects) : IProjectRepository
 {
-    public Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default)
+    public Task AddTargetAsync(Guid projectId, ExecutionTarget target, bool makeDefault, CancellationToken cancellationToken = default)
+    {
+        var i = Projects.FindIndex(p => p.Id == projectId);
+        Projects[i] = Projects[i] with { Targets = [.. Utilities.ProjectTargets.All(Projects[i]), target], DefaultTargetId = makeDefault ? target.Id : Projects[i].DefaultTargetId ?? projectId };
+        return Task.CompletedTask;
+    }
+    public Task SetDefaultTargetAsync(Guid projectId, Guid targetId, CancellationToken cancellationToken = default)
+    {
+        var i = Projects.FindIndex(p => p.Id == projectId);
+        Projects[i] = Projects[i] with { DefaultTargetId = targetId };
+        return Task.CompletedTask;
+    }
+    public Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default, Guid? targetId = null)
     {
         var index = Projects.FindIndex(item => item.Id == projectId);
-        Projects[index] = Projects[index] with { Metadata = Utilities.ProjectScripts.Write(Projects[index].Metadata, settings) };
+        Projects[index] = Projects[index] with { Metadata = Utilities.ProjectScripts.Write(Projects[index].Metadata, settings, targetId) };
         return Task.CompletedTask;
     }
     public Task TouchConversationAsync(Guid projectId, Guid conversationId, DateTimeOffset usedAt, CancellationToken cancellationToken = default)
@@ -48,10 +60,10 @@ internal sealed class InMemoryProjectRepository(params Project[] projects) : IPr
     public Task UpdateMetadataAsync(Guid projectId, JsonElement metadata, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
-    public Task<ConversationDraft> AddConversationAsync(Guid projectId, CancellationToken cancellationToken = default)
+    public Task<ConversationDraft> AddConversationAsync(Guid projectId, CancellationToken cancellationToken = default, Guid? targetId = null)
     {
         var index = Projects.FindIndex(project => project.Id == projectId);
-        var draft = new ConversationDraft { Id = Guid.NewGuid(), Title = "Conversation 1", CreatedAt = DateTimeOffset.UtcNow, IsTitleManual = false };
+        var draft = new ConversationDraft { Id = Guid.NewGuid(), TargetId = Utilities.ProjectTargets.Resolve(Projects[index], targetId).Id, Title = "Conversation 1", CreatedAt = DateTimeOffset.UtcNow, IsTitleManual = false };
         Projects[index] = Projects[index] with { Conversations = [.. Projects[index].Conversations, draft] };
         return Task.FromResult(draft);
     }

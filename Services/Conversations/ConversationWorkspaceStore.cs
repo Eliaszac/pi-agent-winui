@@ -26,7 +26,8 @@ public sealed class ConversationWorkspaceStore(
         if (!workspaces.TryGetValue(key, out var workspace))
         {
             workspace = new ConversationViewModel(sessionFactory(project, conversation), dispatcher, previewCompacting);
-            workspace.WorkingDirectory = project.Path;
+            workspace.Target = Utilities.ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id);
+            workspace.WorkingDirectory = workspace.Target.Path;
             workspace.ResearchOwnerId = conversation.Id;
             workspace.ViewedRunCompleted += () => ViewedRunCompleted?.Invoke();
             workspace.SessionNameChanged += name => SessionNameChanged?.Invoke(project.Id, conversation.Id, name);

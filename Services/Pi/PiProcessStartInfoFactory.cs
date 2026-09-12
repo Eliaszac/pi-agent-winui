@@ -12,12 +12,15 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator, Fun
 
     public ProcessStartInfo Create(PiLaunchRequest request)
     {
-        if (!Directory.Exists(request.WorkingDirectory)) throw new DirectoryNotFoundException("The project folder is unavailable.");
+        var remote = request.Target is { IsLocal: false };
+        var directory = remote ? Path.Combine(Path.GetDirectoryName(request.SessionFile)!, "runtime", request.Target!.Id.ToString("N")) : request.WorkingDirectory;
+        if (remote) { _ = ProjectTargets.Normalize(request.Target!); Directory.CreateDirectory(directory); }
+        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("The project folder is unavailable.");
         var installation = locator.Resolve();
         var info = new ProcessStartInfo
         {
             FileName = installation.ExecutablePath,
-            WorkingDirectory = request.WorkingDirectory,
+            WorkingDirectory = directory,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardInput = true,
@@ -30,6 +33,19 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator, Fun
         if (installation.CliPath is not null) info.ArgumentList.Add(installation.CliPath);
         info.ArgumentList.Add("--mode");
         info.ArgumentList.Add("rpc");
+        if (remote)
+        {
+            info.Environment["PI_GUI_EXECUTION_TARGET"] = System.Text.Json.JsonSerializer.Serialize(request.Target, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+            info.Environment["PI_GUI_SSH_ASKPASS_PATH"] = Path.Combine(AppContext.BaseDirectory, "PiAgentGui.exe");
+            // Third-party extensions can perform their own local I/O. Load only the supported approval integration.
+            info.ArgumentList.Add("--no-extensions");
+            info.ArgumentList.Add("--no-builtin-tools");
+            info.ArgumentList.Add("--no-skills");
+            info.ArgumentList.Add("--no-prompt-templates");
+            var permission = Path.Combine(PermissionModesSupport.AgentDirectory, "npm", "node_modules", "@georgedong32", "permission-modes", "index.ts");
+            if (PermissionModesSupport.IsGloballyConfigured() && File.Exists(permission))
+            { info.ArgumentList.Add("--extension"); info.ArgumentList.Add(permission); }
+        }
         if (request.ResearchWorker)
         {
             foreach (var flag in new[] { "--no-session", "--no-extensions", "--no-skills", "--no-prompt-templates", "--no-context-files" }) info.ArgumentList.Add(flag);
@@ -63,7 +79,7 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator, Fun
             info.ArgumentList.Add("--name");
             info.ArgumentList.Add(request.SessionName);
         }
-        if (request.ResearchPreferencePath is { } preference)
+        if (!remote && request.ResearchPreferencePath is { } preference)
         {
             info.Environment["PI_GUI_RESEARCH_PREFERENCE"] = preference;
             info.ArgumentList.Add("--extension"); info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "PiExtensions", "research-dispatch.ts"));
@@ -72,6 +88,11 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator, Fun
         if (!File.Exists(writeDiffExtension)) throw new FileNotFoundException("The bundled write-diff extension is missing. Rebuild or reinstall Pi desktop.", writeDiffExtension);
         info.ArgumentList.Add("--extension");
         info.ArgumentList.Add(writeDiffExtension);
+        if (remote)
+        {
+            info.ArgumentList.Add("--extension");
+            info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "PiExtensions", "execution-target.ts"));
+        }
         info.ArgumentList.Add("--session");
         info.ArgumentList.Add(request.SessionFile);
         info.ArgumentList.Add("--session-dir");

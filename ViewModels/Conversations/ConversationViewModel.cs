@@ -41,6 +41,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     public bool HasRunChanges => RunChanges is { Files.Count: > 0 } && !running;
     public ChatEntryViewModel? SummaryResponse => HasRunChanges ? responseActionsEntry : null;
     public string? WorkingDirectory { get; internal set; }
+    public Models.Projects.ExecutionTarget? Target { get; internal set; }
+    public bool IsRemoteTarget => Target is { IsLocal: false };
     public Guid ResearchOwnerId { get; internal set; }
     public PromptFileReferences FileReferences { get; } = new();
     public ObservableCollection<ChatImage> PendingImages { get; } = [];

@@ -26,6 +26,8 @@ public sealed class ProjectScriptsDialog : ActionContentDialog
     public ProjectScriptsDialog(ProjectScriptsViewModel model)
     {
         this.model = model;
+        command.Header = model.CommandHeader;
+        import.Visibility = model.IsRemoteTarget ? Visibility.Collapsed : Visibility.Visible;
         Title = "Project scripts";
         CloseButtonText = "Close";
         DefaultButton = ContentDialogButton.Close;
@@ -46,7 +48,7 @@ public sealed class ProjectScriptsDialog : ActionContentDialog
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         actions.Children.Add(save); actions.Children.Add(delete);
         var panel = new StackPanel { Spacing = 12, MinWidth = 320, MaxWidth = 560 };
-        panel.Children.Add(new TextBlock { Text = "Scripts are shared across this project's conversations. Relative directories start from the project folder.", TextWrapping = TextWrapping.Wrap, FontSize = 12 });
+        panel.Children.Add(new TextBlock { Text = "Scripts are shared by conversations on this execution target. Relative directories start from its workspace folder.", TextWrapping = TextWrapping.Wrap, FontSize = 12 });
         var creation = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         creation.Children.Add(add); creation.Children.Add(import);
         importPanel.Children.Add(new TextBlock { Text = "Select scripts to import. Existing commands are kept; duplicates are skipped.", TextWrapping = TextWrapping.Wrap, FontSize = 12 });

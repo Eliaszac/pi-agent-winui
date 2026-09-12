@@ -8,9 +8,31 @@ namespace PiAgentGui.ViewModels.Files;
 public sealed class FileExplorerViewModel(IUiDispatcher dispatcher) : ObservableObject, IDisposable
 {
     private ProjectFileSystem? files;
+    private TargetFileReader? remoteFiles;
+    private readonly CancellationTokenSource lifetime = new();
+    private Guid? targetId;
+    public bool IsReadOnlyTarget => remoteFiles is not null;
+    public void SelectTarget(Models.Projects.ExecutionTarget? target)
+    {
+        if (targetId == target?.Id && Root == target?.Path) return;
+        targetId = target?.Id;
+        generation++; Items.Clear(); expanded = new(target is { IsLocal: false } ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase); Editing = null; Error = "";
+        remoteFiles = null;
+        SelectProject(null);
+        if (target is { IsLocal: false })
+        {
+            generation++; Items.Clear(); expanded.Clear();
+            remoteFiles = new(target, new Services.Projects.TargetCommandRunner());
+            expanded.Add(target.Path);
+            Error = "Target file browser is read-only. Use the agent or target terminal to edit files.";
+            if (IsOpen) _ = RefreshAsync();
+        }
+        else SelectProject(target?.Path);
+        OnPropertyChanged(nameof(IsReadOnlyTarget));
+    }
     private FileSystemWatcher? watcher;
     private Timer? refreshTimer;
-    private readonly HashSet<string> expanded = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> expanded = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim toggles = new(1, 1);
     private int generation;
     private bool defaultsApplied;
@@ -23,7 +45,7 @@ public sealed class FileExplorerViewModel(IUiDispatcher dispatcher) : Observable
     public bool IsBusy { get => busy; private set => SetProperty(ref busy, value); }
     public string Error { get => error; private set { if (SetProperty(ref error, value)) OnPropertyChanged(nameof(HasError)); } }
     public bool HasError => Error.Length > 0;
-    public string? Root => files?.Root;
+    public string? Root => remoteFiles?.Root ?? files?.Root;
     public ExplorerItem? Editing { get; private set; }
 
     public void SelectProject(string? path)
@@ -56,6 +78,21 @@ public sealed class FileExplorerViewModel(IUiDispatcher dispatcher) : Observable
 
     public async Task RefreshAsync()
     {
+        if (remoteFiles is { } remote)
+        {
+            var version = ++generation;
+            var remoteOpened = expanded.ToHashSet(StringComparer.Ordinal);
+            try
+            {
+                var rows = new List<ExplorerItem> { new(remote.Root, true, 0, true) };
+                await ReadRemoteBranchAsync(remote, remote.Root, 1, remoteOpened, rows);
+                if (version != generation || disposed) return;
+                ObservableCollectionSynchronizer.Synchronize(Items, rows);
+                Error = "Target file browser is read-only. Use the agent or target terminal to edit files.";
+            }
+            catch (Exception exception) { if (version == generation && !disposed) Report(exception); }
+            return;
+        }
         var service = files;
         if (service is null || disposed || Editing is not null) return;
         var revision = ++generation;
@@ -86,6 +123,12 @@ public sealed class FileExplorerViewModel(IUiDispatcher dispatcher) : Observable
 
     public async Task ToggleAsync(ExplorerItem item)
     {
+        if (remoteFiles is not null)
+        {
+            if (!item.CanExpand || item.IsRoot) return;
+            if (!expanded.Remove(item.Path)) expanded.Add(item.Path);
+            await RefreshAsync(); return;
+        }
         var originalService = files;
         await toggles.WaitAsync();
         try
@@ -142,6 +185,7 @@ public sealed class FileExplorerViewModel(IUiDispatcher dispatcher) : Observable
 
     public void BeginRename(ExplorerItem item)
     {
+        if (IsReadOnlyTarget) return;
         if (item.IsRoot || item.IsLinked || IsBusy || Editing is not null) return;
         Editing = item; item.Draft = item.Name; item.IsEditing = true;
     }
@@ -196,5 +240,15 @@ public sealed class FileExplorerViewModel(IUiDispatcher dispatcher) : Observable
     }
 
     public void Report(Exception exception) => Error = exception is OperationCanceledException ? "Operation cancelled." : exception.Message;
-    public void Dispose() { disposed = true; generation++; watcher?.Dispose(); refreshTimer?.Dispose(); }
+    private async Task ReadRemoteBranchAsync(TargetFileReader reader, string path, int depth, IReadOnlySet<string> opened, List<ExplorerItem> rows)
+    {
+        if (depth > 32 || rows.Count > 20000) throw new IOException("Collapse some target folders before expanding more.");
+        foreach (var item in await reader.ListAsync(path, depth, lifetime.Token))
+        {
+            item.IsExpanded = item.CanExpand && opened.Contains(item.Path);
+            rows.Add(item);
+            if (item.IsExpanded) await ReadRemoteBranchAsync(reader, item.Path, depth + 1, opened, rows);
+        }
+    }
+    public void Dispose() { disposed = true; generation++; lifetime.Cancel(); watcher?.Dispose(); refreshTimer?.Dispose(); }
 }

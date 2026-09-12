@@ -38,7 +38,9 @@ public sealed partial class ConversationView
         try
         {
             await Task.Delay(120, request.Token);
-            var matches = await fileSearch.FindAsync(owner.WorkingDirectory, token.Query, request.Token);
+            var matches = owner.Target is { IsLocal: false } target
+                ? await new Services.Files.TargetFileReader(target, new Services.Projects.TargetCommandRunner()).FindAsync(token.Query, request.Token)
+                : await fileSearch.FindAsync(owner.WorkingDirectory, token.Query, request.Token);
             if (request.IsCancellationRequested || !ReferenceEquals(owner, ViewModel)) return;
             FileReferenceList.ItemsSource = matches;
             FileReferenceList.SelectedIndex = matches.Count > 0 ? 0 : -1;
@@ -104,6 +106,7 @@ public sealed partial class ConversationView
     private async void OnBrowseReference(object sender, RoutedEventArgs args)
     {
         var owner = ViewModel;
+        if (owner?.IsRemoteTarget == true) { owner.ReportAttachmentError("Use @ to search files on the execution target. The Windows file picker selects local files only."); return; }
         var text = Composer.Text;
         var token = fileToken;
         var selectionStart = Composer.SelectionStart;

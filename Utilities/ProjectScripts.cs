@@ -7,8 +7,14 @@ namespace PiAgentGui.Utilities;
 public static class ProjectScripts
 {
     private static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    public static ProjectScriptSettings Read(JsonElement metadata)
+    public static ProjectScriptSettings Read(JsonElement metadata, Guid? targetId = null)
     {
+        if (targetId is { } id)
+        {
+            if (!metadata.TryGetProperty("targetRunScripts", out var targets) || !targets.TryGetProperty(id.ToString("N"), out var targetSettings)) return new();
+            var parsed = targetSettings.Deserialize<ProjectScriptSettings>(Options) ?? throw new InvalidDataException("Target script settings are invalid.");
+            Validate(parsed); return parsed;
+        }
         var settings = metadata.TryGetProperty("runScripts", out var value)
             ? value.Deserialize<ProjectScriptSettings>(Options) ?? throw new InvalidDataException("Script settings are invalid.")
             : new ProjectScriptSettings();
@@ -16,11 +22,17 @@ public static class ProjectScripts
         return settings;
     }
 
-    public static JsonElement Write(JsonElement metadata, ProjectScriptSettings settings)
+    public static JsonElement Write(JsonElement metadata, ProjectScriptSettings settings, Guid? targetId = null)
     {
         Validate(settings);
         var node = JsonNode.Parse(metadata.GetRawText())!.AsObject();
-        node["runScripts"] = JsonSerializer.SerializeToNode(settings, Options);
+        if (targetId is { } id)
+        {
+            var targets = node["targetRunScripts"] as JsonObject ?? new JsonObject();
+            targets[id.ToString("N")] = JsonSerializer.SerializeToNode(settings, Options);
+            if (targets.Parent is null) node["targetRunScripts"] = targets;
+        }
+        else node["runScripts"] = JsonSerializer.SerializeToNode(settings, Options);
         return JsonSerializer.SerializeToElement(node);
     }
 
@@ -35,7 +47,7 @@ public static class ProjectScripts
             if (item.Id == Guid.Empty || string.IsNullOrWhiteSpace(item.Name) || item.Name.Length > 80)
                 throw new InvalidDataException("Enter a script name of up to 80 characters.");
             if (string.IsNullOrWhiteSpace(item.Command) || item.Command.Length > 8000 || item.Command.Contains('\0'))
-                throw new InvalidDataException("Enter a PowerShell command of up to 8,000 characters.");
+                throw new InvalidDataException("Enter a shell command of up to 8,000 characters.");
             if (item.WorkingDirectory is null || item.WorkingDirectory.Length > 1024 || item.WorkingDirectory.Contains('\0'))
                 throw new InvalidDataException("Enter a valid working directory.");
         }
@@ -48,5 +60,12 @@ public static class ProjectScripts
         var resolved = string.IsNullOrWhiteSpace(directory) ? projectDirectory : Path.GetFullPath(directory.Trim(), projectDirectory);
         if (!Directory.Exists(resolved)) throw new DirectoryNotFoundException("The script's working directory does not exist.");
         return resolved;
+    }
+
+    public static string ResolveTargetDirectory(ExecutionTarget? target, string projectDirectory, string directory)
+    {
+        if (target is not { IsLocal: false }) return ResolveDirectory(projectDirectory, directory);
+        var value = string.IsNullOrWhiteSpace(directory) ? target.Path : directory.Trim().StartsWith('/') ? directory.Trim() : target.Path + "/" + directory.Trim();
+        return ProjectTargets.Normalize(target with { Path = value }).Path;
     }
 }

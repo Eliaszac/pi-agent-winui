@@ -4,58 +4,37 @@ using PiAgentGui.Utilities;
 
 namespace PiAgentGui.ViewModels.Projects;
 
-/// <summary>Owns the modal form and its asynchronous save state.</summary>
-public sealed class CreateProjectViewModel(ProjectService service) : ObservableObject
+public sealed class CreateProjectViewModel : TargetLocationViewModel
 {
-    private readonly ProjectService service = service ?? throw new ArgumentNullException(nameof(service));
+    private readonly ProjectService service;
     private string name = "";
-    private string path = "";
     private string errorMessage = "";
     private bool isBusy;
-
-    /// <summary>Gets or sets the user-entered name.</summary>
-    public string Name { get => name; set { if (SetProperty(ref name, value)) OnPropertyChanged(nameof(CanSubmit)); } }
-    /// <summary>Gets or sets the selected absolute directory.</summary>
-    public string Path { get => path; set { if (SetProperty(ref path, value)) OnPropertyChanged(nameof(CanSubmit)); } }
-    /// <summary>Gets or sets recoverable form feedback.</summary>
-    public string ErrorMessage { get => errorMessage; set { if (SetProperty(ref errorMessage, value)) OnPropertyChanged(nameof(HasError)); } }
-    /// <summary>Gets whether an error is visible.</summary>
-    public bool HasError => ErrorMessage.Length > 0;
-    /// <summary>Gets whether a save is pending.</summary>
-    public bool IsBusy
+    public CreateProjectViewModel(ProjectService service)
     {
-        get => isBusy;
-        private set
+        this.service = service;
+        PropertyChanged += (_, args) =>
         {
-            if (!SetProperty(ref isBusy, value)) return;
-            OnPropertyChanged(nameof(CanSubmit));
-            OnPropertyChanged(nameof(IsEditable));
-        }
+            if (args.PropertyName is nameof(Name) or nameof(Path) or nameof(Host) or nameof(WslDistribution) or nameof(RepositoryUrl)
+                or nameof(TargetKindIndex) or nameof(SourceIndex) or nameof(IsBusy) or nameof(SshSecret) or nameof(SshKeyPath) or nameof(SshAuthenticationIndex)) OnPropertyChanged(nameof(CanSubmit));
+        };
     }
-    /// <summary>Gets whether fields can be edited.</summary>
+    public string Name { get => name; set => SetProperty(ref name, value); }
+    public string ErrorMessage { get => errorMessage; set { if (SetProperty(ref errorMessage, value)) OnPropertyChanged(nameof(HasError)); } }
+    public bool HasError => ErrorMessage.Length > 0;
+    public bool IsBusy { get => isBusy; private set { if (SetProperty(ref isBusy, value)) OnPropertyChanged(nameof(IsEditable)); } }
     public bool IsEditable => !IsBusy;
-    /// <summary>Gets whether the form is ready to submit.</summary>
-    public bool CanSubmit => !IsBusy && !string.IsNullOrWhiteSpace(Name) && !string.IsNullOrWhiteSpace(Path);
-
-    /// <summary>Attempts to save the form, preserving input on failure.</summary>
-    /// <returns>The saved project, or null when validation or persistence fails.</returns>
+    public bool CanSubmit => !IsBusy && !string.IsNullOrWhiteSpace(Name) && IsLocationComplete;
     public async Task<Project?> TryCreateAsync()
     {
         if (!CanSubmit) return null;
         var savedName = Name;
-        var savedPath = Path;
-        IsBusy = true;
-        ErrorMessage = "";
-        try
-        {
-            // Directory validation and lock acquisition may block on an unavailable drive.
-            return await Task.Run(() => service.CreateAsync(savedName, savedPath));
-        }
-        catch (Exception exception)
-        {
-            ErrorMessage = ProjectErrorMessage.From(exception);
-            return null;
-        }
+        var target = CreateTarget(Guid.NewGuid(), IsLocal ? "This computer" : SelectedHost.Trim());
+        var url = CloneRepository ? RepositoryUrl : null;
+        var secret = IsSsh && SshSecret.Length > 0 ? SshSecret : null;
+        IsBusy = true; ErrorMessage = "";
+        try { return await Task.Run(() => service.CreateWithTargetAsync(savedName, target, url, sshSecret: secret)); }
+        catch (Exception exception) { ErrorMessage = exception is ArgumentException or IOException ? exception.Message : ProjectErrorMessage.From(exception); return null; }
         finally { IsBusy = false; }
     }
 }

@@ -8,6 +8,15 @@ namespace PiAgentGui.Services.Projects;
 /// <summary>Registers existing working directories as named projects.</summary>
 public sealed class ProjectService
 {
+    public TargetSetupService TargetSetup { get; } = new(new TargetCommandRunner());
+    public async Task<Project> CreateWithTargetAsync(string name, ExecutionTarget target, string? repositoryUrl = null, CancellationToken cancellationToken = default, string? sshSecret = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        target = await TargetSetup.PrepareAsync(target, repositoryUrl, cancellationToken, sshSecret).ConfigureAwait(false);
+        var project = new Project { Id = target.Id, Name = name.Trim(), Path = target.Path, Targets = [target], DefaultTargetId = target.Id };
+        await repository.AddAsync(project, cancellationToken).ConfigureAwait(false);
+        return project;
+    }
     private readonly IProjectRepository repository;
 
     /// <summary>Creates the service with its persistence boundary.</summary>

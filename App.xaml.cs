@@ -38,6 +38,8 @@ public partial class App : Application
     /// <inheritdoc />
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        var wslDistributions = new WslDistributionCache(new WslDistributionDiscovery().ReadAsync);
+        _ = wslDistributions.GetAsync();
         window = new Window { Title = ApplicationIdentity.Name };
         window.AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Pi.ico"));
         window.AppWindow.TitleBar.PreferredTheme = Microsoft.UI.Windowing.TitleBarTheme.UseDefaultAppMode;
@@ -61,8 +63,9 @@ public partial class App : Application
         try { await research.InitializeAsync(); }
         catch (Exception exception) { researchPanel.ReportError("Couldn't load saved research: " + exception.Message); }
         workspaces = new ConversationWorkspaceStore((project, conversation) =>
-            new ConversationSession(new PiLaunchRequest(project.Path, paths.GetSessionFile(project.Id, conversation.Id),
-                conversation.IsTitleManual ? conversation.Title : null, ResearchPreferencePath: researchStore.PreferencePath),
+            new ConversationSession(new PiLaunchRequest(ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id).Path, paths.GetSessionFile(project.Id, conversation.Id),
+                conversation.IsTitleManual ? conversation.Title : null, ResearchPreferencePath: researchStore.PreferencePath,
+                Target: ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id)),
                 () => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout))
             {
                 ResearchRequested = async payload => await research.DispatchAsync(new Models.Conversations.ResearchTask(Guid.NewGuid(), conversation.Id, project.Path,
@@ -92,6 +95,7 @@ public partial class App : Application
             new Services.GitHub.WindowsGitHubCredentialStore(githubOptions.ClientId)), githubApi, new Services.GitHub.GitBranchReader());
         terminals = new(directory => new Services.Terminal.ConPtySession(directory),
             (directory, command) => new Services.Terminal.ConPtySession(directory, command));
+        terminals.CreateTargetSession = (target, command) => new Services.Terminal.ConPtySession(target.Path, command, target);
         var files = new ViewModels.Files.FileExplorerViewModel(new DispatcherQueueUiDispatcher(window.DispatcherQueue));
         window.Closed += (_, _) => files.Dispose();
         var processReader = new AgentProcessReader();
@@ -102,7 +106,7 @@ public partial class App : Application
         var agentDirectory = PermissionModesSupport.AgentDirectory;
         var imports = new CapabilityImportServices(new GlobalSkillRegistration(agentDirectory),
             new PiPackageInstaller(locator, agentDirectory, githubLifetime.Token), new McpConfigImporter(agentDirectory));
-        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports);
+        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions);
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)

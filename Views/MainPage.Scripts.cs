@@ -25,7 +25,7 @@ public sealed partial class MainPage
         manage.Click += async (_, _) => await ManageScriptsAsync();
         ScriptsMenu.Items.Add(manage);
         var refresh = new ActionMenuFlyoutItem { Text = "Refresh scripts" };
-        refresh.Click += async (_, _) => await Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedProject?.Path);
+        refresh.Click += async (_, _) => await Scripts.SelectAsync(ViewModel.SelectedProject?.Project.Id, ViewModel.SelectedTarget?.Path, ViewModel.SelectedTarget);
         ScriptsMenu.Items.Add(refresh);
     }
 

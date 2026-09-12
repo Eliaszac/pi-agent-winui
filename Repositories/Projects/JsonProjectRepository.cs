@@ -43,7 +43,7 @@ public sealed class JsonProjectRepository : IProjectRepository
         var savedProject = project with
         {
             Name = project.Name.Trim(),
-            Path = ProjectPath.Normalize(project.Path),
+            Path = ProjectTargets.All(project)[0].Path,
             Metadata = project.Metadata.Clone()
         };
 
@@ -51,7 +51,7 @@ public sealed class JsonProjectRepository : IProjectRepository
         using var catalogLock = await ProjectCatalogLock.AcquireAsync(catalogPath, cancellationToken).ConfigureAwait(false);
         var catalog = await ReadAsync(cancellationToken).ConfigureAwait(false);
         if (catalog.Projects.Any(existing => existing.Id == savedProject.Id ||
-            StringComparer.OrdinalIgnoreCase.Equals(ProjectPath.Normalize(existing.Path), savedProject.Path)))
+            ProjectTargets.Identity(ProjectTargets.All(existing)[0]) == ProjectTargets.Identity(ProjectTargets.All(savedProject)[0])))
             throw new InvalidOperationException("This project identifier or directory is already registered.");
 
         catalog.Projects.Add(savedProject);
@@ -75,7 +75,7 @@ public sealed class JsonProjectRepository : IProjectRepository
     }
 
     /// <inheritdoc />
-    public async Task<ConversationDraft> AddConversationAsync(Guid projectId, CancellationToken cancellationToken = default)
+    public async Task<ConversationDraft> AddConversationAsync(Guid projectId, CancellationToken cancellationToken = default, Guid? targetId = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var catalogLock = await ProjectCatalogLock.AcquireAsync(catalogPath, cancellationToken).ConfigureAwait(false);
@@ -88,6 +88,7 @@ public sealed class JsonProjectRepository : IProjectRepository
         var conversation = new ConversationDraft
         {
             Id = Guid.NewGuid(),
+            TargetId = ProjectTargets.Resolve(project, targetId).Id,
             Title = $"Conversation {project.Conversations.Count + 1}",
             IsTitleManual = false,
             CreatedAt = DateTimeOffset.UtcNow
@@ -106,14 +107,28 @@ public sealed class JsonProjectRepository : IProjectRepository
             return updated;
         }, cancellationToken);
 
+    public Task AddTargetAsync(Guid projectId, ExecutionTarget target, bool makeDefault, CancellationToken cancellationToken = default) =>
+        ChangeProjectAsync(projectId, project => project with
+        {
+            Targets = [.. ProjectTargets.All(project), ProjectTargets.Normalize(target)],
+            DefaultTargetId = makeDefault ? target.Id : project.DefaultTargetId ?? project.Id
+        }, cancellationToken);
+
+    public Task SetDefaultTargetAsync(Guid projectId, Guid targetId, CancellationToken cancellationToken = default) =>
+        ChangeProjectAsync(projectId, project => project with { DefaultTargetId = ProjectTargets.Resolve(project, targetId).Id }, cancellationToken);
+
     public Task RenameProjectAsync(Guid projectId, string name, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return ChangeProjectAsync(projectId, project => project with { Name = name.Trim() }, cancellationToken);
     }
 
-    public Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default) =>
-        ChangeProjectAsync(projectId, project => project with { Metadata = ProjectScripts.Write(project.Metadata, settings) }, cancellationToken);
+    public Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default, Guid? targetId = null) =>
+        ChangeProjectAsync(projectId, project =>
+        {
+            if (targetId is not null) _ = ProjectTargets.Resolve(project, targetId);
+            return project with { Metadata = ProjectScripts.Write(project.Metadata, settings, targetId) };
+        }, cancellationToken);
 
     public Task DeleteProjectAsync(Guid projectId, CancellationToken cancellationToken = default) =>
         ChangeProjectAsync(projectId, _ => null, cancellationToken);
@@ -188,11 +203,11 @@ public sealed class JsonProjectRepository : IProjectRepository
                 throw new InvalidDataException("The project list is missing.");
 
             var identifiers = new HashSet<Guid>();
-            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var paths = new HashSet<string>(StringComparer.Ordinal);
             foreach (var project in catalog.Projects)
             {
                 ProjectValidator.Validate(project);
-                if (!identifiers.Add(project.Id) || !paths.Add(ProjectPath.Normalize(project.Path)))
+                if (!identifiers.Add(project.Id) || !paths.Add(ProjectTargets.Identity(ProjectTargets.All(project)[0])))
                     throw new InvalidDataException("The project catalog contains duplicate projects.");
             }
 

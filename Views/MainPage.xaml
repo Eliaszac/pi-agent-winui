@@ -21,7 +21,34 @@
                     Visibility="{x:Bind Rename.IsNotEditing, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                     Background="Transparent" BorderThickness="0" Padding="11,7" Margin="0,1" MinHeight="34" FontSize="13.3"
-                    AutomationProperties.Name="{x:Bind Title, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
+                    AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}" AutomationProperties.HelpText="{x:Bind HoverDetails, Mode=OneWay}">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Placement="Right" Padding="20" MaxWidth="392" CornerRadius="8">
+                            <StackPanel Width="328" Spacing="16">
+                                <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="{x:Bind TargetGlyph}" FontSize="22" VerticalAlignment="Top" Margin="0,3,0,0" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    <StackPanel Grid.Column="1" Spacing="3">
+                                        <TextBlock Text="{x:Bind TargetName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{x:Bind TargetLocation}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Workspace" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{x:Bind TargetPath}" FontFamily="Cascadia Mono" FontSize="12" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Spacing="12" Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{x:Bind PullRequestLabel, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="{x:Bind PullRequestTitle, Mode=OneWay}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </ToolTip>
+                    </ToolTipService.ToolTip>
                     <controls:ActionToggleButton.Resources>
                         <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="{ThemeResource SubtleFillColorSecondary}" />
                         <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="{ThemeResource SubtleFillColorTertiary}" />
@@ -43,6 +70,7 @@
                             </controls:ActionMenuFlyoutItem>
                             <MenuFlyoutSeparator Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                             <controls:ActionMenuFlyoutItem Text="Rename conversation" Command="{x:Bind Rename.BeginCommand}" />
+                            <controls:ActionMenuFlyoutItem Text="Execution target details" Click="OnTargetDetailsClicked" Tag="{x:Bind}" />
                             <controls:ActionMenuFlyoutItem Text="{x:Bind SettleLabel, Mode=OneWay}" Click="OnSettleConversationClicked" Tag="{x:Bind}" />
                             <MenuFlyoutSeparator />
                             <controls:ActionMenuFlyoutItem Text="Delete conversation" Click="OnDeleteConversationClicked" Tag="{x:Bind}" />
@@ -54,7 +82,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <FontIcon Glyph="&#xE8BD;" FontSize="13.3" />
+                        <FontIcon Glyph="{x:Bind TargetGlyph}" FontSize="13.3" />
                         <StackPanel Grid.Column="1" Spacing="3">
                             <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="13.3" TextTrimming="CharacterEllipsis" />
                             <StackPanel Orientation="Horizontal" Spacing="5" AutomationProperties.Name="{x:Bind PullRequestLabel, Mode=OneWay}"
@@ -145,6 +173,7 @@
                                                     <controls:ActionButton.ContextFlyout>
                                                         <MenuFlyout>
                                                             <controls:ActionMenuFlyoutItem Text="Rename project" Command="{x:Bind Rename.BeginCommand}" />
+                                                            <controls:ActionMenuFlyoutItem Text="Execution targets" Click="OnManageTargetsClicked" Tag="{x:Bind}" />
                                                             <MenuFlyoutSeparator />
                                                             <controls:ActionMenuFlyoutItem Text="Delete project" Click="OnDeleteProjectClicked" Tag="{x:Bind}" />
                                                         </MenuFlyout>
@@ -346,7 +375,8 @@
                         </controls:ActionButton.Flyout>
                     </controls:ActionButton>
                 </Grid>
-                <controls:ProjectPathButton x:Name="HeaderPath" FullPath="{x:Bind ViewModel.SelectedProject.Path, Mode=OneWay}" HorizontalAlignment="Left"
+                <TextBlock Text="{x:Bind ViewModel.TargetLabel, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <controls:ProjectPathButton x:Name="HeaderPath" FullPath="{x:Bind ViewModel.WorkspacePath, Mode=OneWay}" HorizontalAlignment="Left"
                     Padding="4,2" Background="Transparent" BorderThickness="0"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Visibility="{x:Bind ViewModel.HasLoaded, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />

@@ -32,7 +32,7 @@ public sealed partial class SourceControlPanel : UserControl
     }
     private async void OnRevert(object sender, RoutedEventArgs args)
     {
-        if (dialogOpen || Model is not { CanAct: true, RepositoryRoot: { } root } model || sender is not FrameworkElement { Tag: GitChange { CanRevert: true } change }) return;
+        if (dialogOpen || Model is not { CanAct: true, RepositoryIdentity: { } root } model || sender is not FrameworkElement { Tag: GitChange { CanRevert: true } change }) return;
         dialogOpen = true;
         try
         {

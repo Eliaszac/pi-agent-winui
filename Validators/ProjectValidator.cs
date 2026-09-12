@@ -14,7 +14,15 @@ internal static class ProjectValidator
             throw new ArgumentException("A project must have an identifier.", nameof(project));
 
         ArgumentException.ThrowIfNullOrWhiteSpace(project.Name);
-        _ = ProjectPath.Normalize(project.Path);
+        ArgumentNullException.ThrowIfNull(project.Targets);
+        if (project.Targets.Count == 0) _ = ProjectPath.Normalize(project.Path);
+        if (project.Targets.Count > 32) throw new ArgumentException("A project supports up to 32 targets.");
+        var targets = ProjectTargets.All(project);
+        if (targets.Select(target => target.Id).Distinct().Count() != targets.Count ||
+            targets.Select(ProjectTargets.Identity).Distinct(StringComparer.Ordinal).Count() != targets.Count)
+            throw new ArgumentException("The project contains duplicate targets.");
+        foreach (var target in targets) _ = ProjectTargets.Normalize(target);
+        _ = ProjectTargets.Resolve(project);
         ValidateMetadata(project.Metadata);
         ArgumentNullException.ThrowIfNull(project.Conversations);
         var identifiers = new HashSet<Guid>();
@@ -24,6 +32,7 @@ internal static class ProjectValidator
             if (conversation.Id == Guid.Empty || !identifiers.Add(conversation.Id) || conversation.CreatedAt == default)
                 throw new ArgumentException("The conversation entry is invalid.", nameof(project));
             ArgumentException.ThrowIfNullOrWhiteSpace(conversation.Title);
+            _ = ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id);
         }
     }
 
