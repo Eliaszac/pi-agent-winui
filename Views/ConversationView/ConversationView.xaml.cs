@@ -152,9 +152,9 @@ public sealed partial class ConversationView : UserControl
         Transcript.InvalidateMeasure();
     }
 
-    private void OnMessageSizeChanged(object sender, SizeChangedEventArgs args)
+    private void OnMarkdownContentRendered(object? sender, EventArgs args)
     {
-        // Markdown is coalesced after transcript events, so follow its final measured height too.
+        // Follow coalesced content changes, never local layout changes such as sorting a table.
         if (followTail) tailScrollPending = true;
     }
 

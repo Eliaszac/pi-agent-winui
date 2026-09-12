@@ -262,7 +262,7 @@
                                 <TextBlock Text="{x:Bind Status, Mode=OneWay}" TextWrapping="Wrap"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
-                            <controls:MarkdownMessage Text="{x:Bind Text, Mode=OneWay}" SizeChanged="OnMessageSizeChanged" />
+                            <controls:MarkdownMessage Text="{x:Bind Text, Mode=OneWay}" ResponsiveWidth="True" ContentRendered="OnMarkdownContentRendered" />
                             <ContentControl Content="{x:Bind Summary, Mode=OneWay}" ContentTemplate="{StaticResource RunSummaryTemplate}" HorizontalContentAlignment="Stretch" Visibility="{x:Bind HasSummary, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                             <StackPanel Orientation="Horizontal" Spacing="4"
                                 Visibility="{x:Bind ShowInlineActions, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">

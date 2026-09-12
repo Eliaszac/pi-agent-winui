@@ -7,17 +7,22 @@ namespace PiAgentGui.Controls;
 /// <summary>Coalesces streamed Markdown updates into native text controls.</summary>
 public sealed class MarkdownMessage : UserControl
 {
+    public event EventHandler? ContentRendered;
     public static readonly DependencyProperty TextProperty = DependencyProperty.Register(nameof(Text), typeof(string),
         typeof(MarkdownMessage), new PropertyMetadata("", (sender, _) => ((MarkdownMessage)sender).Schedule()));
+    public static readonly DependencyProperty ResponsiveWidthProperty = DependencyProperty.Register(nameof(ResponsiveWidth), typeof(bool),
+        typeof(MarkdownMessage), new PropertyMetadata(false, (sender, _) => ((MarkdownMessage)sender).InvalidateMeasure()));
+    public bool ResponsiveWidth { get => (bool)GetValue(ResponsiveWidthProperty); set => SetValue(ResponsiveWidthProperty, value); }
     private readonly DispatcherQueueTimer timer;
     private string? rendered;
-    private readonly StackPanel panel = new() { Spacing = 9 };
+    private readonly StackPanel panel = new() { Spacing = 16, MaxWidth = 960, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly List<string> blockSources = [];
     public string Text { get => (string)GetValue(TextProperty); set => SetValue(TextProperty, value); }
 
     public MarkdownMessage()
     {
         Content = panel;
+        HorizontalContentAlignment = HorizontalAlignment.Left;
         timer = DispatcherQueue.CreateTimer();
         timer.Interval = TimeSpan.FromMilliseconds(100);
         timer.IsRepeating = false;
@@ -29,11 +34,19 @@ public sealed class MarkdownMessage : UserControl
 
     private void Schedule() { if (IsLoaded && !timer.IsRunning) timer.Start(); }
 
+    protected override Windows.Foundation.Size MeasureOverride(Windows.Foundation.Size availableSize)
+    {
+        panel.MaxWidth = ResponsiveWidth && double.IsFinite(availableSize.Width)
+            ? Math.Min(availableSize.Width, Math.Max(680, availableSize.Width * 0.7))
+            : 960;
+        return base.MeasureOverride(availableSize);
+    }
+
     private void Render()
     {
         if (!IsLoaded || rendered == Text) return;
         var source = Text ?? "";
-        var document = Markdown.Parse(source);
+        var document = ResponseMarkdown.Parse(source);
         for (var index = 0; index < document.Count; index++)
         {
             var block = document[index];
@@ -55,5 +68,6 @@ public sealed class MarkdownMessage : UserControl
             blockSources.RemoveAt(blockSources.Count - 1);
         }
         rendered = source;
+        ContentRendered?.Invoke(this, EventArgs.Empty);
     }
 }

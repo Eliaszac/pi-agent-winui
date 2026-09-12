@@ -4,6 +4,8 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI.Text;
+using Markdig.Extensions.Tables;
+using Markdig.Extensions.TaskLists;
 
 namespace PiAgentGui.Controls;
 
@@ -30,7 +32,7 @@ internal static class MarkdownRenderer
     }
     internal static StackPanel Render(ContainerBlock document)
     {
-        var panel = new StackPanel { Spacing = 9 };
+        var panel = new StackPanel { Spacing = 10 };
         foreach (var block in document) panel.Children.Add(RenderBlock(block));
         return panel;
     }
@@ -39,6 +41,8 @@ internal static class MarkdownRenderer
     {
         switch (block)
         {
+            case Table table:
+                return new MarkdownTableView(table);
             case FencedCodeBlock code:
                 var label = string.Join(" ", new[] { code.Info, code.Arguments }.Where(value => !string.IsNullOrWhiteSpace(value)));
                 return new CodeBlockView(label, code.Lines.ToString());
@@ -46,9 +50,10 @@ internal static class MarkdownRenderer
                 return new CodeBlockView("Code", code.Lines.ToString());
             case HeadingBlock heading:
                 var title = Text(heading.Inline);
-                title.FontSize = heading.Level switch { 1 => 22, 2 => 19.5, 3 => 16.5, _ => 15 };
+                title.FontSize = heading.Level switch { 1 => 28, 2 => 23, 3 => 19, _ => 16 };
+                title.LineHeight = title.FontSize * 1.35;
                 title.FontWeight = FontWeights.SemiBold;
-                title.Margin = new Thickness(0, 8, 0, 0);
+                title.Margin = new Thickness(0, 12, 0, 0);
                 return title;
             case ParagraphBlock paragraph:
                 return Text(paragraph.Inline);
@@ -56,24 +61,40 @@ internal static class MarkdownRenderer
                 return new Border { BorderThickness = new Thickness(3, 0, 0, 0), Padding = new Thickness(12, 2, 0, 2),
                     BorderBrush = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"], Child = Render(quote) };
             case ListBlock list:
-                var items = new StackPanel { Spacing = 5 };
+                var depth = 0;
+                for (var ancestor = list.Parent; ancestor is not null; ancestor = ancestor.Parent)
+                    if (ancestor is ListBlock) depth++;
+                var items = new StackPanel { Spacing = list.IsLoose ? 12 : 6,
+                    Margin = new Thickness(depth > 0 ? 16 : 0, 0, 0, 0) };
                 var number = int.TryParse(list.OrderedStart, out var start) ? start : 1;
-                foreach (var child in list)
+                var bullet = depth == 0 ? "• " : depth == 1 ? "◦ " : "▪ ";
+                var markers = Enumerable.Range(0, list.Count).Select(index => list.IsOrdered ? $"{number + index}. " : bullet).ToArray();
+                var widths = markers.Select(marker =>
                 {
-                    var row = new Grid { ColumnSpacing = 8 };
-                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                    row.ColumnDefinitions.Add(new ColumnDefinition());
-                    row.Children.Add(new TextBlock { Text = list.IsOrdered ? $"{number++}." : "•", FontSize = 13, MinWidth = 18 });
-                    var body = Render((ContainerBlock)child);
-                    Grid.SetColumn(body, 1);
-                    row.Children.Add(body);
-                    items.Children.Add(row);
+                    var measure = new TextBlock { Text = marker, FontSize = 15 };
+                    measure.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+                    return measure.DesiredSize.Width;
+                }).ToArray();
+                var gutter = widths.Length > 0 ? widths.Max() : 0;
+                for (var index = 0; index < list.Count; index++)
+                {
+                    var body = Render((ContainerBlock)list[index]);
+                    if (body.Children.FirstOrDefault() is not RichTextBlock)
+                        body.Children.Insert(0, Text(null));
+                    var first = (RichTextBlock)body.Children[0];
+                    first.Padding = new Thickness(gutter, 0, 0, 0);
+                    var paragraph = (Paragraph)first.Blocks[0];
+                    paragraph.TextIndent = -widths[index];
+                    paragraph.Inlines.Insert(0, new Run { Text = markers[index] });
+                    foreach (var element in body.Children.Skip(1).OfType<FrameworkElement>())
+                        element.Margin = new Thickness(element.Margin.Left + gutter, element.Margin.Top, element.Margin.Right, element.Margin.Bottom);
+                    items.Children.Add(body);
                 }
                 return items;
             case ThematicBreakBlock:
                 return new Border { Height = 1, Margin = new Thickness(0, 6, 0, 6), Background = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"] };
             case LeafBlock leaf:
-                return new TextBlock { Text = leaf.Lines.ToString(), FontSize = 13, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
+                return new TextBlock { Text = leaf.Lines.ToString(), FontSize = 15, LineHeight = 24, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
             case ContainerBlock container:
                 return Render(container);
             default:
@@ -81,9 +102,10 @@ internal static class MarkdownRenderer
         }
     }
 
-    private static RichTextBlock Text(ContainerInline? source)
+    internal static RichTextBlock Text(ContainerInline? source)
     {
-        var text = new RichTextBlock { IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontSize = 13 };
+        var text = new RichTextBlock { IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontSize = 15,
+            LineHeight = 24, LineStackingStrategy = LineStackingStrategy.MaxHeight, HorizontalAlignment = HorizontalAlignment.Stretch };
         var paragraph = new Paragraph();
         if (source is not null) AddInlines(paragraph.Inlines, source);
         text.Blocks.Add(paragraph);
@@ -98,13 +120,17 @@ internal static class MarkdownRenderer
             {
                 case LiteralInline literal: target.Add(new Run { Text = literal.Content.ToString() }); break;
                 case CodeInline code:
-                    target.Add(new Run { Text = code.Content, FontFamily = new FontFamily("Consolas"), FontWeight = FontWeights.SemiBold }); break;
+                    target.Add(new Run { Text = code.Content, FontFamily = new FontFamily("Consolas"), FontSize = 14 }); break;
+                case TaskList task:
+                    target.Add(new Run { Text = task.Checked ? "☑ " : "☐ " });
+                    break;
                 case LineBreakInline line:
                     if (line.IsHard) target.Add(new LineBreak()); else target.Add(new Run { Text = " " });
                     break;
                 case EmphasisInline emphasis:
                     var span = new Span();
-                    if (emphasis.DelimiterCount >= 2) span.FontWeight = FontWeights.Bold;
+                    if (emphasis.DelimiterChar == '~') span.TextDecorations = TextDecorations.Strikethrough;
+                    else if (emphasis.DelimiterCount >= 2) span.FontWeight = FontWeights.SemiBold;
                     else span.FontStyle = FontStyle.Italic;
                     AddInlines(span.Inlines, emphasis);
                     target.Add(span);
