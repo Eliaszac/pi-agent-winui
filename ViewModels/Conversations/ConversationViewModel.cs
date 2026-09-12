@@ -21,6 +21,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     private readonly ConcurrentQueue<ConversationUpdate> updates = new();
     private readonly Dictionary<string, ChatEntryViewModel> entries = [];
     private readonly Dictionary<string, SnippetViewModel> snippets = [];
+    public bool HasActiveSnippet => snippets.Values.Any(snippet => snippet.ActiveOperation is { IsCompleted: false });
     private SnippetViewModel GetSnippet(string key, string label, string code)
     {
         if (snippets.TryGetValue(key, out var existing)) return existing;

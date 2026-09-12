@@ -1,0 +1,60 @@
+<UserControl x:Class="PiAgentGui.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch">
+        <StackPanel MaxWidth="900" HorizontalAlignment="Stretch" Spacing="16" Margin="8,16,8,32">
+            <TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/>
+            <TextBox PlaceholderText="Search settings" Text="{Binding Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search settings" Margin="0,0,0,8"/>
+            <InfoBar IsOpen="{Binding HasMessage}" Message="{Binding Message}" Severity="Informational" IsClosable="False"/>
+            <TextBlock Text="No matching settings. Try a different search." TextWrapping="Wrap" Visibility="{Binding NoResults, Converter={StaticResource BooleanToVisibility}}"/>
+            <Expander IsEnabled="{Binding CanEdit}" Header="General" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding General.Expanded, Mode=TwoWay}" Visibility="{Binding General.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="On startup" FontWeight="SemiBold"/>
+                    <TextBlock Text="Choose where the app opens. Existing conversations are kept either way." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <ComboBox x:Name="Startup" SelectedIndex="{Binding StartupIndex, Mode=OneWay}" SelectionChanged="OnStartupChanged" AutomationProperties.Name="Startup page" HorizontalAlignment="Left">
+                        <ComboBoxItem Content="Home"/><ComboBoxItem Content="Most recently opened conversation"/>
+                    </ComboBox>
+                </StackPanel>
+            </Expander>
+            <Expander IsEnabled="{Binding CanEdit}" Header="Local usage" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Usage.Expanded, Mode=TwoWay}" Visibility="{Binding Usage.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="12">
+                    <ToggleSwitch x:Name="UsageToggle" Header="Show local usage on Home" IsOn="{Binding ShowLocalUsage, Mode=OneWay}" Toggled="OnUsageChanged"/>
+                    <TextBlock Text="Calculated on this computer from saved Pi sessions. Turning this off stops the Home usage reader; Pi still records token counts in its sessions. Nothing is sent to the publisher." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{Binding UsageResetLabel}" FontSize="12"/>
+                    <controls:ActionButton Content="Reset usage totals…" Click="OnResetUsage" HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Expander>
+            <Expander IsEnabled="{Binding CanEdit}" Header="Data management" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Data.Expanded, Mode=TwoWay}" Visibility="{Binding Data.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="16">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Conversations" FontWeight="SemiBold"/>
+                        <TextBlock Text="Delete this app’s saved conversations, including screenshots in their messages and associated restore data. Your project folders and shared Pi configuration remain." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <controls:ActionButton Content="Delete all conversations…" Tag="conversations" Click="OnDataAction" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Project registrations" FontWeight="SemiBold"/>
+                        <TextBlock Text="Remove all projects from the sidebar and delete their conversations. Files in Windows, WSL and SSH project folders are never deleted by this action." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <controls:ActionButton Content="Remove all projects…" Tag="projects" Click="OnDataAction" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Restore data and other storage" FontWeight="SemiBold"/>
+                        <TextBlock Text="Manage restore snapshots from Workspace checkpoints in Extensions. Research records, preferences, diagnostic files and shared provider credentials are separate from conversation deletion. Remote cleanup may remain pending until its target is available." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <controls:ActionButton Content="Manage extensions" Tag="extensions" Click="OnDataAction" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </StackPanel>
+            </Expander>
+            <Expander IsEnabled="{Binding CanEdit}" Header="About" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding About.Expanded, Mode=TwoWay}" Visibility="{Binding About.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding Version}" FontWeight="SemiBold" IsTextSelectionEnabled="True"/>
+                    <TextBlock Text="An independent, open-source desktop frontend for Pi. Published by Eliaszac, Denmark." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <controls:ActionButton Content="Legal &amp; privacy" Click="OnLegal" HorizontalAlignment="Left"/>
+                    <HyperlinkButton Content="Source code on GitHub" NavigateUri="https://github.com/Eliaszac/pi-agent-winui" HorizontalAlignment="Left" Padding="0"/>
+                    <HyperlinkButton Content="eliaszacho@gmail.com" NavigateUri="mailto:eliaszacho@gmail.com" HorizontalAlignment="Left" Padding="0"/>
+                </StackPanel>
+            </Expander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

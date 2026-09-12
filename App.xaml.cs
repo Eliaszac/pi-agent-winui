@@ -129,8 +129,14 @@ public partial class App : Application
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "mcp-management"), githubLifetime.Token),
             new McpConnectionService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "mcp-management"), githubLifetime.Token));
-        var home = new ViewModels.Home.HomeViewModel(shell, new Services.Home.SessionUsageReader(paths));
-        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions, docker, home);
+        var settingsStore = new Services.Settings.AppSettingsStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "settings.json"));
+        string settingsError = "";
+        try { await settingsStore.LoadAsync(); }
+        catch (Exception error) { settingsError = "Saved preferences could not be read; defaults are shown. " + error.Message; }
+        shell.ResumeConversationOnStartup = settingsStore.Current.ResumeConversation;
+        var settings = new ViewModels.Settings.SettingsViewModel(settingsStore) { Message = settingsError };
+        var home = new ViewModels.Home.HomeViewModel(shell, new Services.Home.SessionUsageReader(paths), settingsStore);
+        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions, docker, home, settings);
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)

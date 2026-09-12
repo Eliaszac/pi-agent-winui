@@ -54,7 +54,7 @@ public sealed partial class MainPage : Page
         ViewModels.Files.FileExplorerViewModel files, ViewModels.Processes.ProcessesPanelViewModel processes,
         ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts, Services.Pi.CapabilityImportServices imports,
         Repositories.Projects.IProjectRepository projectRepository, Services.Projects.WslDistributionCache wslDistributions,
-        ViewModels.Docker.DockerPanelViewModel docker, ViewModels.Home.HomeViewModel home)
+        ViewModels.Docker.DockerPanelViewModel docker, ViewModels.Home.HomeViewModel home, ViewModels.Settings.SettingsViewModel settings)
     {
         ViewModel = viewModel;
         this.projectRepository = projectRepository;
@@ -77,6 +77,7 @@ public sealed partial class MainPage : Page
         this.createProjectForm = createProjectForm;
         this.picker = picker;
         InitializeComponent();
+        InitializeSettings(settings);
         InitializeHome();
         var sidebarRows = new SidebarRows(new Services.Windowing.DispatcherQueueUiDispatcher(DispatcherQueue));
         SidebarList.ItemsSource = sidebarRows.Rows;

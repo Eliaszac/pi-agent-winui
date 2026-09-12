@@ -52,6 +52,28 @@ public sealed class HomeTests
     }
 
     [TestMethod]
+    public async Task UsageResetExcludesOldResponsesWithoutEditingSessions()
+    {
+        var conversation = Conversation("Usage"); var project = Project(conversation);
+        var original = Entry() + "\n";
+        await WriteAsync(project, conversation, original);
+        var settings = new Services.Settings.AppSettingsStore(Path.Combine(directory, "settings.json"));
+        var shell = new ShellViewModel(new InMemoryProjectRepository(project));
+        await shell.LoadAsync();
+        using var home = new HomeViewModel(shell, new SessionUsageReader(Paths), settings);
+        await home.RefreshAsync();
+        Assert.AreEqual("1", home.ResponseTotal);
+        await settings.SaveAsync(new(UsageResetAt: DateTimeOffset.UtcNow.AddMinutes(1)));
+        await home.RefreshAsync();
+        Assert.AreEqual("0", home.ResponseTotal);
+        Assert.AreEqual(original, await File.ReadAllTextAsync(Paths.GetSessionFile(project.Id, conversation.Id)));
+        await settings.SaveAsync(settings.Current with { ShowLocalUsage = false });
+        await home.RefreshAsync();
+        Assert.IsFalse(home.ShowLocalUsage);
+        Assert.AreEqual("—", home.ResponseTotal);
+    }
+
+    [TestMethod]
     public async Task GlobalPagesAreExclusiveAndHomeSurvivesCatalogReload()
     {
         var shell = new ShellViewModel(new InMemoryProjectRepository(Project())); await shell.LoadAsync();

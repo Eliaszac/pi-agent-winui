@@ -230,6 +230,9 @@
                     <controls:ActionButton Click="OnExtensionsClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
                         <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xEA86;" FontSize="15" /><TextBlock Text="Extensions" FontSize="13.3" /></StackPanel>
                     </controls:ActionButton>
+                    <controls:ActionButton Click="OnSettingsClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
+                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE713;" FontSize="15"/><TextBlock Text="Settings" FontSize="13.3"/></StackPanel>
+                    </controls:ActionButton>
                     </StackPanel>
                 </Grid>
                 <Grid Grid.ColumnSpan="2" Margin="4,15,4,12" RowSpacing="11"
@@ -264,6 +267,9 @@
                     <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnExtensionsClicked" AutomationProperties.Name="Extensions" ToolTipService.ToolTip="Extensions">
                         <FontIcon Glyph="&#xEA86;" FontSize="16" />
                     </controls:ActionButton>
+                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnSettingsClicked" AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
+                        <FontIcon Glyph="&#xE713;" FontSize="16"/>
+                    </controls:ActionButton>
                     </StackPanel>
                 </Grid>
                 <controls:SidebarResizeHandle Grid.Column="1" Style="{StaticResource SidebarResizeHandleStyle}"
@@ -275,6 +281,8 @@
         </SplitView.Pane>
         <Grid Padding="24,16">
         <views:HomeView x:Name="HomePane" Visibility="{x:Bind ViewModel.ShowHome, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
+        <views:SettingsView x:Name="SettingsPane" Visibility="{x:Bind ViewModel.ShowSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
+        <views:LegalView x:Name="LegalPane" Visibility="{x:Bind ViewModel.ShowLegal, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
         <views:ProvidersView DataContext="{x:Bind ViewModel.Providers}"
             Visibility="{x:Bind ViewModel.ShowProviders, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
         <views:ExtensionsView DataContext="{x:Bind ViewModel.Extensions}"

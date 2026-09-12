@@ -11,6 +11,7 @@ public sealed class ConversationWorkspaceStore(
     private readonly Dictionary<(Guid Project, Guid Conversation), ConversationViewModel> workspaces = [];
     private bool disposed;
     public int ActiveRunCount => workspaces.Values.Count(workspace => workspace.HasActiveWork);
+    public bool HasActiveSnippet => workspaces.Values.Any(workspace => workspace.HasActiveSnippet);
     public event Action<Guid, Guid, string>? SessionNameChanged;
     public event Action<Guid, Guid, string>? ExplicitSessionNameChanged;
     public event Action? ViewedRunCompleted;

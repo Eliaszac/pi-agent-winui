@@ -10,6 +10,8 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
 {
     private readonly ShellViewModel shell;
     private readonly SessionUsageReader reader;
+    private readonly Services.Settings.AppSettingsStore? settings;
+    public bool ShowLocalUsage => settings?.Current.ShowLocalUsage ?? true;
     private CancellationTokenSource? read;
     private UsageInventory inventory = new([], 0, 0);
     private bool isLoading;
@@ -45,13 +47,24 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
     public string PeriodEnd => summary.Days[^1].Date.ToString("MMM d");
     public AsyncRelayCommand RefreshCommand { get; }
 
-    public HomeViewModel(ShellViewModel shell, SessionUsageReader reader)
+    public HomeViewModel(ShellViewModel shell, SessionUsageReader reader, Services.Settings.AppSettingsStore? settings = null)
     {
         this.shell = shell;
         this.reader = reader;
+        this.settings = settings;
+        if (settings is not null) settings.Changed += OnSettingsChanged;
         RefreshCommand = new(_ => RefreshAsync(), exception => Error = exception.Message);
         shell.PropertyChanged += OnShellChanged;
         RefreshRecent();
+    }
+
+    private void OnSettingsChanged(object? sender, EventArgs args)
+    {
+        read?.Cancel();
+        inventory = new([], 0, 0); hasRead = false;
+        OnPropertyChanged(nameof(ShowLocalUsage));
+        ApplySummary();
+        if (ShowLocalUsage) _ = RefreshAsync();
     }
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs change)
@@ -83,7 +96,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
 
     public async Task RefreshAsync()
     {
-        if (disposed || !shell.ShowHome || !shell.CanManageSidebar) return;
+        if (disposed || !shell.ShowHome || !shell.CanManageSidebar || !ShowLocalUsage) return;
         read?.Cancel();
         RefreshRecent();
         IsLoading = true; Error = "";
@@ -104,11 +117,12 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
 
     private void ApplySummary()
     {
-        summary = HomeUsageAggregator.Summarize(inventory, shell.Projects.ToDictionary(project => project.Project.Id, project => project.Name),
+        var visible = settings?.Current.UsageResetAt is { } cutoff ? inventory with { Samples = inventory.Samples.Where(sample => sample.At >= cutoff).ToArray() } : inventory;
+        summary = HomeUsageAggregator.Summarize(visible, shell.Projects.ToDictionary(project => project.Project.Id, project => project.Name),
             DateOnly.FromDateTime(DateTime.Now), RangeIndex == 0 ? 7 : 30);
         foreach (var name in new[] { nameof(TokenTotal), nameof(ResponseTotal), nameof(ProjectTotal), nameof(Days), nameof(Models), nameof(Projects),
             nameof(HasUsage), nameof(ShowUsageEmpty), nameof(Coverage), nameof(PeriodStart), nameof(PeriodEnd) }) OnPropertyChanged(name);
     }
 
-    public void Dispose() { disposed = true; shell.PropertyChanged -= OnShellChanged; read?.Cancel(); }
+    public void Dispose() { disposed = true; shell.PropertyChanged -= OnShellChanged; if (settings is not null) settings.Changed -= OnSettingsChanged; read?.Cancel(); }
 }

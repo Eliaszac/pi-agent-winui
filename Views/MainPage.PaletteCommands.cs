@@ -13,6 +13,7 @@ public sealed partial class MainPage
         var commands = new List<PaletteCommand>
         {
             PaletteCommand.Action("home", "Open Home", "Recent conversations and local usage", ViewModel.OpenHome, aliases: "dashboard analytics tokens"),
+            PaletteCommand.Action("settings", "Open Settings", "Preferences, local data and legal information", () => ViewModel.OpenSettings(), aliases: "privacy terms license startup analytics"),
             PaletteCommand.Action("extensions", "Open Extensions", "Manage optional features and integrations", ViewModel.OpenExtensions, aliases: "plugins addons"),
             PaletteCommand.Action("providers", "Open Providers", "Connect and manage model providers", ViewModel.OpenProviders, aliases: "models authentication login"),
             PaletteCommand.Action("sidebar", "Toggle sidebar", "Collapse or expand projects and conversations", ViewModel.Sidebar.Toggle),

@@ -20,6 +20,7 @@ public sealed class ResearchPanelViewModel : ObservableObject
     public string EnabledLabel => Enabled ? "On" : "Off";
     public string EnableActionLabel => Enabled ? "Turn off background research" : "Turn on background research";
     public bool HasTasks => Tasks.Count > 0;
+    public bool HasActiveTasks => all.Any(task => task.Status is "Running" or "Queued");
     public bool IsEmpty => !HasTasks;
     public bool HasSelection => Selected is not null;
     public string EmptyHint => Enabled ? "Ask your agent to research something in the background." : "Turn research on to allow independent background tasks.";

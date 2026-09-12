@@ -41,6 +41,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="Legal\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="LICENSE" Link="Legal\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
         <Content Include="Assets\SplashScreen.scale-200.png" />
         <Content Include="Assets\LockScreenLogo.scale-200.png" />
         <Content Include="Assets\Square150x150Logo.scale-200.png" />

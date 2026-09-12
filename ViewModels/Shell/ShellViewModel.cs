@@ -29,14 +29,34 @@ public sealed class ShellViewModel : ObservableObject
     private bool showExtensions;
     private bool showProviders;
     private bool showHome = true;
+    private bool showSettings;
+    private bool showLegal;
+    public bool ShowSettings => showSettings;
+    public bool ShowLegal => showLegal;
+    public bool ResumeConversationOnStartup { get; set; }
+    public bool HasActiveWork => workspaces?.ActiveRunCount > 0 || workspaces?.HasActiveSnippet == true;
+    private void CloseSettingsPages()
+    {
+        showSettings = showLegal = false;
+        OnPropertyChanged(nameof(ShowSettings)); OnPropertyChanged(nameof(ShowLegal));
+    }
+    public void OpenSettings(bool legal = false)
+    {
+        showHome = showProviders = showExtensions = false;
+        showLegal = legal; showSettings = !legal;
+        Chat?.SetViewed(false);
+        foreach (var name in new[] { nameof(ShowHome), nameof(ShowProviders), nameof(ShowExtensions), nameof(ShowSettings), nameof(ShowLegal), nameof(ShowWorkspace) }) OnPropertyChanged(name);
+        if (Sidebar.IsOverlay) Sidebar.IsOpen = false;
+    }
     public bool ShowHome => showHome;
     public bool ShowProviders => showProviders;
     public ViewModels.Providers.ProvidersViewModel? Providers { get; set; }
     public bool ShowExtensions => showExtensions;
-    public bool ShowWorkspace => !showExtensions && !showProviders && !showHome;
+    public bool ShowWorkspace => !showExtensions && !showProviders && !showHome && !showSettings && !showLegal;
     public ViewModels.Extensions.ExtensionsViewModel Extensions { get; }
     public void OpenExtensions()
     {
+        CloseSettingsPages();
         showHome = false;
         OnPropertyChanged(nameof(ShowHome));
         showProviders = false;
@@ -50,6 +70,7 @@ public sealed class ShellViewModel : ObservableObject
     }
     public void CloseExtensions()
     {
+        CloseSettingsPages();
         showHome = false;
         OnPropertyChanged(nameof(ShowHome));
         showProviders = false;
@@ -62,6 +83,7 @@ public sealed class ShellViewModel : ObservableObject
 
     public void OpenProviders()
     {
+        CloseSettingsPages();
         showHome = false;
         OnPropertyChanged(nameof(ShowHome));
         showExtensions = false;
@@ -76,6 +98,7 @@ public sealed class ShellViewModel : ObservableObject
 
     public void OpenHome()
     {
+        CloseSettingsPages();
         showExtensions = false;
         showProviders = false;
         showHome = true;
@@ -199,6 +222,8 @@ public sealed class ShellViewModel : ObservableObject
             var settledExpanded = Projects.ToDictionary(project => project.Project.Id, project => project.IsSettledExpanded);
             var projectId = selectedProject?.Project.Id;
             var keepHome = ShowHome;
+            var keepSettings = ShowSettings;
+            var keepLegal = ShowLegal;
             var conversationId = selectedConversation?.Conversation.Id;
             var loadedProjects = new ObservableCollection<ProjectItemViewModel>();
             foreach (var project in saved.Reverse())
@@ -212,8 +237,15 @@ public sealed class ShellViewModel : ObservableObject
             projects = loadedProjects;
             var selected = Projects.FirstOrDefault(project => project.Project.Id == projectId) ?? Projects.FirstOrDefault();
             var conversation = selected?.Conversations.FirstOrDefault(item => item.Conversation.Id == conversationId);
+            if (!hasLoaded && ResumeConversationOnStartup)
+            {
+                var recent = Projects.SelectMany(project => project.Conversations.Select(item => (project, item)))
+                    .OrderByDescending(pair => pair.item.LastUsedAt).FirstOrDefault();
+                if (recent.item is not null) { selected = recent.project; conversation = recent.item; keepHome = false; }
+            }
             SetSelection(selected, conversation);
             if (keepHome) OpenHome();
+            else if (keepSettings || keepLegal) OpenSettings(keepLegal);
             OnPropertyChanged(nameof(Projects));
             hasLoaded = true;
             OnPropertyChanged(nameof(HasLoaded));
@@ -398,6 +430,33 @@ public sealed class ShellViewModel : ObservableObject
         project.Conversations.Remove(conversation);
         if (ReferenceEquals(selectedConversation, conversation)) SetSelection(project, null);
         if (workspaces is not null) await workspaces.RemoveAsync(project.Project.Id, conversation.Conversation.Id);
+        await CleanupDeletedDataAsync();
+    });
+
+    /// <summary>Deletes catalog-owned history through the normal deferred cleanup boundary; never deletes project directories.</summary>
+    public Task ClearCatalogAsync(bool removeProjects) => ChangeSidebarAsync(async () =>
+    {
+        if (HasActiveWork) throw new InvalidOperationException("Finish or cancel active conversations before deleting their data.");
+        foreach (var project in Projects.ToArray())
+        {
+            foreach (var conversation in project.Conversations.ToArray())
+            {
+                if (HasActiveWork) throw new InvalidOperationException("A conversation became active. Deletion stopped; already deleted conversations remain deleted.");
+                if (dataCleanup is not null) await dataCleanup.ScheduleAsync(project.Project.Id, conversation.Conversation.Id,
+                    ProjectTargets.Resolve(project.Project, conversation.Conversation.TargetId ?? project.Project.Id));
+                await Task.Run(() => repository.DeleteConversationAsync(project.Project.Id, conversation.Conversation.Id));
+                project.Conversations.Remove(conversation);
+                if (ReferenceEquals(selectedConversation, conversation)) { SetSelection(project, null); OpenSettings(); }
+                if (workspaces is not null) await workspaces.RemoveAsync(project.Project.Id, conversation.Conversation.Id);
+            }
+            project.RefreshGroups();
+            if (!removeProjects) continue;
+            await Task.Run(() => repository.DeleteProjectAsync(project.Project.Id));
+            Projects.Remove(project);
+            if (ReferenceEquals(selectedProject, project)) { SetSelection(null, null); OpenSettings(); }
+            if (workspaces is not null) await workspaces.RemoveAsync(project.Project.Id);
+        }
+        OnPropertyChanged(nameof(Projects)); OnPropertyChanged(nameof(ShowEmptyProjects));
         await CleanupDeletedDataAsync();
     });
 
