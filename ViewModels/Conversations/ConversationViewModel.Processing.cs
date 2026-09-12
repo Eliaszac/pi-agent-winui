@@ -14,7 +14,7 @@ public sealed partial class ConversationViewModel
     private void SynchronizeProcessingTime()
     {
         if (disposed) return;
-        if (running || compacting || previewCompacting)
+        if (running || compacting || previewCompacting || submittedPreview is not null)
         {
             if (processingStarted is null)
             {

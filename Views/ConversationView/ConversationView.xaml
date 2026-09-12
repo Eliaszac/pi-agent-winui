@@ -293,24 +293,46 @@
                 </ListView.ItemTemplate>
             </ListView>
         </Grid>
-        <ScrollViewer Grid.Row="2" MaxHeight="240" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="2" MaxHeight="380" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Prompts}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="chat:ExtensionPromptViewModel">
-                        <Border Padding="16" Margin="0,0,0,8" BorderThickness="1" CornerRadius="8"
+                        <Border Padding="20,16" Margin="0,0,0,8" BorderThickness="1" CornerRadius="8"
                             BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                <TextBlock Text="{x:Bind Message}" TextWrapping="Wrap" />
+                            <StackPanel Spacing="12">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE8F2;" FontSize="18" VerticalAlignment="Top" Margin="0,3,0,0"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="{x:Bind Heading}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                        <TextBlock Text="{x:Bind Context}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="{x:Bind Context}"
+                                            Visibility="{x:Bind HasContext, Converter={StaticResource BooleanToVisibility}}" />
+                                    </StackPanel>
+                                </Grid>
+                                <Border Padding="12" CornerRadius="4" Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                    Visibility="{x:Bind HasPreview, Converter={StaticResource BooleanToVisibility}}">
+                                    <ScrollViewer MaxHeight="132" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <TextBlock Text="{x:Bind Preview}" FontFamily="Consolas" FontSize="13" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                    </ScrollViewer>
+                                </Border>
+                                <TextBlock Text="{x:Bind Message}" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                    Visibility="{x:Bind HasMessage, Converter={StaticResource BooleanToVisibility}}" />
                                 <TextBox Text="{x:Bind Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MaxHeight="120"
                                     AutomationProperties.Name="Response"
                                     Visibility="{x:Bind IsText, Converter={StaticResource BooleanToVisibility}}" />
-                                <controls:ActionComboBox ItemsSource="{x:Bind Options}" SelectedItem="{x:Bind Value, Mode=TwoWay}"
-                                    HorizontalAlignment="Stretch" PlaceholderText="Choose an option" AutomationProperties.Name="Response option"
-                                    Visibility="{x:Bind IsSelect, Converter={StaticResource BooleanToVisibility}}" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <controls:ActionButton Content="{x:Bind SubmitLabel}" Command="{x:Bind SubmitCommand}" IsEnabled="{x:Bind IsPending, Mode=OneWay}" />
+                                <RadioButtons ItemsSource="{x:Bind Options}" SelectedItem="{x:Bind Value, Mode=TwoWay}" MaxColumns="1"
+                                    Header="Choose a response" AutomationProperties.Name="Response option" IsEnabled="{x:Bind IsPending, Mode=OneWay}"
+                                    Visibility="{x:Bind IsSelect, Converter={StaticResource BooleanToVisibility}}">
+                                    <RadioButtons.ItemTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" /></DataTemplate>
+                                    </RadioButtons.ItemTemplate>
+                                </RadioButtons>
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                                     <controls:ActionButton Content="Cancel" Command="{x:Bind CancelCommand}" IsEnabled="{x:Bind IsPending, Mode=OneWay}" />
+                                    <controls:ActionButton Content="{x:Bind SubmitLabel}" Command="{x:Bind SubmitCommand}" IsEnabled="{x:Bind CanSubmit, Mode=OneWay}"
+                                        Style="{StaticResource AccentButtonStyle}" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -428,6 +450,7 @@
                 TextCompositionStarted="OnCompositionStarted" TextCompositionEnded="OnCompositionEnded"
                 KeyboardAcceleratorPlacementMode="Hidden"
                 PlaceholderText="Message Pi…" AutomationProperties.Name="Message Pi" AcceptsReturn="True"
+                IsSpellCheckEnabled="False" IsTextPredictionEnabled="False"
                 FontSize="14" TextWrapping="Wrap" MinHeight="48" MaxHeight="184" VerticalContentAlignment="Top" Padding="4,6"
                 Background="Transparent" BorderThickness="0">
                 <TextBox.Resources>

@@ -155,7 +155,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     public bool IsLoading => preparing || (!connected && !HasError);
     public bool ShowRecovery => !IsLoading && !connected;
     public bool HasInlineError => IsReady && HasError;
-    public bool CanSend => IsReady && !busy && !stopping && !disposed && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages);
+    public bool CanSend => IsReady && !busy && !stopping && !disposed && (submittedPreview is null || running) && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages);
     public bool CanStop => connected && running && (!busy || operationInFlight) && !stopping;
     public bool ComposerShowsStop => running && string.IsNullOrWhiteSpace(Draft) && !HasPendingImages;
     public bool ShowSeparateStop => running && !ComposerShowsStop;
@@ -164,7 +164,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     public string ComposerActionLabel => ComposerShowsStop ? "Stop" : IsSteeringDraft ? "Steer" : running ? "Queue follow-up" : "Send";
     public string ComposerActionGlyph => running ? "\uE71A" : "\uE72A";
     public bool CanRetry => ShowRecovery && !busy && !disposed;
-    public bool IsEmpty => Entries.Count == 0 && !busy && !running && !previewCompacting && !compacting;
+    public bool IsEmpty => Entries.Count == 0 && submittedPreview is null && !busy && !running && !previewCompacting && !compacting;
     private readonly bool previewCompacting;
     private bool compacting;
     public AsyncRelayCommand RetryCommand { get; }
@@ -404,6 +404,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             }
             if (update.Entry is not null)
             {
+                if (update.Entry.IsUser && !entries.ContainsKey(update.Entry.Id)) submittedPreview = null;
                 Upsert(update.Entry);
                 if (trackingRun) { runEntryIds.Add(update.Entry.Id); runVerification.Observe(update.Entry); }
                 changed = true;
@@ -416,6 +417,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             }
             if (update.IsRunning is bool isRunning)
             {
+                if (!isRunning && submittedPreview is not null) { submittedPreview = null; changed = true; }
                 if (!isRunning && compacting) { compacting = false; changed = true; }
                 if (running != isRunning) changed = true;
                 if (isRunning && !running)
@@ -464,6 +466,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (update.IsConnected == false || !string.IsNullOrEmpty(update.Error)) { queueHeld = true; queueReady = false; }
             if (update.IsConnected is bool isConnected)
             {
+                if (!isConnected && submittedPreview is not null) { submittedPreview = null; changed = true; }
                 connected = isConnected;
                 if (!connected) { ClearPrompts(); compacting = false; changed = true; }
             }
@@ -489,7 +492,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (update.Prompt is not null && !Prompts.Any(item => item.Id == update.Prompt.Id))
             {
                 var prompt = new ExtensionPromptViewModel(update.Prompt,
-                    (id, response) => Task.Run(() => session.ReplyAsync(id, response)), RemovePrompt, ReportError);
+                    (id, response) => Task.Run(() => session.ReplyAsync(id, response)), RemovePrompt, ReportError,
+                    string.Join(" · ", new[] { Target?.Label ?? "Local", WorkingDirectory }.Where(part => !string.IsNullOrWhiteSpace(part))));
                 Prompts.Add(prompt);
                 _ = prompt.ExpireAsync(action => dispatcher.Post(action), RemovePrompt);
             }
@@ -506,7 +510,15 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         OnPropertyChanged(nameof(HasRunChanges));
         if (changed)
         {
-            var rows = presentation.Project(Entries, running || compacting || previewCompacting,
+            RefreshTranscript();
+        }
+        Interlocked.Exchange(ref drainScheduled, 0);
+        if (!updates.IsEmpty && Interlocked.Exchange(ref drainScheduled, 1) == 0) dispatcher.Post(Drain);
+    }
+
+    private void RefreshTranscript()
+    {
+            var rows = presentation.Project(submittedPreview is { } preview ? Entries.Append(preview) : Entries, running || compacting || previewCompacting || submittedPreview is not null,
                 ProcessingLabel);
             for (var index = 0; index < rows.Count; index++)
             {
@@ -518,9 +530,6 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             while (DisplayEntries.Count > rows.Count) DisplayEntries.RemoveAt(DisplayEntries.Count - 1);
             OnPropertyChanged(nameof(IsEmpty));
             TranscriptChanged?.Invoke();
-        }
-        Interlocked.Exchange(ref drainScheduled, 0);
-        if (!updates.IsEmpty && Interlocked.Exchange(ref drainScheduled, 1) == 0) dispatcher.Post(Drain);
     }
 
     private void Upsert(ChatEntry entry)

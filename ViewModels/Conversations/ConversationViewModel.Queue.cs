@@ -11,6 +11,15 @@ public sealed partial class ConversationViewModel
     private bool queueReady;
     private bool dispatchingQueue;
     private int steeringCount;
+    private ChatEntryViewModel? submittedPreview;
+
+    private void ShowSubmittedPreview(string text, IReadOnlyList<ChatImage> images)
+    {
+        if (running || text.TrimStart().StartsWith('/')) return;
+        submittedPreview = new(new ChatEntry("presentation:submitted", "You", text, IsUser: true, Images: images));
+        SynchronizeProcessingTime();
+        RefreshTranscript();
+    }
     public ObservableCollection<PendingPrompt> RecoveredPrompts { get; } = [];
     public bool HasQueuedPrompt => queued is not null;
     public string QueuedPreview => queued?.Preview ?? "";
@@ -104,9 +113,12 @@ public sealed partial class ConversationViewModel
     {
         if (busy || disposed) return;
         ClearSubmitted(submitted, images);
+        ShowSubmittedPreview(expanded, images);
         try { await ExecuteAsync(send); }
         catch
         {
+            submittedPreview = null;
+            RefreshTranscript();
             var prompt = new PendingPrompt(submitted, expanded, images);
             if (string.IsNullOrWhiteSpace(Draft) && !HasPendingImages) RestorePrompt(prompt);
             else RecoveredPrompts.Add(prompt);
@@ -124,12 +136,13 @@ public sealed partial class ConversationViewModel
 
     private async Task DispatchQueuedAsync(PendingPrompt item)
     {
+        ShowSubmittedPreview(item.Message, item.Images);
         try
         {
             await ExecuteAsync(() => session.SendAsync(item.Message, item.Images));
             if (ReferenceEquals(queued, item)) queued = null;
         }
-        catch (Exception exception) { queueHeld = true; ReportError(exception); }
+        catch (Exception exception) { submittedPreview = null; RefreshTranscript(); queueHeld = true; ReportError(exception); }
         finally { dispatchingQueue = false; NotifyQueue(); }
     }
 
