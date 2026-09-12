@@ -8,6 +8,7 @@ namespace PiAgentGui.Views;
 /// <summary>Hosts the bundled terminal renderer and translates UI events to the injected shell session.</summary>
 public sealed class TerminalSurface : UserControl, IDisposable
 {
+    public event Action<bool, bool, bool>? PaletteKey;
     private const string Origin = "https://terminal.piagent.local/";
     private readonly ITerminalSession session;
     private readonly WebView2 browser = new();
@@ -84,6 +85,7 @@ public sealed class TerminalSurface : UserControl, IDisposable
             var root = json.RootElement;
             switch (root.GetProperty("type").GetString())
             {
+                case "palette-key": PaletteKey?.Invoke(root.GetProperty("down").GetBoolean(), root.GetProperty("shift").GetBoolean(), root.GetProperty("modified").GetBoolean()); break;
                 case "ready" when !started:
                     started = true;
                     feedback.Text = "Starting shell…";

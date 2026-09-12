@@ -73,6 +73,7 @@ public sealed partial class MainPage : Page
         this.createProjectForm = createProjectForm;
         this.picker = picker;
         InitializeComponent();
+        InitializeCommandPalette();
         CapabilitiesPane.DataContext = Capabilities;
         GettingStartedPane.DataContext = GettingStarted;
         GettingStartedPane.ProvidersRequested += (_, _) => ViewModel.OpenProviders();

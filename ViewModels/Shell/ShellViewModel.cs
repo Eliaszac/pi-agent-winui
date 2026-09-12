@@ -105,6 +105,7 @@ public sealed class ShellViewModel : ObservableObject
     public bool HasError => ErrorMessage.Length > 0;
     /// <summary>Gets the currently selected project.</summary>
     public ProjectItemViewModel? SelectedProject => selectedProject;
+    public ConversationItemViewModel? SelectedConversation => selectedConversation;
     public ExecutionTarget? SelectedTarget => selectedConversation?.Target ?? selectedProject?.DefaultTarget;
     public string TargetLabel => SelectedTarget?.Label ?? "";
     public string? LocalWorkspacePath => SelectedTarget is { IsLocal: true } target ? target.Path : null;
@@ -220,7 +221,7 @@ public sealed class ShellViewModel : ObservableObject
     private ProjectItemViewModel CreateProjectItem(Project project) =>
         new(project, SelectConversation, NewConversationCommand, workspaces, RenameProjectAsync, RenameConversationAsync);
 
-    private void SelectProject(ProjectItemViewModel? project)
+    public void SelectProject(ProjectItemViewModel? project)
     {
         CloseExtensions();
         if (ReferenceEquals(selectedProject, project) && selectedConversation is not null) return;

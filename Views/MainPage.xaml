@@ -461,7 +461,7 @@
             </ScrollViewer>
             <Grid x:Name="ConversationBody" Grid.Row="2"
                 Visibility="{x:Bind ViewModel.HasConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
-            <views:ConversationView ViewModel="{x:Bind ViewModel.Chat, Mode=OneWay}" ShellCommandRequested="OnShellCommandRequested"
+            <views:ConversationView x:Name="ConversationPane" ViewModel="{x:Bind ViewModel.Chat, Mode=OneWay}" ShellCommandRequested="OnShellCommandRequested"
                 GettingStarted="{x:Bind GettingStarted}" ProvidersRequested="OnGettingStartedProviders"
                 ApprovalSetupRequested="OnApprovalSetupRequested"
                 Visibility="{x:Bind ViewModel.HasConversation, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
@@ -498,5 +498,6 @@
         </Grid>
     </SplitView>
 </Page>
+
 
 

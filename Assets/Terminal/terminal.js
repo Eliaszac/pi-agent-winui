@@ -5,6 +5,11 @@ const terminal = new Terminal({ fontFamily: "Consolas, 'Cascadia Mono', monospac
   cursorBlink: true, scrollback: 5000, screenReaderMode: true, allowProposedApi: false });
 const fit = new FitAddon.FitAddon();
 const host = window.chrome.webview;
+// Forward only gesture metadata, never typed text, to the app shortcut handler.
+for (const type of ["keydown", "keyup"]) {
+  document.addEventListener(type, event => host.postMessage({ type: "palette-key", down: type === "keydown",
+    shift: event.key === "Shift", modified: event.ctrlKey || event.altKey || event.metaKey }), true);
+}
 terminal.loadAddon(fit);
 terminal.open(document.getElementById("terminal"));
 // Shell output must never be allowed to write the system clipboard via OSC 52.

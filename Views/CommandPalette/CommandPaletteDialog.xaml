@@ -1,0 +1,46 @@
+<controls:ActionContentDialog x:Class="PiAgentGui.Views.CommandPaletteDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls"
+    CloseButtonText="Close" DefaultButton="None">
+    <controls:ActionContentDialog.Resources>
+        <x:Double x:Key="ContentDialogMaxWidth">580</x:Double>
+    </controls:ActionContentDialog.Resources>
+    <StackPanel Spacing="24" MinWidth="280">
+        <Grid ColumnSpacing="16">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="Command palette" FontSize="18" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="1" Text="Shift + Shift" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </Grid>
+        <Border x:Name="ProviderState" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Padding="0,24,0,0">
+            <StackPanel Spacing="12">
+                <FontIcon Glyph="&#xE8D7;" FontSize="24" HorizontalAlignment="Left" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Text="Connect a provider to get started" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="Add a provider to use Pi. Your commands will appear here once you’re connected." FontSize="14" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <controls:ActionButton x:Name="ProviderAction" Click="OnOpenProviders" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="14,12" Margin="0,8,0,0" AutomationProperties.Name="Open Providers">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE713;" FontSize="16"/>
+                        <TextBlock Grid.Column="1" Text="Open Providers"/>
+                        <FontIcon Grid.Column="2" Glyph="&#xE72A;" FontSize="14"/>
+                    </Grid>
+                </controls:ActionButton>
+            </StackPanel>
+        </Border>
+        <StackPanel x:Name="CommandsState" Spacing="12" Visibility="Collapsed">
+            <controls:ActionButton x:Name="BackAction" Content="Back" Click="OnBack" Visibility="Collapsed" HorizontalAlignment="Left"/>
+            <TextBox x:Name="Search" PlaceholderText="Search commands…" TextChanged="OnSearchChanged" KeyDown="OnSearchKeyDown" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" AutomationProperties.Name="Search commands"/>
+            <TextBlock x:Name="ScopeLabel" Text="Most used" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <controls:CommandListView x:Name="Results" MaxHeight="360" SelectionMode="Single" IsItemClickEnabled="True" ItemClick="OnCommandClicked" KeyDown="OnResultsKeyDown" AutomationProperties.Name="Commands">
+                <ListView.ItemTemplate><DataTemplate>
+                    <StackPanel Spacing="3" Padding="4,8">
+                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Description}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </DataTemplate></ListView.ItemTemplate>
+            </controls:CommandListView>
+            <TextBlock x:Name="NoResults" Text="No matching commands" Visibility="Collapsed" FontSize="13"/>
+        </StackPanel>        <TextBlock Text="Esc to close" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+    </StackPanel>
+</controls:ActionContentDialog>
+

@@ -59,6 +59,8 @@ public sealed partial class CapabilitiesPanel : UserControl
         finally { dialogOpen = false; }
     }
     public CapabilitiesPanel() => InitializeComponent();
+    public void OpenQuickIntegrations() => OnQuickIntegrations(this, new());
+    public void OpenMcpImport() => OnImportMcp(this, new());
     private async void OnQuickIntegrations(object sender, RoutedEventArgs args)
     {
         if (dialogOpen) return;

@@ -5,6 +5,7 @@ namespace PiAgentGui.Views;
 
 public sealed partial class SourceControlPanel : UserControl
 {
+    public void OpenBranches() => OnBranches(this, new());
     private bool dialogOpen;
     private SourceControlViewModel? Model => DataContext as SourceControlViewModel;
     public SourceControlPanel() => InitializeComponent();

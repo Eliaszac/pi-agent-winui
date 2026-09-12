@@ -7,6 +7,7 @@ public sealed partial class TerminalPanel : UserControl
 {
     private TerminalPanelViewModel? model;
     private bool sharedTabs;
+    public event Action<bool, bool, bool>? PaletteKey;
     private readonly Dictionary<TerminalTabViewModel, TabViewItem> tabs = [];
     private readonly Dictionary<TerminalTabViewModel, TerminalSurface> displays = [];
     public Func<string?>? CurrentDirectory { get; set; }
@@ -42,6 +43,7 @@ public sealed partial class TerminalPanel : UserControl
             foreach (TerminalTabViewModel added in args.NewItems)
             {
                 var surface = new TerminalSurface(added.Session) { Visibility = Visibility.Collapsed };
+                surface.PaletteKey += (down, shift, modified) => PaletteKey?.Invoke(down, shift, modified);
                 displays[added] = surface;
                 TerminalDisplays.Children.Add(surface);
                 var item = new TabViewItem { Header = added.Title, Tag = added, IsClosable = true };
