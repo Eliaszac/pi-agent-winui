@@ -15,6 +15,7 @@ public sealed class ShellViewModel : ObservableObject
     private readonly IProjectRepository repository;
     private readonly ConversationWorkspaceStore? workspaces;
     private readonly PiSessionPaths sessionPaths;
+    private readonly ConversationDataCleanup? dataCleanup;
     private readonly SemaphoreSlim titleGate = new(1, 1);
     private bool isLoading;
     private bool isReady;
@@ -144,11 +145,12 @@ public sealed class ShellViewModel : ObservableObject
 
     /// <summary>Creates the shell without performing disk I/O.</summary>
     /// <param name="repository">The shared project persistence boundary.</param>
-    public ShellViewModel(IProjectRepository repository, ConversationWorkspaceStore? workspaces = null, PiSessionPaths? sessionPaths = null)
+    public ShellViewModel(IProjectRepository repository, ConversationWorkspaceStore? workspaces = null, PiSessionPaths? sessionPaths = null, ConversationDataCleanup? dataCleanup = null)
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.workspaces = workspaces;
         this.sessionPaths = sessionPaths ?? new(new ProjectStorageOptions());
+        this.dataCleanup = dataCleanup;
         if (workspaces is not null) workspaces.CopyRequested = DuplicateConversationAsync;
         if (workspaces is not null) workspaces.SessionNameChanged += OnSessionNameChanged;
         if (workspaces is not null) workspaces.ExplicitSessionNameChanged += OnExplicitSessionNameChanged;
@@ -189,6 +191,7 @@ public sealed class ShellViewModel : ObservableObject
             OnPropertyChanged(nameof(ShowWelcome));
             OnPropertyChanged(nameof(ShowInitialLoading));
             IsReady = true;
+            _ = CleanupDeletedDataAsync();
         }
         catch (Exception exception) { ReportError(exception); }
         finally { IsLoading = false; }
@@ -359,20 +362,37 @@ public sealed class ShellViewModel : ObservableObject
     public Task DeleteConversationAsync(ConversationItemViewModel conversation) => ChangeSidebarAsync(async () =>
     {
         var project = FindProject(conversation);
+        if (dataCleanup is not null) await dataCleanup.ScheduleAsync(project.Project.Id, conversation.Conversation.Id,
+            ProjectTargets.Resolve(project.Project, conversation.Conversation.TargetId ?? project.Project.Id));
         await Task.Run(() => repository.DeleteConversationAsync(project.Project.Id, conversation.Conversation.Id));
         project.Conversations.Remove(conversation);
         if (ReferenceEquals(selectedConversation, conversation)) SetSelection(project, null);
         if (workspaces is not null) await workspaces.RemoveAsync(project.Project.Id, conversation.Conversation.Id);
+        await CleanupDeletedDataAsync();
     });
 
     public Task DeleteProjectAsync(ProjectItemViewModel project) => ChangeSidebarAsync(async () =>
     {
+        if (dataCleanup is not null)
+            foreach (var conversation in project.Conversations)
+                await dataCleanup.ScheduleAsync(project.Project.Id, conversation.Conversation.Id,
+                    ProjectTargets.Resolve(project.Project, conversation.Conversation.TargetId ?? project.Project.Id));
         await Task.Run(() => repository.DeleteProjectAsync(project.Project.Id));
         Projects.Remove(project);
         if (ReferenceEquals(selectedProject, project)) SetSelection(Projects.FirstOrDefault(), null);
         OnPropertyChanged(nameof(ShowEmptyProjects));
         if (workspaces is not null) await workspaces.RemoveAsync(project.Project.Id);
+        await CleanupDeletedDataAsync();
     });
+
+    private Task? cleanupTask;
+    private Task CleanupDeletedDataAsync() => cleanupTask is { IsCompleted: false } ? cleanupTask : cleanupTask = RunDataCleanupAsync();
+    private async Task RunDataCleanupAsync()
+    {
+        if (dataCleanup is null) return;
+        try { if (await dataCleanup.RunPendingAsync() is { } notice) ErrorMessage = notice; }
+        catch (Exception error) { ErrorMessage = "Could not finish conversation data cleanup: " + error.Message; }
+    }
 
     private async Task ChangeSidebarAsync(Func<Task> change)
     {

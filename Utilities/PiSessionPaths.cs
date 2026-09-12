@@ -6,6 +6,7 @@ namespace PiAgentGui.Utilities;
 public sealed class PiSessionPaths(ProjectStorageOptions storage)
 {
     private readonly string root = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(storage.CatalogPath))!, "sessions");
+    public string CleanupDirectory => Path.Combine(Path.GetDirectoryName(root)!, "deleted-conversation-data");
 
     public string GetSessionFile(Guid projectId, Guid conversationId)
     {

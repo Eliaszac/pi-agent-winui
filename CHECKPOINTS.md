@@ -28,7 +28,7 @@ Multi-file restore is not atomic. Backups and a journal precede writes; progress
 | Setting | Default |
 | --- | --- |
 | Capture | Disabled until enabled in Extensions |
-| Retention | 30 days for completed checkpoints; evaluated when the engine runs |
+| Retention | Latest five completed checkpoints per conversation, with a 30-day age limit; evaluated when the engine runs and after capture finishes |
 | Snapshot content budget | 1 GiB per target user |
 | Individual file limit | 8 MiB |
 | Scan bound | 20,000 candidate files / 30 seconds of directory enumeration |
@@ -41,6 +41,10 @@ The Windows opt-in setting is `%LOCALAPPDATA%\PiAgentGui\checkpoints.json`. Cros
 Default exclusions include Git metadata, dependency/build/cache folders, `.env` and `.env.*`, and `.pem`/`.key` files. Git ignore rules are honored in Git workspaces. Links, junctions, unsupported files, oversized files, and unstable reads are not captured; incomplete coverage disables deterministic revert. A project folder is required; filesystem roots and the target user's home folder are rejected.
 
 ## Concurrency limits
+
+Deleting a conversation now schedules removal of its app-owned Pi JSONL session (including embedded screenshots), selector-settings sidecar, and that conversation's checkpoint records. Independent copies and shared snapshot blobs still referenced by other conversations are preserved. Project deletion schedules the same cleanup for its conversations, without deleting project files. The app stops owned runtimes before cleanup. Pending recovery is protected; local known pending recovery blocks deletion. Failed or offline target cleanup retains a small request in `%LOCALAPPDATA%\PiAgentGui\deleted-conversation-data` and retries on a subsequent project-list load. This is housekeeping, not an agent job scheduler. No broad scan of user folders or retroactive deletion of old unregistered sessions is performed.
+
+The five-checkpoint limit preserves active, interrupted, partial, and already-reverted checkpoints with Undo data; the existing age limit still applies to completed/reverted checkpoints. Earlier change summaries remain readable after snapshot expiry.
 
 The first implementation conservatively coordinates all app-owned agents, Git commands, scripts, and open terminals across app windows. Other activity can disable attribution even in a different project; restoration requires those activities to finish. Concurrent conversations remain available, but overlapping captures are not automatically revertible. Target-side locks and journals protect reconnect/recovery handling.
 

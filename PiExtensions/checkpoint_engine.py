@@ -166,6 +166,13 @@ class CheckpointEngine:
 
     def prune(self):
         referenced = set()
+        records = [(file, json.loads(file.read_text(encoding='utf-8'))) for file in self.records.glob('*.json')]
+        by_session = {}
+        for _, value in records:
+            if value['state'] == 'complete' and not value.get('applied'):
+                by_session.setdefault(value['session'], []).append(value)
+        superseded = {value['id'] for values in by_session.values()
+                      for value in sorted(values, key=lambda r: r['created'], reverse=True)[5:]}
         def collect(value):
             if isinstance(value, dict):
                 if isinstance(value.get('hash'), str):
@@ -175,9 +182,8 @@ class CheckpointEngine:
             elif isinstance(value, list):
                 for child in value:
                     collect(child)
-        for file in self.records.glob('*.json'):
-            value = json.loads(file.read_text(encoding='utf-8'))
-            if value['state'] not in ('active', 'applying', 'interrupted', 'partial', 'expired') and value['created'] < time.time() - 30 * 86400:
+        for file, value in records:
+            if value['id'] in superseded or (value['state'] not in ('active', 'applying', 'interrupted', 'partial', 'expired') and value['created'] < time.time() - 30 * 86400):
                 value['cachedManifest'] = self.manifest(value)
                 value['cachedManifest']['state'] = 'expired'
                 value['cachedManifest']['applied'] = []
@@ -362,6 +368,8 @@ class CheckpointEngine:
         with self.lock():
             if request['action'] == 'clear':
                 return self.clear_snapshot_data()
+            if request['action'] == 'forget':
+                return self.forget_session()
             atomic_json(self.store / 'workspace.json', {'root': str(self.root)})
             self.prune()
             self.used = sum(p.stat().st_size for p in self.base.glob('*/blobs/*') if p.is_file())
@@ -388,6 +396,7 @@ class CheckpointEngine:
                     raise ValueError('Checkpoint already finalized.')
                 record.update(after=self.capture(), response=request['response'], state='complete', overlap=record.get('overlap', False) or request.get('overlap', False))
                 self.save(record)
+                self.prune()
                 return self.manifest(record)
             if action == 'manifest':
                 return self.manifest(record)
@@ -415,6 +424,32 @@ class CheckpointEngine:
                 self.save(record)
                 return self.manifest(record)
             raise ValueError('Unsupported checkpoint operation.')
+
+    def forget_session(self):
+        matches = []
+        for file in self.base.glob('*/records/*.json'):
+            if any(path.is_symlink() or (hasattr(path, 'is_junction') and path.is_junction())
+                   for path in (file, file.parent, file.parent.parent)):
+                raise ValueError('Linked checkpoint storage cannot be removed.')
+            record = json.loads(file.read_text(encoding='utf-8'))
+            if record['session'] != self.session:
+                continue
+            if record['state'] in ('applying', 'interrupted', 'partial'):
+                raise ValueError('Pending file restoration must be resolved before deleting its recovery data.')
+            matches.append(file)
+        original_records, original_blobs = self.records, self.blobs
+        try:
+            for directory in {file.parent for file in matches}:
+                self.records, self.blobs = directory, directory.parent / 'blobs'
+                if self.blobs.is_symlink() or (hasattr(self.blobs, 'is_junction') and self.blobs.is_junction()):
+                    raise ValueError('Linked checkpoint storage cannot be removed.')
+                for file in matches:
+                    if file.parent == directory:
+                        file.unlink()
+                self.prune()
+        finally:
+            self.records, self.blobs = original_records, original_blobs
+        return {'cleared': len(matches)}
 
     def clear_snapshot_data(self):
         # Preflight all stores before removing anything. Leave the coordinator and

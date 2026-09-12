@@ -77,6 +77,42 @@ class CheckpointTests(unittest.TestCase):
         self.assertTrue(list(self.engine.blobs.iterdir()))
         self.assertEqual(self.engine.load(ident)['state'], 'complete')
 
+    def test_only_latest_five_completed_checkpoints_retain_bytes(self):
+        ids = []
+        for index in range(7):
+            ident = self.begin()
+            self.write('file', str(index).encode())
+            self.finish(ident)
+            ids.append(ident)
+        self.assertEqual([self.engine.load(i)['state'] for i in ids], ['expired', 'expired'] + ['complete'] * 5)
+        self.assertEqual(self.engine.manifest(self.engine.load(ids[0]))['files'][0]['kind'], 'created')
+
+    def test_forget_deletes_only_selected_session_and_keeps_shared_blobs(self):
+        self.write('file', b'shared')
+        first = self.begin()
+        self.write('file', b'after')
+        self.finish(first)
+        other = module.CheckpointEngine(str(self.root), 'session-b', self.store)
+        second = other.run({'action': 'begin'})['id']
+        self.write('file', b'other')
+        other.run({'action': 'finish', 'id': second, 'response': 'assistant:456'})
+        self.engine.run({'action': 'forget'})
+        self.assertFalse((self.engine.records / (first + '.json')).exists())
+        other.run({'action': 'apply', 'id': second, 'paths': ['file']})
+        self.assertEqual((self.root / 'file').read_bytes(), b'after')
+
+    def test_forget_preserves_pending_restore(self):
+        self.write('file', b'before')
+        ident = self.begin()
+        self.write('file', b'after')
+        self.finish(ident)
+        record = self.engine.load(ident)
+        record['state'] = 'partial'
+        self.engine.save(record)
+        with self.assertRaisesRegex(ValueError, 'Pending file restoration'):
+            self.engine.run({'action': 'forget'})
+        self.assertTrue((self.engine.records / (ident + '.json')).exists())
+
     def test_restore_preserves_git_index_and_head(self):
         subprocess.run(['git', 'init', str(self.root)], check=True, capture_output=True)
         self.write('staged.txt', b'staged baseline')

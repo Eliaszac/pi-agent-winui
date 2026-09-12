@@ -23,7 +23,13 @@ public sealed class CheckpointDataService(IProjectRepository projects)
             .ToArray();
     }
 
-    public async Task<int> ClearAsync(ExecutionTarget target)
+    public Task<int> ClearAsync(ExecutionTarget target) => ExecuteAsync(target, "clear", "maintenance");
+    public Task<int> ForgetAsync(ExecutionTarget target, string sessionFile) => target.IsLocal &&
+        !Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".pi-desktop-checkpoints"))
+        ? Task.FromResult(0)
+        : ExecuteAsync(target with { Path = target.IsLocal ? Path.GetTempPath() : "/tmp" }, "forget", sessionFile);
+
+    private async Task<int> ExecuteAsync(ExecutionTarget target, string action, string session)
     {
         target = ProjectTargets.Normalize(target);
         using var activity = WorkspaceActivityLease.Acquire(true);
@@ -37,7 +43,13 @@ public sealed class CheckpointDataService(IProjectRepository projects)
             start.ArgumentList.Add("-X"); start.ArgumentList.Add("utf8");
             start.ArgumentList.Add("-c"); start.ArgumentList.Add(loader);
         }
-        else start = TargetCommandRunner.CreateStartInfo(target, "python3 -X utf8 -c " + PosixShell.Quote(loader));
+        else
+        {
+            var command = "python3 -X utf8 -c " + PosixShell.Quote(loader);
+            if (action == "forget") command = "if [ -d \"$HOME/.pi-desktop-checkpoints\" ]; then " + command +
+                "; else cat >/dev/null; printf '%s\\n' '{\"ok\":true,\"data\":{\"cleared\":0}}'; fi";
+            start = TargetCommandRunner.CreateStartInfo(target, command);
+        }
         using var process = new Process { StartInfo = start };
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         if (!process.Start()) throw new IOException("Could not start checkpoint cleanup. Check Python on this target.");
@@ -46,7 +58,7 @@ public sealed class CheckpointDataService(IProjectRepository projects)
         try
         {
             await process.StandardInput.WriteLineAsync(Convert.ToBase64String(code).AsMemory(), timeout.Token);
-            await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new { action = "clear", root = target.Path, session = "maintenance" }).AsMemory(), timeout.Token);
+            await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new { action, root = target.Path, session }).AsMemory(), timeout.Token);
             process.StandardInput.Close();
             await process.WaitForExitAsync(timeout.Token);
             if (process.ExitCode != 0) throw new IOException("Checkpoint cleanup failed. Check the target connection and Python installation.");

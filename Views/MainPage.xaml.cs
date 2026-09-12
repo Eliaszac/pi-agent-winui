@@ -381,7 +381,7 @@ public sealed partial class MainPage : Page
     {
         if (sender is not MenuFlyoutItem { Tag: ConversationItemViewModel conversation }) return;
         await ConfirmDeletionAsync($"Delete {conversation.Title}?",
-            "This removes the conversation from the app and stops its running agent. The saved Pi session file is retained on disk.",
+            "This deletes the conversation, its saved messages and screenshots, and unused checkpoint data, and stops its agent. Your project files are kept. Unavailable target cleanup will be retried; pending recovery data is protected.",
             () => ViewModel.DeleteConversationAsync(conversation));
     }
 
@@ -389,7 +389,7 @@ public sealed partial class MainPage : Page
     {
         if (sender is not MenuFlyoutItem { Tag: ProjectItemViewModel project }) return;
         await ConfirmDeletionAsync($"Delete {project.Name}?",
-            "This removes the project and its conversations from the app and stops their agents. Your project folder and saved Pi session files are retained on disk.",
+            "This removes the project and deletes its conversations, saved messages, screenshots, and unused checkpoint data. Agents are stopped; your project folder is kept. Unavailable target cleanup will be retried; pending recovery data is protected.",
             () => ViewModel.DeleteProjectAsync(project));
     }
 

@@ -76,7 +76,8 @@ public partial class App : Application
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "model-favorites.json")));
         var projectService = new ProjectService(repository);
         workspaces.ViewedRunCompleted += () => { if (!closing && !windowClosed) CompletionSound.Play(); };
-        var shell = new ShellViewModel(repository, workspaces, paths);
+        var checkpointData = new CheckpointDataService(repository);
+        var shell = new ShellViewModel(repository, workspaces, paths, new ConversationDataCleanup(paths, repository, checkpointData.ForgetAsync));
         providers = new ProviderService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "management"));
         var ollamaHttp = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
