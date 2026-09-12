@@ -24,10 +24,6 @@ Use `-CompilerPath 'C:\path\ISCC.exe'` for a custom compiler location. The scrip
 
 The resulting file is `artifacts/installer/PiDesktop-Setup-0.1.1-x64.exe` with an adjacent SHA-256 checksum. The version parameter stamps both application and installer. Use an increasing three-part numeric version for each release. Dependencies are pinned to the baseline already restored in this project.
 
-Version 0.1.1 adds exclusive research-store ownership across app windows. Close all older app builds before using it; pre-0.1.1 processes do not participate in the ownership protocol. Its two new regression tests cover competing coordinators and failed initialization recovery.
-
-Historical verification on 2026-09-11 (not current installation state): built the current workspace as version 0.1.2 and upgraded the installed 0.1.0 successfully (installer exit code 0). Both the installed executable and uninstall registration report 0.1.2. The two existing top-level application JSON files retained their SHA-256 hashes. Installation used silent mode without closing running applications or launching the app afterward. Installer and log: `artifacts/installer/PiAgent-Setup-0.1.2-x64.exe` and `artifacts/installer/install-0.1.2.log`. This is a Release build; the temporary Debug-only `/test-error` command is not included.
-
 ## Install and update
 
 - Run the installer normally, without administrator elevation. It installs for the current user under `%LOCALAPPDATA%\Programs\Pi Agent`.
@@ -50,8 +46,6 @@ Pi and its model/provider configuration remain separate. The app's existing Pi i
 This local installer is unsigned. Public distribution still needs a code-signing identity for both application and installer, release hosting, and a separately designed authenticated update-check/download flow. No automatic updater or release publishing is enabled by this work. Re-running a newer local installer is the current update mechanism.
 
 Verify fresh installation, same-version repair, upgrade, rejected downgrade, launch from the installed directory, uninstall and reinstall. Confirm user data is unchanged. A machine without .NET/Windows App SDK/WebView2 is needed to fully test first-time prerequisite installation; a developer machine cannot prove that scenario.
-
-Local verification on 2026-09-10 passed fresh 0.1.0 installation and launch, same-version repair, uninstall, reinstall with a 0.0.9 test build, upgrade to 0.1.0, and rejection of the 0.0.9 installer afterward. The four existing app JSON data files checked retained their hashes. That result describes the installation at the time, not the currently installed version. The 0.0.9 installer is a test artifact only. All 234 application unit tests passed. WebView2 was already installed, so its missing-runtime branch remains untested on a clean machine.
 
 References:
 - https://jrsoftware.org/ishelp/topic_setup_appid.htm

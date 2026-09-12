@@ -4,6 +4,7 @@ Native Windows frontend for the Pi coding agent, built with WinUI 3 and C#. Pi r
 
 ## Documentation
 
+- [Future work](BACKLOG.md) — ideas and issues to revisit.
 - [Architecture and current scope](ARCHITECTURE.md) — ownership, implemented features, storage, decisions, and verification limits.
 - [Pi setup](PI-SETUP.md) — runtime discovery, providers, and optional integrations.
 - [Execution targets](EXECUTION-TARGETS.md) — Windows/WSL/SSH setup and capability limits.
@@ -12,7 +13,6 @@ Native Windows frontend for the Pi coding agent, built with WinUI 3 and C#. Pi r
 - [Installer](Installer/README.md) — local build/install/update workflow.
 - [Development instructions](AGENTS.md) — repository rules and execution permissions.
 - [Design brief](.ui-craft/brief.md) and [native resource contract](.ui-craft/tokens.md).
-- [Historical research and implementation notes](docs/archive/README.md) — dated context, not current setup instructions or an open backlog.
 
 Asset README and license files under `Assets/` document bundled artwork, grammars, and terminal dependencies; preserve their attribution.
 
@@ -29,4 +29,4 @@ Application startup, Pi runtime probes, and installer scripts are separate from 
 
 ## Keeping documentation current
 
-Update the relevant guide when behavior changes, and ARCHITECTURE.md when ownership or product scope changes. Keep historical experiments in the archive, distinguish implemented behavior from verification, and avoid machine-specific installed-version claims in current setup instructions.
+Update the relevant guide when behavior changes, and ARCHITECTURE.md when ownership or product scope changes. Keep documentation focused on current behavior and operational guidance. Remove superseded implementation plans instead of retaining a development log, distinguish implemented behavior from verification, and avoid machine-specific installed-version claims in setup instructions.

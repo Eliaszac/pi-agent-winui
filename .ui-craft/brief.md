@@ -57,9 +57,6 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 - 2026-09-10: PR preview is now live integration. Show GitHub-logo Connect to GitHub in the chat header only when signed out; when connected, show Open PR only for a detected open PR. Use actual PR numbers in sidebar conversation metadata and context-menu navigation. Local project working-folder branch is shared by conversations. GitHub login uses a code-and-browser dialog, credential storage and automatic token refresh. Header context menu exposes refresh, repository access and disconnect without adding a full source-control panel.
 
-
-
-
 - 2026-09-10: Extensions use cards in a responsive two-to-three-column grid, falling back to one column in narrow windows. No Back to workspace button; sidebar conversation selection returns to chat.
 
 - 2026-09-10: Build a global Extensions page for supported integrations, with installation guidance in a modal. Missing approval modes stay discoverable as a muted, clickable composer control; other integrations choose missing-feature visibility individually. Global installation must not make model or mode selections shared across conversations. First approval integration is explicitly a preview until live Windows verification.
@@ -80,18 +77,13 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 - 2026-09-10: User confirmed the model startup selection fix. Chat messages have no You/Pi labels: user prompts are right-aligned bubbles, assistant replies plain text on the left. Add a copy icon beneath each; show the response copy control only once the message is complete. Preserve system light/dark styling.
 
-
 - 2026-09-10: Successful message copying briefly replaces the copy icon with a checkmark. Crossfade over 180 ms, restore after 1.6 seconds, restart the confirmation on repeated clicks, and skip animation when Windows animations are disabled. Reset feedback when a virtualized message control is reused.
-
 
 - 2026-09-10: Clicking the conversation header title starts inline rename; Enter or blur saves, Escape cancels. Use a separate editor state from sidebar rename. Project paths default to drive + ellipsis + folder (network paths hide server/share parents). Click to reveal for five seconds; hide on blur, navigation, or a second click. Sidebar path tooltips are also redacted.
 
-
 - 2026-09-10: Sidebar conversation rows use far-right red (approval needed), blue (running), or green (unseen completion) dots with descriptive tooltips. Hide dots on the selected conversation. Opening acknowledges green permanently until the next background completion; red takes precedence over blue.
 
-
 - 2026-09-10: Render basic Markdown in assistant responses. Fenced code has a themed box, language/filename header, and code-only copy confirmation. Keep tool calls muted and compact; more than three consecutive calls collapse into Called N tools, expandable to inspect each. Preserve message ordering and group expansion during streaming.
-
 
 - 2026-09-10: Write/edit tool summaries show the affected file and +added / minus-removed line counts. Expanding displays a colored unified diff instead of only Successfully wrote. Never fabricate removed-line counts without a baseline; retain real error/output details when no patch is available.
 
@@ -107,7 +99,6 @@ The user can register a named folder, reopen it after restarting, and work in mu
 - 2026-09-12: Clear the composer immediately on Send, before RPC acknowledgement or state refresh. Restore failed submissions without overwriting a newer draft.
 - 2026-09-12 correction: Inherited composer icon Foreground did not resolve contrast in the live app. Explicitly use black send/stop shapes in dark mode (white button), and white shapes in light mode (dark button); update on ActualThemeChanged.
 
-
 ## Current completion and data controls
 
 - Workspace checkpoints is done and opt-in. Its Extensions button reads Manage; management includes Clear stored data with confirmation.
@@ -117,10 +108,16 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 - MCP Quick integrations opens a native card list from the MCP panel. Each card includes a logo, name, description, publisher, Documentation, and Add. Add opens native authentication setup with Save only and an isolated connection check. Configured cards offer Manage; MCP inventory cards group connection, JSON editing, and confirmed removal in a Manage menu. Saving alone never claims connectivity. Editing/removal preserve unrelated definitions and reject concurrent changes.
 - MCP inventory includes saved global definitions before runtime loading and while disconnected. Show configured/disabled/live states truthfully and make available error details selectable. Obsidian quick setup chooses a vault for a local stdio server.
-- 2026-09-12: Agent Markdown uses a restrained reading column, 15px body/24px line spacing, distinct headings, quieter inline code, and native horizontally scrollable tables. Preserve surrounding response buttons, run summaries, and tool-call controls. Pipe tables, task markers, and strikethrough parse through the shared response pipeline.
-- 2026-09-12: Nested Markdown lists must read as deliberate hierarchy: an additional 16px indent beyond the parent text gutter, hollow second-level bullets, and square deeper bullets. Keep marker-to-text spacing compact and preserve source nesting.
-- 2026-09-12: Markdown tables show the header and up to ten measured data rows, with internal vertical scrolling for longer tables and horizontal scrolling for wide tables. Do not launch preview apps unless the user requests it again.
-- 2026-09-12: Table headers stay fixed during vertical scrolling. Place the shared horizontal scrollbar directly below the header, synchronized with header and body; retain the left-side vertical scrollbar and ten-data-row viewport.
-- 2026-09-12: Conversation response Markdown uses 70% of available transcript width instead of a fixed 960px cap. Keep a 680px reading width where space permits and use available width below that; other Markdown previews retain their existing width. User prompts and surrounding controls remain unchanged.
-- 2026-09-12: Table header clicks toggle ascending/descending, show a direction arrow, and preserve stable ties with empty cells last. Infer numbers or unambiguous ISO/named-month dates across all populated values; otherwise sort case-insensitive text. Table-local Original order and Export CSV/JSON actions preserve all rows in current visual order. JSON values remain strings and blank/duplicate headers get unique keys. Sorting is presentation-only and does not modify the saved response.
-- 2026-09-12: Table actions belong in a compact vertical-dots menu at the far right of the sticky header, not a separate toolbar row. Export feedback must not resize the transcript. Tail-follow responds to rendered Markdown content changes, not presentation-only table sorting or resizing.
+
+## Response Markdown and tables
+
+- Keep response typography native: 15px body text with 24px line spacing, distinct headings, and quieter inline code. Preserve surrounding response buttons, summaries, and tool-call controls.
+- Conversation responses use 70% of available transcript width, with a 680px reading width where space permits and available width below that. Other Markdown previews retain their existing width.
+- Preserve nested-list hierarchy with an additional 16px indent beyond the parent gutter, hollow second-level bullets, and square deeper bullets. Markers share the text baseline with compact spacing.
+- Tables show up to ten measured data rows with a sticky header. The vertical scrollbar overlays the left edge; the horizontal scrollbar sits below the header and starts at the first column. Header and body scroll together horizontally.
+- Header clicks toggle ascending/descending with a direction arrow. Sort numbers or unambiguous ISO/named-month dates when the whole populated column matches; otherwise use case-insensitive text. Keep equal values stable and empty cells last.
+- Export CSV, Export JSON, and Original order belong in the vertical-dots menu at the header's far right. Match the header background and height, with native hover feedback and no extra toolbar row.
+- Exports include every row in current visual order as readable text. JSON values remain strings; blank or duplicate headers get unique keys. Sorting never changes the saved transcript.
+- Export feedback must not resize the transcript. Tail-follow responds to new Markdown content, not presentation changes such as sorting or resizing.
+- Do not launch previews or perform manual UI checks unless the user requests it again.
+- Code blocks: completed assistant snippets support Save to project and Run for PowerShell/Bash/Python as compact header icons beside Copy, with the target in accessible tooltips. Show inline status/output and elapsed time, with Stop in the header. Output expansion, Copy output, Add output to prompt, and Dismiss are compact icons beside the result status. Dismiss clears completed results; idle blocks have no empty result area. No save picker, overwrite, extra confirmation, dependency install, or automatic agent turn. Keep surrounding response controls.

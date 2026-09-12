@@ -12,6 +12,16 @@ public sealed class CodeBlockView : UserControl
 {
     private readonly TextBlock codeText;
     private readonly TextBlock labelText;
+    private readonly StackPanel contentPanel;
+    private readonly StackPanel headerActions;
+    internal bool HasSnippet { get; private set; }
+    internal void AttachSnippet(ViewModels.Conversations.SnippetViewModel model)
+    {
+        HasSnippet = true;
+        var actions = new SnippetActions(model);
+        headerActions.Children.Insert(0, actions.HeaderActions);
+        contentPanel.Children.Add(actions);
+    }
     private string currentCode;
     private readonly CodeSyntaxHighlighter highlighter = new();
     private CancellationTokenSource? highlighting;
@@ -69,6 +79,7 @@ public sealed class CodeBlockView : UserControl
     {
         currentCode = code;
         var panel = new StackPanel();
+        contentPanel = panel;
         var header = new Grid { Padding = new Thickness(12, 4, 6, 4), ColumnSpacing = 12 };
         header.ColumnDefinitions.Add(new ColumnDefinition());
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -89,8 +100,10 @@ public sealed class CodeBlockView : UserControl
             }
             catch (System.Runtime.InteropServices.COMException) { ToolTipService.SetToolTip(copy, "Couldn't copy. Try again."); }
         };
-        Grid.SetColumn(copy, 1);
-        header.Children.Add(copy);
+        headerActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
+        headerActions.Children.Add(copy);
+        Grid.SetColumn(headerActions, 1);
+        header.Children.Add(headerActions);
         panel.Children.Add(header);
         var text = new TextBlock { Text = code, FontFamily = new FontFamily("Consolas"), FontSize = 12,
             IsTextSelectionEnabled = true, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(11, 7, 11, 11) };

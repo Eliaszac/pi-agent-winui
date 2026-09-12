@@ -16,6 +16,8 @@ internal static class MarkdownRenderer
     {
         if (element is CodeBlockView codeView && block is CodeBlock code)
         {
+            // Completed blocks bind actions to an immutable code snapshot; replace that binding if code changes.
+            if (codeView.HasSnippet) return false;
             var label = code is FencedCodeBlock fenced
                 ? string.Join(" ", new[] { fenced.Info, fenced.Arguments }.Where(value => !string.IsNullOrWhiteSpace(value))) : "Code";
             codeView.Update(label, code.Lines.ToString());
@@ -30,14 +32,14 @@ internal static class MarkdownRenderer
         }
         return false;
     }
-    internal static StackPanel Render(ContainerBlock document)
+    internal static StackPanel Render(ContainerBlock document, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null)
     {
         var panel = new StackPanel { Spacing = 10 };
-        foreach (var block in document) panel.Children.Add(RenderBlock(block));
+        foreach (var block in document) panel.Children.Add(RenderBlock(block, snippets));
         return panel;
     }
 
-    internal static FrameworkElement RenderBlock(Markdig.Syntax.Block block)
+    internal static FrameworkElement RenderBlock(Markdig.Syntax.Block block, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null)
     {
         switch (block)
         {
@@ -45,9 +47,13 @@ internal static class MarkdownRenderer
                 return new MarkdownTableView(table);
             case FencedCodeBlock code:
                 var label = string.Join(" ", new[] { code.Info, code.Arguments }.Where(value => !string.IsNullOrWhiteSpace(value)));
-                return new CodeBlockView(label, code.Lines.ToString());
+                var fencedView = new CodeBlockView(label, code.Lines.ToString());
+                if (snippets is not null) fencedView.AttachSnippet(snippets(code.Span.Start.ToString(), label, code.Lines.ToString()));
+                return fencedView;
             case CodeBlock code:
-                return new CodeBlockView("Code", code.Lines.ToString());
+                var codeView = new CodeBlockView("Code", code.Lines.ToString());
+                if (snippets is not null) codeView.AttachSnippet(snippets(code.Span.Start.ToString(), "text", code.Lines.ToString()));
+                return codeView;
             case HeadingBlock heading:
                 var title = Text(heading.Inline);
                 title.FontSize = heading.Level switch { 1 => 28, 2 => 23, 3 => 19, _ => 16 };
@@ -59,7 +65,7 @@ internal static class MarkdownRenderer
                 return Text(paragraph.Inline);
             case QuoteBlock quote:
                 return new Border { BorderThickness = new Thickness(3, 0, 0, 0), Padding = new Thickness(12, 2, 0, 2),
-                    BorderBrush = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"], Child = Render(quote) };
+                    BorderBrush = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"], Child = Render(quote, snippets) };
             case ListBlock list:
                 var depth = 0;
                 for (var ancestor = list.Parent; ancestor is not null; ancestor = ancestor.Parent)
@@ -78,7 +84,7 @@ internal static class MarkdownRenderer
                 var gutter = widths.Length > 0 ? widths.Max() : 0;
                 for (var index = 0; index < list.Count; index++)
                 {
-                    var body = Render((ContainerBlock)list[index]);
+                    var body = Render((ContainerBlock)list[index], snippets);
                     if (body.Children.FirstOrDefault() is not RichTextBlock)
                         body.Children.Insert(0, Text(null));
                     var first = (RichTextBlock)body.Children[0];
@@ -96,7 +102,7 @@ internal static class MarkdownRenderer
             case LeafBlock leaf:
                 return new TextBlock { Text = leaf.Lines.ToString(), FontSize = 15, LineHeight = 24, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
             case ContainerBlock container:
-                return Render(container);
+                return Render(container, snippets);
             default:
                 return new TextBlock();
         }

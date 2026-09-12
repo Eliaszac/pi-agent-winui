@@ -59,5 +59,3 @@ External editors and detached processes cannot be fully excluded. Files are chec
 - Live Pi 0.85.1 probes passed on Windows and Ubuntu WSL, using disposable folders without model requests. The probe drives lifecycle callbacks through a test extension and exercises the real target transports; it is not a provider-driven end-to-end conversation test.
 - The native verification build launched and exposed its accessible window tree. Full dialog interaction remains unverified because the computer-use helper rejected input (`SendInput ... GetLastError=87`).
 - Linux SSH implementation uses the same engine and existing SSH transport. The user declined live SSH checks; real SSH, interrupted-connection checks, and the native dialog flow remain unverified. The feature is marked done at the user's request; this does not represent completed release verification for those paths.
-
-The original acceptance plan is in [CHECKPOINT-PLAN.md](docs/archive/CHECKPOINT-PLAN.md); package reuse findings are in [CHECKPOINT-RESEARCH.md](docs/archive/CHECKPOINT-RESEARCH.md).

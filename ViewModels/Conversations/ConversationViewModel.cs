@@ -20,6 +20,14 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     private readonly IUiDispatcher dispatcher;
     private readonly ConcurrentQueue<ConversationUpdate> updates = new();
     private readonly Dictionary<string, ChatEntryViewModel> entries = [];
+    private readonly Dictionary<string, SnippetViewModel> snippets = [];
+    private SnippetViewModel GetSnippet(string key, string label, string code)
+    {
+        if (snippets.TryGetValue(key, out var existing)) return existing;
+        var target = Target ?? new Models.Projects.ExecutionTarget { Id = Guid.Empty, Name = "Windows", Path = WorkingDirectory ?? throw new InvalidOperationException("No workspace selected.") };
+        return snippets[key] = new SnippetViewModel(new SnippetService(target), dispatcher, label, code,
+            text => Draft = string.IsNullOrWhiteSpace(Draft) ? text : Draft + "\n\n" + text);
+    }
     private readonly TranscriptPresentation presentation = new();
     public ObservableCollection<ChatEntryViewModel> DisplayEntries { get; } = [];
     private int drainScheduled;
@@ -518,7 +526,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     private void Upsert(ChatEntry entry)
     {
         if (entries.TryGetValue(entry.Id, out var existing)) existing.Update(entry);
-        else { var item = new ChatEntryViewModel(entry) { ForkCommand = ForkCommand, CloneCommand = CloneCommand }; entries.Add(entry.Id, item); Entries.Add(item); }
+        else { var item = new ChatEntryViewModel(entry) { ForkCommand = ForkCommand, CloneCommand = CloneCommand,
+            SnippetFactory = (key, label, code) => GetSnippet(entry.Id + ":" + key + ":" + label + ":" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(code))), label, code) }; entries.Add(entry.Id, item); Entries.Add(item); }
     }
 
     private void RestoreEarlierSummaries(IReadOnlyList<ChatEntry> history)
@@ -591,6 +600,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         if (disposed) return;
         disposed = true;
+        foreach (var snippet in snippets.Values) snippet.Dispose();
+        await Task.WhenAll(snippets.Values.Select(snippet => snippet.ActiveOperation ?? Task.CompletedTask));
         processingTimer?.Dispose();
         session.Updated -= Enqueue;
         ClearPrompts();

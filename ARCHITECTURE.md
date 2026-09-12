@@ -1,6 +1,6 @@
 # Pi desktop architecture
 
-Current implementation and product decisions, reviewed 2026-09-12. Start at [README.md](README.md) for setup and the documentation index. Historical investigations and detailed development notes are in [docs/archive](docs/archive/README.md); they are not an outstanding-work list.
+Current implementation and product decisions, reviewed 2026-09-12. Start at [README.md](README.md) for setup and the documentation index.
 
 ## Product and runtime ownership
 
@@ -83,3 +83,11 @@ The MCP panel merges saved global mcp.json names with conversation runtime statu
 MCP cards expose a Manage menu for connection/authentication, editing the complete server definition as validated JSON, and confirmed removal. Editing preserves adapter-specific options; editing and removal compare the reviewed definition before writing, preserving unrelated configuration. These actions affect global definitions only; external definitions must be changed at their source. Removal leaves stored credentials and remote account access intact. Running conversations retain loaded connections until restart.
 
 Markdown tables use native sticky headers and a ten-row scrolling viewport. Sorting is local presentation state (stable ascending/descending number, unambiguous date, or text order) with an original-order reset. CSV/JSON export uses the native save picker and includes the complete table in current order. Exported values are visible text; JSON preserves values as strings and disambiguates header keys. The Pi transcript is unchanged. Pure parsing/sorting/export tests cover these behaviors; native save-picker interaction is not part of automated verification.
+
+### Code-block actions
+
+Completed assistant code blocks offer Save to project and, for PowerShell/Bash/Python fences, Run. Operations use the conversation's fixed target and working directory, without Pi/model involvement or extra confirmation. Save creates snippet.ext, snippet-2.ext, and so on using exclusive creation; unknown languages use .txt. Windows runs use directly discovered interpreters; Bash never implicitly selects WSL. WSL/SSH use the bundled Python 3 helper and existing target/SSH configuration, requiring the chosen interpreter on that target.
+
+Runs are noninteractive, with stdin closed, bounded inline output, elapsed time, exit status, Stop, output copy/expansion, and an explicit Add output to prompt action. No automatic dependency installation or prompt submission occurs. Snippet state belongs to the conversation and survives view changes; disposal cancels its operations. Stop terminates the owned local process tree or requests remote process-group termination; connection loss cannot guarantee immediate remote cancellation. Snippet writes participate in workspace activity coordination. Temporary run files are removed; Save to project files remain user-owned. New actions stay unavailable while the response is streaming.
+
+Verification: pure C# tests cover names, concurrent saves, interpreter arguments, state, output limits and cancellation. Python helper unit tests mock subprocesses and cover save/stdio/exit/Stop cleanup. No native UI or live WSL/SSH snippet checks have been performed.

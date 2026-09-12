@@ -7,6 +7,14 @@ namespace PiAgentGui.Controls;
 /// <summary>Coalesces streamed Markdown updates into native text controls.</summary>
 public sealed class MarkdownMessage : UserControl
 {
+    public static readonly DependencyProperty SnippetFactoryProperty = DependencyProperty.Register(nameof(SnippetFactory), typeof(Func<string, string, string, ViewModels.Conversations.SnippetViewModel>),
+        typeof(MarkdownMessage), new PropertyMetadata(null, (sender, _) => ((MarkdownMessage)sender).ResetActions()));
+    public Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? SnippetFactory
+    { get => (Func<string, string, string, ViewModels.Conversations.SnippetViewModel>?)GetValue(SnippetFactoryProperty); set => SetValue(SnippetFactoryProperty, value); }
+    public static readonly DependencyProperty SnippetsEnabledProperty = DependencyProperty.Register(nameof(SnippetsEnabled), typeof(bool),
+        typeof(MarkdownMessage), new PropertyMetadata(false, (sender, _) => ((MarkdownMessage)sender).ResetActions()));
+    public bool SnippetsEnabled { get => (bool)GetValue(SnippetsEnabledProperty); set => SetValue(SnippetsEnabledProperty, value); }
+    private void ResetActions() { rendered = null; blockSources.Clear(); panel.Children.Clear(); Schedule(); }
     public event EventHandler? ContentRendered;
     public static readonly DependencyProperty TextProperty = DependencyProperty.Register(nameof(Text), typeof(string),
         typeof(MarkdownMessage), new PropertyMetadata("", (sender, _) => ((MarkdownMessage)sender).Schedule()));
@@ -58,7 +66,7 @@ public sealed class MarkdownMessage : UserControl
                 blockSources[index] = signature;
                 continue;
             }
-            var element = MarkdownRenderer.RenderBlock(block);
+            var element = MarkdownRenderer.RenderBlock(block, SnippetsEnabled ? SnippetFactory : null);
             if (index < panel.Children.Count) { panel.Children[index] = element; blockSources[index] = signature; }
             else { panel.Children.Add(element); blockSources.Add(signature); }
         }
