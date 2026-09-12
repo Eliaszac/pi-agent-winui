@@ -1,6 +1,6 @@
 # Checkpoint extension investigation
 
-Read-only source review on 2026-09-12. No extension installed or executed. These findings describe upstream main as retrieved on that date, not a pinned or locally verified release. No implementation decision has been approved.
+Read-only source review on 2026-09-12. No extension installed or executed. These findings describe upstream main as retrieved on that date, not a pinned or locally verified release. This historical investigation predates the completed bundled implementation; see [CHECKPOINTS.md](../../CHECKPOINTS.md).
 
 ## Product requirement
 

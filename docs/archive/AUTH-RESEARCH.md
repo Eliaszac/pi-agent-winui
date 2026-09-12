@@ -1,3 +1,5 @@
+> Historical research, superseded by the implemented Providers surface. See [current architecture](../../ARCHITECTURE.md).
+
 # Provider authentication research
 
 Checked 2026-09-10 against current Pi documentation and upstream v0.85.1 source. The first Providers implementation now follows this research; see ARCHITECTURE.md for implemented scope and verification limits. No user credentials were read or changed during development.

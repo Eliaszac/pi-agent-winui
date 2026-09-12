@@ -1,5 +1,7 @@
 # Workspace checkpoints
 
+Status: done, 2026-09-12, as requested by the user. Includes deterministic revert, Undo revert, file-change summaries, Manage/Clear stored data, and conversation-deletion cleanup with checkpoint retention. Verification limitations are recorded below.
+
 Workspace checkpoints is an optional extension bundled with Pi desktop. Enable it in **Extensions → Workspace checkpoints → Manage**. It is disabled by default; the toggle takes effect before the next agent operation. No configuration-file editing or separate extension package installation is required.
 
 Manage also offers **Clear stored data** for This computer or a saved WSL/SSH target. After explicit confirmation it expires all stored checkpoints for the selected target user and removes their snapshot bytes. Project files, Pi conversations, and cached historical file summaries remain. Existing Revert/Undo becomes unavailable; reconnect conversations to refresh their status. Capture remains enabled if its toggle is on. Clearing refuses active captures and pending or partial recovery; finish or inspect those first. Clearing was unit-tested only in disposable storage; no real user data or SSH target was cleared.
@@ -56,6 +58,6 @@ External editors and detached processes cannot be fully excluded. Files are chec
 - Engine tests cover exact bytes, create/modify/delete, Undo, conflicts, unrelated work, overlapping sessions, backup failure, partial retry, interrupted-write reconciliation, retention, path/content validation, ignored files, scan failure, and Git index/history preservation.
 - Live Pi 0.85.1 probes passed on Windows and Ubuntu WSL, using disposable folders without model requests. The probe drives lifecycle callbacks through a test extension and exercises the real target transports; it is not a provider-driven end-to-end conversation test.
 - The native verification build launched and exposed its accessible window tree. Full dialog interaction remains unverified because the computer-use helper rejected input (`SendInput ... GetLastError=87`).
-- Linux SSH implementation uses the same engine and existing SSH transport. The user declined live SSH checks; real SSH and interrupted-connection acceptance remain unverified. Do not mark the feature release-ready before these checks and the native dialog flow pass.
+- Linux SSH implementation uses the same engine and existing SSH transport. The user declined live SSH checks; real SSH, interrupted-connection checks, and the native dialog flow remain unverified. The feature is marked done at the user's request; this does not represent completed release verification for those paths.
 
-The original acceptance plan is in [CHECKPOINT-PLAN.md](CHECKPOINT-PLAN.md); package reuse findings are in [CHECKPOINT-RESEARCH.md](CHECKPOINT-RESEARCH.md).
+The original acceptance plan is in [CHECKPOINT-PLAN.md](docs/archive/CHECKPOINT-PLAN.md); package reuse findings are in [CHECKPOINT-RESEARCH.md](docs/archive/CHECKPOINT-RESEARCH.md).

@@ -2,9 +2,9 @@
 
 ## Prerequisites
 
-Install and authenticate Pi separately before using the chat view. The GUI uses Pi's existing provider configuration and authentication; it does not collect or store API keys. Use a current Pi release matching the [RPC reference](https://pi.dev/docs/latest/rpc), including `agent_settled` and delta-only streaming events. An exact release has not yet been validated locally.
+Install Pi separately. Configure providers through the native Providers page or Pi's own setup. The GUI supports sign-in and masked API-key entry through a bundled Pi management integration; Pi owns credential storage. Use a current Pi release matching the [RPC reference](https://pi.dev/docs/latest/rpc), including `agent_settled` and delta-only streaming events. Pi 0.85.1 has been exercised in Windows and Ubuntu WSL extension probes; this does not establish compatibility with every release.
 
-The current [official quickstart](https://pi.dev/docs/latest/quickstart) documents:
+The [official quickstart](https://pi.dev/docs/latest/quickstart) provides installation guidance. The package used by this project is:
 
 ```powershell
 npm install -g --ignore-scripts @earendil-works/pi-coding-agent
@@ -12,7 +12,7 @@ npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
 Follow the [Windows setup guide](https://pi.dev/docs/latest/windows) for Node.js and Git Bash requirements. Authenticate through Pi's terminal `/login` flow or a provider's supported environment configuration. See [Pi usage](https://pi.dev/docs/latest/usage) for configuration and model selection. Restart Rider/the GUI after changing inherited environment variables.
 
-No installation, authentication, GUI launch, or Pi launch was performed during this implementation.
+Recorded verification includes Windows/WSL Pi extension probes and native preview launches. Provider login and complete native workflows require their own checks.
 
 ## Executable discovery
 
@@ -37,7 +37,7 @@ PI_GUI_PI_EXECUTABLE=C:\absolute\path\to\pi-coding-agent\dist\cli.js
 PI_GUI_NODE_EXECUTABLE=C:\Program Files\nodejs\node.exe
 ```
 
-Use an actual `.exe` or `dist\cli.js`, not `pi.cmd`/PowerShell wrappers. The application uses argument arrays and never invokes a command shell to start Pi. Opening a conversation starts Pi automatically behind a local loading state. A missing executable, unavailable project directory, locked session, or runtime failure appears in the affected conversation with a Retry action.
+Use an actual `.exe` or JavaScript CLI entry point, not `pi.cmd`/PowerShell wrappers. The application uses argument arrays and never invokes a command shell to start Pi. Opening a conversation starts Pi automatically behind a local loading state. A missing executable, unavailable project directory, locked session, or runtime failure appears in the affected conversation with a Retry action.
 
 ## Storage and ownership
 
@@ -45,10 +45,10 @@ Use an actual `.exe` or `dist\cli.js`, not `pi.cmd`/PowerShell wrappers. The app
 - Pi session: `%LOCALAPPDATA%\PiAgentGui\sessions\<project-guid-without-hyphens>\<conversation-guid-without-hyphens>.jsonl`.
 - Session lease: the same session path with `.lock` appended. The file can remain after shutdown; the OS lock, not its presence, indicates ownership.
 - Pi is the only writer of session contents. See the [upstream session manager](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/core/session-manager.ts) for explicit-path session creation/resumption. An empty conversation can remain catalog-only until Pi persists a turn.
-- Conversation processes in the same project use the same working folder. They do not get isolated checkouts automatically.
+- Conversation processes using the same execution target folder share that folder. Different project targets may have separate checkouts. They do not get isolated checkouts automatically.
 - Selecting another conversation leaves the previous process running. The interface does not expose manual connection management. Closing the main window closes all processes owned by that window.
 
-## Live smoke test still required
+## Manual verification checklist
 
 The Extensions page offers global setup for `@georgedong32/permission-modes@2.6.3` as a preview integration. Follow its modal instructions, finish active work, then restart the GUI. No installation is performed automatically. Only this pinned npm version is recognized initially. Existing extension model profiles and rules still apply; these modes are not an OS sandbox.
 
@@ -66,7 +66,7 @@ Ordinary builds and fake-transport unit tests do not validate these live behavio
 
 ## Automatic titles
 
-Open Extensions → Automatic titles → Setup instructions. Install globally with `pi install npm:pi-auto-session-name@0.1.1`, configure `~/.pi/agent/extensions/auto-session-name.json` to an available authenticated model (for this setup: `{"provider":"openai-codex","model":"gpt-5.5"}`), then restart. The extension's default naming model is separate from the chat model. New conversations can be automatically named; legacy and manually renamed titles are protected. Test naming after a first run, rename during naming, and restart to verify protection. No install or provider request was run during implementation.
+Open Extensions → Automatic titles and its setup dialog. Install globally with `pi install npm:pi-auto-session-name@0.1.1`, configure `~/.pi/agent/extensions/auto-session-name.json` to an available authenticated model (for this setup: `{"provider":"openai-codex","model":"gpt-5.5"}`), then restart. The extension's default naming model is separate from the chat model. New conversations can be automatically named; legacy and manually renamed titles are protected. Test naming after a first run, rename during naming, and restart to verify protection. Automatic naming makes a separate provider request when enabled.
 
 ## Approval classifier model
 
@@ -79,3 +79,7 @@ Use Ask for manual approvals, or configure classifier.model in that file to an a
 
 Restart the GUI after upgrading to load PiExtensions/write-diff.ts into each Pi process. It wraps Pi's native local write operation to capture a unified patch and persist it in tool-result details; approval hooks still run. Test both a new file and an overwrite in a disposable project, then reopen the conversation to verify the same diff survives. Old sessions without captured write metadata cannot recover the previous file contents. Binary/unreadable files and previews over 256 KiB or 5,000 lines per side show a diff-unavailable notice.
 
+
+## Checkpoints and deletion
+
+[Workspace checkpoints](CHECKPOINTS.md) is bundled and disabled by default. Enable it from Extensions → Workspace checkpoints → Manage; the same dialog can clear target snapshot data. Deleting conversations removes their saved sessions (including embedded screenshots), settings, and unused checkpoint data. Offline target cleanup retries later; project files and independent conversation copies remain.

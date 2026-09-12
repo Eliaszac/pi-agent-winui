@@ -38,4 +38,8 @@ There is no background remote job supervisor. Cancellation attempts to stop the 
 - Create a WSL-first or SSH-first project without a local checkout; test cloning into a new destination using your existing Git authentication.
 - Try an unavailable distribution/SSH host and verify a clear error with no local tool execution.
 
-Implementation verification used builds, unit tests, and Pi against an isolated Ubuntu WSL folder without model calls. SSH tests cover temporary Windows Credential Manager entries and the explicitly headless helper, which exits before WinUI initialization. The GUI was not launched. A real SSH server and the native UI still require manual verification.
+Implementation verification used builds, unit tests, and Pi against an isolated Ubuntu WSL folder without model calls. SSH tests cover temporary Windows Credential Manager entries and the explicitly headless helper, which exits before WinUI initialization. Later Windows/WSL checkpoint probes and native preview launches also passed. Live SSH verification was declined by the user; real SSH connectivity and complete native target workflows remain unverified.
+
+## Optional checkpoints
+
+The bundled [Workspace checkpoints](CHECKPOINTS.md) extension supports all three target types from its initial implementation. It additionally requires Python 3 and Git on the target. Capture, restore bytes, and cleanup stay on that target; Pi history remains on Windows.

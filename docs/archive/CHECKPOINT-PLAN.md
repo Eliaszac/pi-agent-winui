@@ -1,6 +1,6 @@
 # Optional workspace checkpoints and safe revert
 
-Status: implementation authorized and present, 2026-09-12; final acceptance remains open. Windows and WSL live extension probes pass. Live SSH verification was declined by the user, and native dialog automation could not complete because the computer-use helper rejected input. See CHECKPOINTS.md for actual implementation decisions and verification scope. The sections below retain the agreed acceptance criteria.
+Status: done, 2026-09-12, as requested by the user. Windows and WSL live extension probes pass. Live SSH verification was declined by the user, and native dialog automation could not complete because the computer-use helper rejected input. These verification limitations remain recorded; completion does not imply those checks passed. See [CHECKPOINTS.md](../../CHECKPOINTS.md) for actual implementation decisions and verification scope. The sections below retain the original implementation and acceptance plan.
 
 ## Intended behavior
 

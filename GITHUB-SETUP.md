@@ -35,7 +35,7 @@ In the GitHub App settings, choose **Install App**, choose the account, then gra
 - When connected with no matching open PR, neither Connect nor Open PR is displayed.
 - Right-click the conversation header for **Refresh pull request**, **GitHub repository access**, or **Disconnect GitHub**. Disconnect removes the local credential; revoke the authorization in GitHub settings if you also want to revoke it server-side.
 - Local branch metadata is checked every 15 seconds while the page is loaded. GitHub results are checked at most once per minute per project, except branch changes or an explicit refresh.
-- All conversations currently use their project's one working folder and therefore share its checked-out branch. This does not create conversation-specific branches or worktrees, or persist branch associations in the conversation catalog.
+- GitHub PR discovery is currently local-only. Conversations sharing a local target folder share its checked-out branch; separate targets can have different checkouts. This does not create conversation-specific branches or worktrees, or persist branch associations in the conversation catalog.
 - Supports github.com SSH/HTTPS remotes, upstream tracking branches (origin/current branch fallback), and fork PRs against an accessible parent repository. Detached HEAD, non-Git folders and other Git hosts do not show a PR. Multiple matches choose the most recently updated PR in the parent repository first, then the source repository.
 
 ## Credential lifecycle

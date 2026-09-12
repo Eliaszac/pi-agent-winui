@@ -4,13 +4,13 @@
 
 - 2026-09-11: Composer toolbar has no plus/attachment action or approval glyph. Selectors read `Approval: <mode>` and `Effort: <level>`. Selector widths must remain stable when dropdowns open.
 
-- 2026-09-11: Composer follows the supplied compact chat reference: one rounded neutral surface, borderless multiline draft above an internal toolbar, plus/file action and approval left, model/effort and neutral circular Send/Stop right. Narrow widths wrap the toolbar. Speech input is explicitly deferred.
+- Composer uses one rounded neutral surface with a borderless multiline draft and internal toolbar. Approval, model, and effort stay grouped on the left; Send/Stop stays on the right. There is no plus/attachment toolbar action. Speech input is deferred.
 
 A native Windows frontend for Pi that organizes coding conversations by named working directory.
 
 ## Primary user
 
-A developer working with local source folders on a Windows desktop or laptop.
+A developer using a Windows desktop with Local Windows, WSL, or Linux SSH workspaces.
 
 ## Three to five principles
 
@@ -27,7 +27,7 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 - Manual theme selection.
 - Project scaffolding or Git initialization.
-- Rich Markdown/code editors, attachments, advanced session browsing, and multiple-window coordination beyond session locking.
+- Advanced session-tree browsing and a full standalone code editor. Markdown rendering, screenshot attachments, file previews, and coordinated app-owned workspace operations are implemented.
 
 ## Learned constraints
 
@@ -57,11 +57,8 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 - 2026-09-10: PR preview is now live integration. Show GitHub-logo Connect to GitHub in the chat header only when signed out; when connected, show Open PR only for a detected open PR. Use actual PR numbers in sidebar conversation metadata and context-menu navigation. Local project working-folder branch is shared by conversations. GitHub login uses a code-and-browser dialog, credential storage and automatic token refresh. Header context menu exposes refresh, repository access and disconnect without adding a full source-control panel.
 
-- 2026-09-10: PR UI starts as an explicitly hardcoded styling preview: Open PR beside Open in in the conversation header, subtle PR number beneath sidebar conversation titles, and an Open PR context-menu entry. Preview uses PR #123 and has no lookup, navigation, authentication or persisted metadata. Future scope is branch-based open-PR detection plus a possible Git CLI diff/commit panel.
 
-- 2026-09-10: Model and approval selectors share one row with Send/Stop below the composer. Auto is the default approval mode when the supported extension has no saved mode; preserve existing conversation choices.
 
-- 2026-09-10: Hide extension setup once the supported version is installed. Refresh is a tooltip-labeled icon at the top right of each card.
 
 - 2026-09-10: Extensions use cards in a responsive two-to-three-column grid, falling back to one column in narrow windows. No Back to workspace button; sidebar conversation selection returns to chat.
 
@@ -70,10 +67,10 @@ The user can register a named folder, reopen it after restarting, and work in mu
 - 2026-09-10: Conversation composer uses Enter to send and Ctrl+Enter for a newline without instructional copy. Keep the title/path header compact without Ready/provider/model text above the transcript. Model, Effort, and Approval share one row below the input with labels inside each dropdown, such as Effort: medium; no separate label row. A single icon action inside the input switches from an upward send arrow to a stop square while running; never show Send alongside Stop. Reserve text space and provide tooltips/accessibility names. Effort is native Pi functionality, conversation-specific, and defaults to low for new sessions when supported; preserve saved choices and list only the selected model's supported levels. Fast mode remains deferred.
 
 - 2026-09-10: User approved sidebar management but rejected the duplicate + beside Projects. Keep that heading plain and use the existing New project button.
-- 2026-09-10: Complete sidebar actions via context menus: conversation inline rename/delete/settle/restore and project rename/delete. Use a subtle expandable Settled — (count) group below each project's active conversations, initially collapsed. Settled is a user organization flag, separate from runtime completion. Add a new-project + beside the Projects heading. Inline rename uses Enter/blur to save and Escape to cancel.
+- 2026-09-10: Complete sidebar actions via context menus: conversation inline rename/delete/settle/restore and project rename/delete. Use a subtle expandable Settled — (count) group below each project's active conversations, initially collapsed. Settled is a user organization flag, separate from runtime completion. Inline rename uses Enter/blur to save and Escape to cancel.
 - 2026-09-10: Use Pi's official compact badge for the native window icon. App title is Pi desktop; append the selected conversation title with an em dash. Keep native window controls. Install Pi screen was approved and its forced preview removed.
 - 2026-09-10: Check for Pi when the app starts. If unavailable, replace the workspace with an Install Pi screen linking to the official website and explaining that the app must be restarted after installation. Use native system-theme styling.
-- 2026-09-10: Connection management should be invisible in the normal workflow. Automatically prepare a selected conversation behind a local loading state; reveal transcript/composer together, keep sidebar and startup extension questions usable, and offer Retry only on failure. Keep active runs inline with Stop. Defer the model dropdown until the basic conversation loop is complete.
+- 2026-09-10: Connection management should be invisible in the normal workflow. Automatically prepare a selected conversation behind a local loading state; reveal transcript/composer together, keep sidebar and startup extension questions usable, and offer Retry only on failure. Keep active runs inline with Stop.
 - 2026-09-10: User explicitly requires more than one active conversation in the first runtime pass. Keep background runs alive on selection changes; each conversation owns its composer, messages, questions, and Stop action. Show background activity in the sidebar.
 - 2026-09-10: Native window chrome must follow the system app theme as well as the XAML content; a light title bar over a dark workspace is inconsistent.
 
@@ -100,13 +97,20 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 - 2026-09-10: Slash commands open at a word boundary anywhere in the composer, not only at its beginning. Show a compact themed list above the input with command descriptions, origin labels, keyboard selection, and filtering. Preserve surrounding draft text when running actions. Pi skills/templates use a leading command in the draft because Pi requires that for expansion.
 
-- 2026-09-10: Fork and Clone are compact icon buttons beside Copy under the latest completed agent response only; hide them during runs. Fork opens an independent continuation, Clone adds the copy to the same project and keeps the original selected. Keep hover cursors, tooltips, accessible names, and theme-aware native styling. Providers will have a separate design; omit import, session settings, and branch navigation.
+- 2026-09-10: Fork and Clone are compact icon buttons beside Copy under the latest completed agent response only; hide them during runs. Fork opens an independent continuation, Clone adds the copy to the same project and keeps the original selected. Keep hover cursors, tooltips, accessible names, and theme-aware native styling. Providers has its own global page; omit import, session settings, and branch navigation.
 
 - 2026-09-10: Providers is a global page matching the Extensions card grid, reachable above Extensions in both sidebar states. Show configured providers first, configuration/source, model details, and Set up/Manage. Use native modals with masked secrets for sign-in, keys, device codes, and setup links. No back button or forced conversation selection; omit account/quota values Pi does not expose.
 
-- 2026-09-10: Show whole-run reported tokens and elapsed time beside the final response action buttons only once the run finishes. Use muted 12px text, seconds below one minute, then minutes and seconds. Preserve existing response controls and avoid a live counter or extra response header.
+- 2026-09-10: Show whole-run reported tokens and elapsed time beside the final response action buttons only once the run finishes. Use muted 12px text, seconds below one minute, then minutes and seconds. Preserve existing response controls and avoid an extra response header. Processing has its own live elapsed label.
 
 - 2026-09-12: Both provider navigation in the model dropdown and Providers cards prioritize Anthropic, OpenAI, OpenAI Codex, then Ollama. Favorites stays first in the dropdown; other providers retain their existing relative ordering.
 - 2026-09-12: Clear the composer immediately on Send, before RPC acknowledgement or state refresh. Restore failed submissions without overwriting a newer draft.
-- 2026-09-12: Composer send/stop vector fills inherit the button foreground rather than hardcoded white, preserving contrast on inverted dark-mode button backgrounds and disabled states.
 - 2026-09-12 correction: Inherited composer icon Foreground did not resolve contrast in the live app. Explicitly use black send/stop shapes in dark mode (white button), and white shapes in light mode (dark button); update on ActualThemeChanged.
+
+
+## Current completion and data controls
+
+- Workspace checkpoints is done and opt-in. Its Extensions button reads Manage; management includes Clear stored data with confirmation.
+- Revert and Undo are embedded actions in completed change-summary cards. Show created, modified, and deleted files. Ask agent to revert is removed.
+- Hide the empty-conversation prompt while processing. Show elapsed seconds, then minutes/seconds after one minute.
+- Conversation deletion explains removal of saved messages/screenshots and restore data while preserving project files. Snapshot retention and unavailable recovery must remain truthful.
