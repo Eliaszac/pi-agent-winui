@@ -33,6 +33,16 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator, Fun
         if (installation.CliPath is not null) info.ArgumentList.Add(installation.CliPath);
         info.ArgumentList.Add("--mode");
         info.ArgumentList.Add("rpc");
+        if (request.ManageMcpServer is { } server)
+        {
+            if (string.IsNullOrWhiteSpace(server) || server.Length > 128 || server.Any(char.IsControl)) throw new ArgumentException("Invalid MCP server name.");
+            foreach (var flag in new[] { "--no-session", "--no-tools", "--no-extensions", "--no-skills", "--no-prompt-templates", "--no-context-files" }) info.ArgumentList.Add(flag);
+            info.Environment["PI_GUI_MCP_SERVER"] = server;
+            info.Environment["PI_GUI_MCP_AGENT_DIR"] = PermissionModesSupport.AgentDirectory;
+            info.ArgumentList.Add("--extension");
+            info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "PiExtensions", "mcp-management.ts"));
+            return info;
+        }
         if (remote)
         {
             info.Environment["PI_GUI_EXECUTION_TARGET"] = System.Text.Json.JsonSerializer.Serialize(request.Target, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });

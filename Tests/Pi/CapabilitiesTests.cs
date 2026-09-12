@@ -60,7 +60,7 @@ public sealed class CapabilitiesTests
         var pending = new TaskCompletionSource<JsonElement>();
         firstSession.OperationHandler = (_, _) => pending.Task;
         secondSession.OperationHandler = (_, _) => Task.FromResult(JsonDocument.Parse("""{"commands":[{"name":"skill:second","source":"skill"}]}""").RootElement.Clone());
-        var panel = new CapabilitiesPanelViewModel(() => ("Installed", false));
+        var panel = new CapabilitiesPanelViewModel(() => ("Installed", false), () => Task.FromResult<IReadOnlyList<McpServerStatus>>([]));
         panel.Select(first);
         var oldRead = panel.RefreshAsync();
         panel.Select(second);
@@ -73,9 +73,37 @@ public sealed class CapabilitiesTests
         Assert.AreEqual(0, secondSession.Sent.Count);
         secondSession.Emit(new() { McpStatus = new([new("docs", "connected", 3, 1)]) }); dispatcher.Drain();
         Assert.AreEqual("Connected", panel.Servers.Single().Status);
+        panel.ReportRemoved("docs");
+        Assert.AreEqual(0, panel.Servers.Count);
+        Assert.IsFalse(panel.KnownServerNames.Contains("docs"));
+        await panel.RefreshAsync();
+        Assert.AreEqual(0, panel.Servers.Count);
         await secondSession.DisconnectAsync(); dispatcher.Drain();
         Assert.AreEqual(0, panel.Servers.Count);
         Assert.IsNull(second.McpStatus);
         Assert.AreEqual(0, panel.Skills.Count);
+    }
+
+    [TestMethod]
+    public async Task SavedServersAppearWithoutAConnectedConversationAndRefreshAfterAdding()
+    {
+        IReadOnlyList<McpServerStatus> saved = [new("notes", "configured", 0, null)];
+        var panel = new CapabilitiesPanelViewModel(readConfigured: () => Task.FromResult(saved));
+        await panel.RefreshAsync();
+        Assert.AreEqual("Configured · restart to load", panel.Servers.Single().Status);
+        saved = [.. saved, new("issues", "disabled", 0, null)];
+        await panel.RefreshAsync();
+        Assert.AreEqual(2, panel.Servers.Count);
+        panel.Search = "notes";
+        Assert.AreEqual(1, panel.Servers.Count);
+        Assert.AreEqual(2, panel.KnownServerNames.Count());
+    }
+
+    [TestMethod]
+    public void ErrorDetailIsPreservedAndCredentialsAreRedacted()
+    {
+        var snapshot = CapabilityParser.Mcp("""{"version":1,"servers":[{"name":"notes","status":"failed","toolCount":0,"error":"HTTP 401 Authorization: Bearer secret-value"}]}""");
+        StringAssert.Contains(snapshot!.Servers.Single().Explanation, "HTTP 401");
+        Assert.IsFalse(snapshot.Servers.Single().Explanation.Contains("secret-value"));
     }
 }

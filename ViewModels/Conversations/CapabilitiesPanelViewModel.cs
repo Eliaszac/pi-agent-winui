@@ -9,8 +9,21 @@ namespace PiAgentGui.ViewModels.Conversations;
 public sealed class CapabilitiesPanelViewModel : ObservableObject
 {
     private readonly Func<(string Status, bool NeedsSetup)> installationState;
-    public CapabilitiesPanelViewModel(Func<(string Status, bool NeedsSetup)>? installationState = null)
-        => this.installationState = installationState ?? (() => McpAdapterSupport.GetInstallationState());
+    private readonly Func<Task<IReadOnlyList<McpServerStatus>>> readConfigured;
+    private IReadOnlyList<McpServerStatus> configured = [];
+    private readonly HashSet<string> removedServers = new(StringComparer.Ordinal);
+    public void ReportRemoved(string name)
+    {
+        removedServers.Add(name);
+        configured = configured.Where(server => server.Name != name).ToArray();
+        NotifyLists();
+    }
+    public CapabilitiesPanelViewModel(Func<(string Status, bool NeedsSetup)>? installationState = null,
+        Func<Task<IReadOnlyList<McpServerStatus>>>? readConfigured = null)
+    {
+        this.installationState = installationState ?? (() => McpAdapterSupport.GetInstallationState());
+        this.readConfigured = readConfigured ?? new Services.Pi.McpConfiguredInventory(PermissionModesSupport.AgentDirectory).ReadAsync;
+    }
     private ConversationViewModel? owner;
     private int revision;
     private bool isOpen;
@@ -28,15 +41,16 @@ public sealed class CapabilitiesPanelViewModel : ObservableObject
     public bool HasMessage => Message.Length > 0;
     public bool IsLoading { get => loading; private set => SetProperty(ref loading, value); }
     public IReadOnlyList<AvailableSkill> Skills => skills.Where(item => Matches(item.Name) || Matches(item.Description)).ToArray();
-    public IReadOnlyList<McpServerStatus> Servers => owner?.IsConnected == true
-        ? (owner.McpStatus?.Servers ?? []).Where(item => Matches(item.Name)).ToArray() : [];
+    public IReadOnlyList<McpServerStatus> Servers => (owner?.IsConnected == true ? owner.McpStatus?.Servers ?? [] : [])
+        .Concat(configured).DistinctBy(item => item.Name).Where(item => !removedServers.Contains(item.Name) && Matches(item.Name))
+        .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
     public bool HasNoSkills => !IsLoading && Skills.Count == 0;
-    public IEnumerable<string> KnownServerNames => owner?.McpStatus?.Servers.Select(server => server.Name) ?? [];
+    public IEnumerable<string> KnownServerNames => configured.Select(server => server.Name).Concat(owner?.McpStatus?.Servers.Select(server => server.Name) ?? []).Where(name => !removedServers.Contains(name)).Distinct();
     public bool HasNoServers => Servers.Count == 0;
     public bool ShowMcpSetup => owner?.McpStatus is null;
     public bool HasMcpMessage => McpMessage.Length > 0;
     public string McpMessage => owner?.IsConnected != true ? "Conversation disconnected · server status unavailable."
-        : owner.McpStatus is not null ? (owner.McpStatus.Servers.Count == 0 ? "No MCP servers configured in this conversation."
+        : owner.McpStatus is not null ? (owner.McpStatus.Servers.Count == 0 && configured.Count == 0 ? "No MCP servers configured in this conversation."
             : Servers.Count == 0 ? "No MCP servers match this view." : "")
         : !adapterLoaded ? "MCP Adapter is not loaded in this conversation. Install it, then restart Pi desktop."
         : adapterSetup;
@@ -80,12 +94,15 @@ public sealed class CapabilitiesPanelViewModel : ObservableObject
     public async Task RefreshAsync()
     {
         var current = owner;
-        if (current?.IsConnected != true) { NotifyLists(); return; }
         var request = ++revision;
         IsLoading = true;
         Message = "";
         try
         {
+            try { var saved = await readConfigured(); if (request != revision) return; configured = saved; removedServers.ExceptWith(saved.Select(server => server.Name)); }
+            catch (Exception) { if (request == revision) Message = "Couldn't read the saved MCP configuration. Check mcp.json for invalid JSON or file access errors."; }
+            NotifyLists();
+            if (current?.IsConnected != true) return;
             var data = await current.ReadCapabilitiesAsync();
             if (request != revision || !ReferenceEquals(owner, current)) return;
             var commands = PiJson.Field(data, "commands");

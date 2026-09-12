@@ -116,7 +116,11 @@ public partial class App : Application
         var scripts = new ViewModels.Projects.ProjectScriptsViewModel(repository, terminals);
         var agentDirectory = PermissionModesSupport.AgentDirectory;
         var imports = new CapabilityImportServices(new GlobalSkillRegistration(agentDirectory),
-            new PiPackageInstaller(locator, agentDirectory, githubLifetime.Token), new McpConfigImporter(agentDirectory));
+            new PiPackageInstaller(locator, agentDirectory, githubLifetime.Token), new McpConfigImporter(agentDirectory),
+            new McpSetupService(agentDirectory), new McpTokenStore(locator, agentDirectory,
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "mcp-management"), githubLifetime.Token),
+            new McpConnectionService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "mcp-management"), githubLifetime.Token));
         window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions);
     }
 

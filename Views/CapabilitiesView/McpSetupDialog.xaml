@@ -1,0 +1,37 @@
+<controls:ActionContentDialog x:Class="PiAgentGui.Views.McpSetupDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls"
+    CloseButtonText="Close" PrimaryButtonText="Connect" SecondaryButtonText="Save only" DefaultButton="Primary">
+    <ScrollViewer x:Name="Scroller" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="16">
+            <TextBlock x:Name="Description" TextWrapping="Wrap" FontSize="14"/>
+            <TextBlock Text="{Binding Endpoint}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <StackPanel Spacing="8" Visibility="{Binding IsObsidianSetup, Converter={StaticResource BooleanToVisibility}}">
+                <TextBox Header="Vault folder" Text="{Binding Folder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Choose your Obsidian vault" IsEnabled="{Binding CanAct}"/>
+                <controls:ActionButton Content="Browse folders" Click="OnBrowse" HorizontalAlignment="Left" IsEnabled="{Binding CanAct}"/>
+                <TextBlock Text="Choose a folder containing .obsidian. The server can read and update this vault. On first connection, npx downloads obsidian-mcp 2.x." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+            <controls:ActionComboBox x:Name="Authentication" Header="Authentication" SelectedIndex="{Binding AuthIndex, Mode=TwoWay}"
+                HorizontalAlignment="Stretch" IsEnabled="{Binding CanAct}" Visibility="{Binding IsHttp, Converter={StaticResource BooleanToVisibility}}"/>
+            <PasswordBox x:Name="Secret" Header="API token" PlaceholderText="Paste a token, or leave blank to keep existing credentials"
+                PasswordRevealMode="Hidden" MaxLength="16384" IsEnabled="{Binding CanAct}" Visibility="{Binding NeedsToken, Converter={StaticResource BooleanToVisibility}}"/>
+            <TextBlock Text="{Binding AuthHelp}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock Text="Changing the authentication method replaces the saved Authorization and bearer-token settings for this server." FontSize="11" TextWrapping="Wrap"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{Binding IsHttp, Converter={StaticResource BooleanToVisibility}}"/>
+            <StackPanel Spacing="8">
+                <ProgressBar IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}"/>
+                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontSize="12" AutomationProperties.LiveSetting="Polite"/>
+                <controls:ActionButton Content="Cancel connection" Click="OnCancelConnection" HorizontalAlignment="Left"
+                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}"/>
+            </StackPanel>
+            <StackPanel x:Name="CallbackPanel" Spacing="8" Visibility="Collapsed">
+                <TextBlock Text="Finish sign-in in your browser. If the browser cannot return automatically, paste its full callback URL below." TextWrapping="Wrap" FontSize="12"/>
+                <HyperlinkButton x:Name="AuthorizationLink" Content="Open sign-in page" HorizontalAlignment="Left"/>
+                <PasswordBox x:Name="Callback" Header="Callback URL · only if needed" PasswordRevealMode="Hidden"/>
+                <controls:ActionButton Content="Complete sign-in" Click="OnCompleteSignIn" HorizontalAlignment="Left"/>
+            </StackPanel>
+            <HyperlinkButton x:Name="Documentation" Content="Documentation" HorizontalAlignment="Left"/>
+        </StackPanel>
+    </ScrollViewer>
+</controls:ActionContentDialog>

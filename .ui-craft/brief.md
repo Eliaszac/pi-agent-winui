@@ -114,3 +114,6 @@ The user can register a named folder, reopen it after restarting, and work in mu
 - Revert and Undo are embedded actions in completed change-summary cards. Show created, modified, and deleted files. Ask agent to revert is removed.
 - Hide the empty-conversation prompt while processing. Show elapsed seconds, then minutes/seconds after one minute.
 - Conversation deletion explains removal of saved messages/screenshots and restore data while preserving project files. Snapshot retention and unavailable recovery must remain truthful.
+
+- MCP Quick integrations opens a native card list from the MCP panel. Each card includes a logo, name, description, publisher, Documentation, and Add. Add opens native authentication setup with Save only and an isolated connection check. Configured cards offer Manage; MCP inventory cards group connection, JSON editing, and confirmed removal in a Manage menu. Saving alone never claims connectivity. Editing/removal preserve unrelated definitions and reject concurrent changes.
+- MCP inventory includes saved global definitions before runtime loading and while disconnected. Show configured/disabled/live states truthfully and make available error details selectable. Obsidian quick setup chooses a vault for a local stdio server.

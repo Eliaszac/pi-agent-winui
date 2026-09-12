@@ -1,0 +1,44 @@
+<controls:ActionContentDialog
+    x:Class="PiAgentGui.Views.QuickIntegrationsDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls"
+    xmlns:views="using:PiAgentGui.Views"
+    Title="Quick integrations" CloseButtonText="Close" DefaultButton="Close">
+    <Grid x:Name="Body" RowSpacing="16">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <StackPanel Spacing="6">
+            <TextBlock Text="Connect your tools to Pi." FontSize="14" TextWrapping="Wrap"/>
+            <TextBlock Text="Choose an integration to review its configuration. Authentication may be required after adding it."
+                FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{x:Bind Integrations}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="views:QuickIntegration">
+                        <Border Padding="16" Margin="0,0,4,8" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                            <Grid ColumnSpacing="12" RowSpacing="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <Image Source="{x:Bind IconPath}" Width="26" Height="26" VerticalAlignment="Top" AutomationProperties.AccessibilityView="Raw"/>
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <TextBlock Text="{x:Bind Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{x:Bind Description}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{x:Bind Publisher}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <Grid Grid.Row="1" Grid.Column="1">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <HyperlinkButton Content="Documentation" NavigateUri="{x:Bind Documentation}" FontSize="12" Padding="0,6" HorizontalAlignment="Left"
+                                        AutomationProperties.Name="{x:Bind DocumentationLabel}"/>
+                                    <controls:ActionButton Grid.Column="1" Content="{x:Bind ActionLabel}" Click="OnAdd" Tag="{x:Bind}" MinWidth="64" FontSize="12"
+                                        AutomationProperties.Name="{x:Bind AddLabel}"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</controls:ActionContentDialog>

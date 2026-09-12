@@ -16,12 +16,13 @@ public sealed class McpImportDialog : ActionContentDialog
     private readonly ComboBox mode = new ActionComboBox { ItemsSource = new[] { "Enter details", "Import JSON" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
     public bool Saved { get; private set; }
 
-    public McpImportDialog(McpConfigImporter importer, IEnumerable<string> runtimeNames)
+    public McpImportDialog(McpConfigImporter importer, IEnumerable<string> runtimeNames, string? initialJson = null, string? guidance = null)
     {
         Title = "Add MCP servers globally"; PrimaryButtonText = "Preview"; CloseButtonText = "Cancel";
         var names = runtimeNames.ToArray();
         var body = new StackPanel { Spacing = 12 };
         body.Children.Add(new TextBlock { Text = "Add a server globally, then restart Pi desktop to load it. Existing server names are preserved.", TextWrapping = TextWrapping.Wrap });
+        if (guidance is not null) body.Children.Add(new TextBlock { Text = guidance, FontSize = 12, TextWrapping = TextWrapping.Wrap });
         var browse = new ActionButton { Content = "Choose JSON file" };
         var import = new StackPanel { Spacing = 12, Visibility = Visibility.Collapsed };
         import.Children.Add(browse); import.Children.Add(json);
@@ -59,6 +60,7 @@ public sealed class McpImportDialog : ActionContentDialog
             catch (Exception exception) { status.Text = exception is ArgumentException ? exception.Message : "Couldn't read the JSON file."; }
         };
         json.TextChanged += (_, _) => ResetPreview();
+        if (initialJson is not null) { mode.SelectedIndex = 1; json.Text = initialJson; }
         Closing += (_, args) => { if (busy) args.Cancel = true; };
         PrimaryButtonClick += async (_, args) =>
         {

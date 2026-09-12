@@ -23,10 +23,10 @@ public sealed class ProcessPiTransport(PiProcessStartInfoFactory startInfoFactor
         ObjectDisposedException.ThrowIf(disposed != 0, this);
         if (process is not null) throw new InvalidOperationException("Pi is already started.");
         var info = startInfoFactory.Create(request);
-        if (!request.ManageProviders) Directory.CreateDirectory(Path.GetDirectoryName(request.SessionFile)!);
+        if (!request.ManageProviders && request.ManageMcpServer is null) Directory.CreateDirectory(Path.GetDirectoryName(request.SessionFile)!);
         try
         {
-            try { if (!request.ManageProviders) sessionLease = new FileStream(request.SessionFile + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+            try { if (!request.ManageProviders && request.ManageMcpServer is null) sessionLease = new FileStream(request.SessionFile + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
             catch (IOException exception) { throw new IOException("This session is in use by another app window, or its storage is unavailable. Disconnect it there before retrying.", exception); }
             process = new Process { StartInfo = info };
             if (!process.Start()) throw new IOException("Pi could not start.");

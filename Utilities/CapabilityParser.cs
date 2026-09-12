@@ -45,7 +45,8 @@ public static class CapabilityParser
                 if (!PiJson.Field(item, "toolCount").TryGetInt32(out var tools) || tools < 0) return null;
                 var resource = PiJson.Field(item, "resourceCount");
                 int? resources = resource.ValueKind == JsonValueKind.Number && resource.TryGetInt32(out var count) && count >= 0 ? count : null;
-                rows.Add(new(name, state, tools, resources));
+                var error = PiJson.Text(item, "error");
+                rows.Add(new(name, state, tools, resources, error.Length == 0 ? null : ConversationErrors.Describe(error).Message));
             }
             return new(rows.DistinctBy(row => row.Name).OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase).ToArray());
         }

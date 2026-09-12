@@ -67,8 +67,11 @@
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                     <TextBlock Text="{Binding McpMessage}" FontSize="12" Margin="8,4,8,12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Visibility="{Binding HasMcpMessage, Converter={StaticResource BooleanToVisibility}}"/>
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="8,0,8,12">
+                    <StackPanel Grid.Row="1" Spacing="6" Margin="8,0,8,12">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
                     <controls:ActionButton Content="Add server" Click="OnImportMcp" FontSize="12"/>
+                    <controls:ActionButton Content="Quick integrations" Click="OnQuickIntegrations" FontSize="12"/>
+                    </StackPanel>
                     <controls:ActionButton Content="MCP Adapter setup" Click="OnSetup" HorizontalAlignment="Left" FontSize="12"
                         Visibility="{Binding ShowMcpSetup, Converter={StaticResource BooleanToVisibility}}"/>
                     </StackPanel>
@@ -81,11 +84,23 @@
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="{x:Bind Name}" FontSize="12" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{x:Bind Status}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="{x:Bind Error}" FontSize="11" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}" Visibility="{x:Bind HasError, Converter={StaticResource BooleanToVisibility}}"/>
                                     </StackPanel>
                                 </Expander.Header>
                                 <StackPanel Spacing="6">
                                     <TextBlock Text="{x:Bind Counts}" FontSize="11"/>
-                                    <TextBlock Text="{x:Bind Explanation}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{x:Bind Explanation}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <controls:ActionButton Content="Manage" HorizontalAlignment="Left" FontSize="12">
+                                        <controls:ActionButton.Flyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Connection and authentication" Tag="{x:Bind Name}" Click="OnManageMcp"/>
+                                                <MenuFlyoutItem Text="Edit configuration" Tag="{x:Bind Name}" Click="OnEditMcp"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Remove server…" Tag="{x:Bind Name}" Click="OnRemoveMcp"/>
+                                            </MenuFlyout>
+                                        </controls:ActionButton.Flyout>
+                                    </controls:ActionButton>
                                 </StackPanel>
                             </Expander>
                         </DataTemplate></ListView.ItemTemplate>
