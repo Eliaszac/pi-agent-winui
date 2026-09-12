@@ -15,6 +15,10 @@
   </ItemGroup>
   <!-- Compile the UI-independent production files directly; no WinUI runtime is needed. -->
   <ItemGroup>
+    <Compile Include="../Models/Docker/*.cs" Link="Production/Models/Docker/%(Filename)%(Extension)" />
+    <Compile Include="../Services/Docker/*.cs" Link="Production/Services/Docker/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="../Assets/Syntax/**/*" Link="Assets/Syntax/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>

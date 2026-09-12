@@ -14,6 +14,11 @@ public sealed partial class ExtensionSetupDialog : Controls.ActionContentDialog
         {
             Title = $"Manage {definition.Name}";
             Sections.Children.Add(new TextBlock { Text = definition.Details, TextWrapping = TextWrapping.Wrap });
+            if (definition.Docker is { } docker)
+            {
+                Sections.Children.Add(new DockerManagementView { DataContext = docker });
+                return;
+            }
             if (definition.WriteEnabled is not null) return;
             Sections.Children.Add(new TextBlock { Text = "Default limits: 8 MiB per file and 1 GiB of snapshot content per target user. Keep the latest five completed checkpoints per conversation, with a 30-day age limit. Pending recovery and Undo data are protected from the five-checkpoint limit. Generated files, dependencies, ignored files and common secret files are excluded. Existing conversations apply the setting before their next request. Older versions require an app restart.", TextWrapping = TextWrapping.Wrap });
             AddCheckpointDataManagement();

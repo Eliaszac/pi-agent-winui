@@ -79,7 +79,7 @@ public sealed partial class MainPage
     }
 
     private bool PanelAvailable(string kind) => ViewModel.Chat is not null &&
-        (kind is "terminal" or "files" or "source" || ViewModel.SelectedTarget?.IsLocal != false && (kind != "research" || Research.Enabled));
+        (kind == "docker" ? Docker.Enabled : kind is "terminal" or "files" or "source" || ViewModel.SelectedTarget?.IsLocal != false && (kind != "research" || Research.Enabled));
 
     private void OpenSidePanel(string kind)
     {
@@ -115,6 +115,7 @@ public sealed partial class MainPage
             Processes.IsOpen = tab?.Kind == "processes";
             Capabilities.IsOpen = tab?.Kind == "capabilities";
             Research.IsOpen = tab?.Kind == "research" && Research.Enabled;
+            Docker.IsOpen = tab?.Kind == "docker" && Docker.Enabled;
             PanelLauncher.Visibility = activeSidePanels?.Tabs.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             BuildPanelLauncher();
         }
@@ -144,11 +145,6 @@ public sealed partial class MainPage
     private void OnHideSidePanel(object sender, RoutedEventArgs args)
     {
         if (activeSidePanels is not null) activeSidePanels.IsOpen = false;
-        ApplySidePanel();
-    }
-    private void OnShowSidePanels(object sender, RoutedEventArgs args)
-    {
-        if (activeSidePanels is not null) activeSidePanels.IsOpen = true;
         ApplySidePanel();
     }
 

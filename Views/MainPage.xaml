@@ -109,58 +109,7 @@
                     Visibility="{x:Bind Rename.IsEditing, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
             </Grid>
         </DataTemplate>
-    </Page.Resources>
-    <SplitView x:Name="WorkspaceSplit"
-        IsPaneOpen="{x:Bind ViewModel.Sidebar.IsOpen, Mode=TwoWay}"
-        OpenPaneLength="{x:Bind ViewModel.Sidebar.ExpandedWidth, Mode=OneWay}"
-        CompactPaneLength="48" DisplayMode="CompactInline"
-        PaneBackground="{ThemeResource LayerFillColorDefaultBrush}">
-        <SplitView.Pane>
-            <Grid Width="{x:Bind ViewModel.Sidebar.ContentWidth, Mode=OneWay}" HorizontalAlignment="Left">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                </Grid.ColumnDefinitions>
-                <Grid Visibility="{x:Bind ViewModel.Sidebar.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid Margin="12,15,4,12" ColumnSpacing="4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <controls:ActionButton Click="OnNewProjectClicked" IsEnabled="{x:Bind ViewModel.CanManageSidebar, Mode=OneWay}"
-                            HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="8,5" MinHeight="30"
-                            Background="Transparent" BorderThickness="0" FontSize="13.3">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon Glyph="&#xE710;" FontSize="13.3" />
-                                <TextBlock Text="New project" FontSize="13.3" />
-                            </StackPanel>
-                        </controls:ActionButton>
-                        <controls:ActionButton Grid.Column="1" Style="{StaticResource CompactSidebarIconStyle}" Click="OnToggleSidebarClicked"
-                            AutomationProperties.Name="Collapse sidebar" ToolTipService.ToolTip="Collapse sidebar">
-                            <FontIcon Glyph="&#xE76B;" FontSize="14" />
-                        </controls:ActionButton>
-                    </Grid>
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                        HorizontalScrollMode="Disabled" Padding="8,0,0,16">
-                        <StackPanel Spacing="11">
-                            <TextBlock Text="Projects" Margin="8,0,8,0" FontSize="12" FontWeight="SemiBold"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <ProgressRing Width="24" Height="24" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
-                                Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
-                                AutomationProperties.Name="Loading projects" />
-                            <TextBlock Text="Your projects will appear here." Margin="8,0,12,0" TextWrapping="Wrap"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"
-                                Visibility="{x:Bind ViewModel.ShowEmptyProjects, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                            <ItemsControl ItemsSource="{x:Bind ViewModel.Projects, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.CanManageSidebar, Mode=OneWay}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="projects:ProjectItemViewModel">
-                                        <StackPanel Margin="0,0,0,8">
-                                            <Grid ColumnSpacing="0">
+<DataTemplate x:Key="SidebarProjectTemplate" x:DataType="projects:ProjectItemViewModel">                                            <Grid ColumnSpacing="0">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
@@ -199,33 +148,70 @@
                                                     <FontIcon Glyph="&#xE710;" FontSize="12" />
                                                 </controls:ActionButton>
                                             </Grid>
-                                            <StackPanel Margin="19,2,4,0"
-                                                Visibility="{x:Bind IsExpanded, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
-                                                <TextBlock Text="No conversations yet" Margin="12,8" FontSize="12"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Visibility="{x:Bind HasNoConversations, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                                                <ItemsControl ItemsSource="{x:Bind ActiveConversations}" ItemTemplate="{StaticResource ConversationTemplate}" />
-                                                <StackPanel Margin="0,8,0,0"
-                                                    Visibility="{x:Bind HasSettledConversations, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
-                                                    <controls:ActionButton Command="{x:Bind ToggleSettledCommand}" Style="{StaticResource SidebarItemButtonStyle}"
-                                                        AutomationProperties.Name="{x:Bind SettledLabel, Mode=OneWay}">
-                                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                                            <FontIcon Glyph="{x:Bind SettledGlyph, Mode=OneWay}" FontSize="10"
-                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                            <TextBlock Text="{x:Bind SettledLabel, Mode=OneWay}" FontSize="12"
-                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        </StackPanel>
-                                                    </controls:ActionButton>
-                                                    <ItemsControl ItemsSource="{x:Bind SettledConversations}" ItemTemplate="{StaticResource ConversationTemplate}"
-                                                        Visibility="{x:Bind IsSettledExpanded, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
+</DataTemplate>        <DataTemplate x:Key="SidebarSettledTemplate" x:DataType="projects:SidebarGroupRow">
+            <controls:ActionButton Margin="19,8,4,0" Command="{x:Bind Project.ToggleSettledCommand}" Style="{StaticResource SidebarItemButtonStyle}" AutomationProperties.Name="{x:Bind Project.SettledLabel, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="{x:Bind Project.SettledGlyph, Mode=OneWay}" FontSize="10"/>
+                    <TextBlock Text="{x:Bind Project.SettledLabel, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </controls:ActionButton>
+        </DataTemplate>
+        <DataTemplate x:Key="SidebarEmptyTemplate"><TextBlock Text="No conversations yet" Margin="31,8,4,8" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></DataTemplate>
+        <controls:SidebarTemplateSelector x:Key="SidebarTemplates" ProjectTemplate="{StaticResource SidebarProjectTemplate}" ConversationTemplate="{StaticResource ConversationTemplate}" SettledTemplate="{StaticResource SidebarSettledTemplate}" EmptyTemplate="{StaticResource SidebarEmptyTemplate}"/>    </Page.Resources>
+    <SplitView x:Name="WorkspaceSplit"
+        IsPaneOpen="{x:Bind ViewModel.Sidebar.IsOpen, Mode=TwoWay}"
+        OpenPaneLength="{x:Bind ViewModel.Sidebar.ExpandedWidth, Mode=OneWay}"
+        CompactPaneLength="48" DisplayMode="CompactInline"
+        PaneBackground="{ThemeResource LayerFillColorDefaultBrush}">
+        <SplitView.Pane>
+            <Grid Width="{x:Bind ViewModel.Sidebar.ContentWidth, Mode=OneWay}" HorizontalAlignment="Left">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="8" />
+                </Grid.ColumnDefinitions>
+                <Grid Visibility="{x:Bind ViewModel.Sidebar.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid Margin="12,15,4,12" ColumnSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <controls:ActionButton Click="OnNewProjectClicked" IsEnabled="{x:Bind ViewModel.CanManageSidebar, Mode=OneWay}"
+                            HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="8,5" MinHeight="30"
+                            Background="Transparent" BorderThickness="0" FontSize="13.3">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE710;" FontSize="13.3" />
+                                <TextBlock Text="New project" FontSize="13.3" />
+                            </StackPanel>
+                        </controls:ActionButton>
+                        <controls:ActionButton Grid.Column="1" Style="{StaticResource CompactSidebarIconStyle}" Click="OnToggleSidebarClicked"
+                            AutomationProperties.Name="Collapse sidebar" ToolTipService.ToolTip="Collapse sidebar">
+                            <FontIcon Glyph="&#xE76B;" FontSize="14" />
+                        </controls:ActionButton>
+                    </Grid>
+                    <ListView x:Name="SidebarList" Grid.Row="1" SelectionMode="None" IsTabStop="False" Padding="8,0,0,16"
+                        IsEnabled="{x:Bind ViewModel.CanManageSidebar, Mode=OneWay}" ItemTemplateSelector="{StaticResource SidebarTemplates}"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollMode="Disabled" AutomationProperties.Name="Projects and conversations">
+                        <ListView.Header><StackPanel Spacing="11" Margin="0,0,0,11">                            <TextBlock Text="Projects" Margin="8,0,8,0" FontSize="12" FontWeight="SemiBold"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <ProgressRing Width="24" Height="24" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
+                                Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
+                                AutomationProperties.Name="Loading projects" />
+                            <TextBlock Text="Your projects will appear here." Margin="8,0,12,0" TextWrapping="Wrap"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"
+                                Visibility="{x:Bind ViewModel.ShowEmptyProjects, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                        </StackPanel></ListView.Header>
+                        <ListView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel CacheLength="1"/></ItemsPanelTemplate></ListView.ItemsPanel>
+                        <ListView.ItemContainerTransitions><TransitionCollection/></ListView.ItemContainerTransitions>
+                        <ListView.ItemContainerStyle><Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0"/><Setter Property="MinHeight" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="IsTabStop" Value="False"/>
+                        </Style></ListView.ItemContainerStyle>
+                    </ListView>
                     <StackPanel Grid.Row="2" Margin="12,8,4,12" Spacing="4">
                     <views:GettingStartedCard x:Name="GettingStartedPane"/>
                     <controls:ActionButton Click="OnProvidersClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
@@ -349,7 +335,6 @@
                         <FontIcon Glyph="&#xE712;" FontSize="15" />
                         <controls:ActionButton.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                <controls:ActionMenuFlyoutItem Text="Side panels" Click="OnShowSidePanels" />
                                 <controls:ActionMenuFlyoutItem Text="Terminal" Click="OnTerminalClicked">
                                     <controls:ActionMenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xE756;" />
@@ -361,6 +346,10 @@
                                 <controls:ActionMenuFlyoutItem Text="Background research" Click="OnResearchClicked"
                                     Visibility="{x:Bind Research.Enabled, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE721;" /></controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Docker" Click="OnDockerClicked"
+                                    Visibility="{x:Bind Docker.Enabled, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                                    <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE7B8;" /></controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="Instructions, skills &amp; MCP" Click="OnCapabilitiesClicked">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE8F1;"/></controls:ActionMenuFlyoutItem.Icon>
@@ -485,6 +474,8 @@
                     Visibility="{x:Bind Terminals.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:ResearchPanel x:Name="ResearchPane" Grid.Row="1"
                     Visibility="{x:Bind Research.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                <views:DockerPanel x:Name="DockerPane" Grid.Row="1"
+                    Visibility="{x:Bind Docker.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:FileExplorerPanel x:Name="FilesPane" Grid.Row="1"
                     Visibility="{x:Bind Files.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:ProcessesPanel x:Name="ProcessesPane" Grid.Row="1"
@@ -498,6 +489,3 @@
         </Grid>
     </SplitView>
 </Page>
-
-
-

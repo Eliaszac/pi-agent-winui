@@ -53,6 +53,7 @@ Checkpoint bytes live on each target under `$HOME/.pi-desktop-checkpoints`, outs
 - Target-aware terminals, run scripts, file browsing and source control, with documented local-only capabilities. Scripts execute only on explicit Run; saved definitions do not schedule or resume work.
 - Local GitHub PR discovery/device login and Open in integration. See [GITHUB-SETUP.md](GITHUB-SETUP.md).
 - Optional background research: at most two concurrent one-shot workers, twelve active/queued tasks, twenty-minute timeout. Results stay in the panel until the user copies or adds them to a draft. Shutdown interrupts workers; restart never replays them. This is distinct from durable background execution.
+- **Docker extension and panel: done, accepted by the user.** Optional integration under Our extensions: Windows/WSL CLI detection, explicit addition of saved SSH targets, and a conversation tab with container status and Start/Stop. Manage owns source removal and project links. Unlinked containers appear in every project; full container IDs share links and avoid duplicate rows when Windows and WSL reach the same engine. This is a native GUI integration, not a Pi tool or npm extension.
 
 ## Integration and safety boundaries
 
@@ -65,6 +66,8 @@ The native terminal uses ConPTY and bundled xterm.js through WebView2, not a run
 Side panels share a native tab strip. Each conversation owns its in-memory tab order, selection and open/hidden state; switching conversations restores those tabs, while restarting starts fresh. Non-terminal panels have one tab per type. Terminal tabs own independent sessions, can be renamed and reordered, and are scoped by conversation even when projects share a directory. Hiding or switching tabs keeps shells running; closing a terminal tab or deleting its conversation disposes its shell. Project scripts use the same conversation scope. Existing panel content stays outside the tab content presenter. The empty panel offers available panel types, with existing remote-target and research opt-in restrictions.
 
 ## Scope decisions
+
+Docker uses each source user's installed CLI and current Docker context. It never installs Docker, starts an engine, creates/deletes containers, or replays failed actions. Detection can start WSL distributions. SSH uses the saved target's authentication and host verification. Preferences are written atomically to `%LOCALAPPDATA%\PiAgentGui\docker.json`; secrets stay in the existing SSH credential store. Removing a source or disabling Docker does not stop containers. Polling runs while its tab is selected, every ten seconds, with bounded CLI calls and independent source errors. Container links are pruned only after every source responds successfully; deleted project links are pruned when Manage loads the project catalog. Docker build and mocked unit verification do not establish live Windows/WSL/SSH connectivity.
 
 The current refined feature list is complete; no additional feature is approved by this document. Durable background execution, scheduled tasks/triggers, automatic worktrees, cross-session memory, product-managed sandboxing, and general-purpose subagents were removed from scope. Users can independently configure sandboxing. The existing opt-in research feature remains.
 

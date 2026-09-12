@@ -1,0 +1,44 @@
+<UserControl x:Class="PiAgentGui.Views.DockerManagementView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls">
+    <StackPanel Spacing="12" MinWidth="300">
+        <TextBlock Text="Sources" FontSize="18" FontWeight="SemiBold" Margin="0,8,0,0"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <controls:ActionButton Content="Detect Windows / WSL" Command="{Binding DetectCommand}" IsEnabled="{Binding Enabled}"/>
+            <controls:ActionButton Content="Refresh" Click="OnRefresh"/>
+        </StackPanel>
+        <ProgressBar IsIndeterminate="True" Visibility="{Binding Busy, Converter={StaticResource BooleanToVisibility}}"/>
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontSize="12"/>
+        <ItemsControl ItemsSource="{Binding Sources}">
+            <ItemsControl.ItemTemplate><DataTemplate>
+                <Grid ColumnSpacing="12" Padding="0,8">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                    </StackPanel>
+                    <controls:ActionButton Grid.Column="1" Content="Remove" Click="OnRemove" VerticalAlignment="Top"/>
+                </Grid>
+            </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ComboBox x:Name="SshTargets" Header="Saved SSH targets" ItemsSource="{Binding SshCandidates}" DisplayMemberPath="Name" PlaceholderText="Select a target" HorizontalAlignment="Stretch"/>
+        <controls:ActionButton Content="Add SSH source" Click="OnAddSsh" IsEnabled="{Binding CanManage}"/>
+        <TextBlock Text="SSH targets come from your projects. Add an SSH execution target to a project first if it is missing here." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <TextBlock Text="Project links" FontSize="18" FontWeight="SemiBold" Margin="0,12,0,0"/>
+        <TextBlock Text="No projects selected means the container appears everywhere. Shared Windows / WSL containers appear once and share their project links. Recreating a container creates a new identity." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <ItemsControl ItemsSource="{Binding LinkContainers}">
+            <ItemsControl.ItemTemplate><DataTemplate>
+                <Grid ColumnSpacing="12" Padding="0,8">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SourceName}" FontSize="12"/>
+                        <TextBlock Text="{Binding Links}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    <controls:ActionButton Grid.Column="1" Content="Projects" Click="OnProjects" VerticalAlignment="Top"/>
+                </Grid>
+            </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

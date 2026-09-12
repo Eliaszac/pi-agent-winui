@@ -77,7 +77,14 @@ public partial class App : Application
         var projectService = new ProjectService(repository);
         workspaces.ViewedRunCompleted += () => { if (!closing && !windowClosed) CompletionSound.Play(); };
         var checkpointData = new CheckpointDataService(repository);
-        var extensions = new ViewModels.Extensions.ExtensionsViewModel(ViewModels.Extensions.SupportedExtensions.All.Append(ViewModels.Extensions.SupportedExtensions.Research(research)));
+        var dockerClient = new Services.Docker.DockerCliClient();
+        var docker = new ViewModels.Docker.DockerPanelViewModel(
+            new Services.Docker.DockerPreferenceStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "docker.json")),
+            dockerClient, new Services.Docker.DockerSourceDiscovery(repository, wslDistributions, dockerClient));
+        await docker.InitializeAsync();
+        window.Closed += (_, _) => docker.Dispose();
+        var extensions = new ViewModels.Extensions.ExtensionsViewModel(ViewModels.Extensions.SupportedExtensions.All
+            .Append(ViewModels.Extensions.SupportedExtensions.Research(research)).Append(ViewModels.Extensions.SupportedExtensions.Docker(docker)));
         var shell = new ShellViewModel(repository, workspaces, paths, new ConversationDataCleanup(paths, repository, checkpointData.ForgetAsync), extensions);
         providers = new ProviderService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "management"));
@@ -122,7 +129,7 @@ public partial class App : Application
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "mcp-management"), githubLifetime.Token),
             new McpConnectionService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "mcp-management"), githubLifetime.Token));
-        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions);
+        window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions, docker);
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)

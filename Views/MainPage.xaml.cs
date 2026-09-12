@@ -25,6 +25,7 @@ public sealed partial class MainPage : Page
     public ViewModels.Terminal.TerminalPanelViewModel Terminals { get; }
     public ProjectScriptsViewModel Scripts { get; }
     public ViewModels.Conversations.ResearchPanelViewModel Research { get; }
+    public ViewModels.Docker.DockerPanelViewModel Docker { get; }
     public ViewModels.Files.FileExplorerViewModel Files { get; }
     public ViewModels.Processes.ProcessesPanelViewModel Processes { get; }
     public ViewModels.SourceControl.SourceControlViewModel SourceControl { get; }
@@ -52,7 +53,8 @@ public sealed partial class MainPage : Page
         ViewModels.Terminal.TerminalPanelViewModel terminals, ViewModels.Conversations.ResearchPanelViewModel research,
         ViewModels.Files.FileExplorerViewModel files, ViewModels.Processes.ProcessesPanelViewModel processes,
         ViewModels.SourceControl.SourceControlViewModel sourceControl, ProjectScriptsViewModel scripts, Services.Pi.CapabilityImportServices imports,
-        Repositories.Projects.IProjectRepository projectRepository, Services.Projects.WslDistributionCache wslDistributions)
+        Repositories.Projects.IProjectRepository projectRepository, Services.Projects.WslDistributionCache wslDistributions,
+        ViewModels.Docker.DockerPanelViewModel docker)
     {
         ViewModel = viewModel;
         this.projectRepository = projectRepository;
@@ -65,6 +67,7 @@ public sealed partial class MainPage : Page
         Terminals = terminals;
         Scripts = scripts;
         Research = research;
+        Docker = docker;
         Files = files;
         Processes = processes;
         SourceControl = sourceControl;
@@ -73,6 +76,20 @@ public sealed partial class MainPage : Page
         this.createProjectForm = createProjectForm;
         this.picker = picker;
         InitializeComponent();
+        var sidebarRows = new SidebarRows(new Services.Windowing.DispatcherQueueUiDispatcher(DispatcherQueue));
+        SidebarList.ItemsSource = sidebarRows.Rows;
+        sidebarRows.SetProjects(ViewModel.Projects);
+        ViewModel.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == nameof(ViewModel.Projects)) sidebarRows.SetProjects(ViewModel.Projects);
+            if (change.PropertyName == nameof(ViewModel.Chat))
+                DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+                {
+                    if (ViewModel.SelectedConversation is { } selected && sidebarRows.Rows.Contains(selected))
+                        SidebarList.ScrollIntoView(selected);
+                });
+        };
+        Unloaded += (_, _) => sidebarRows.Dispose();
         InitializeCommandPalette();
         CapabilitiesPane.DataContext = Capabilities;
         GettingStartedPane.DataContext = GettingStarted;
@@ -115,6 +132,8 @@ public sealed partial class MainPage : Page
         FilesPane.OpenFile = OpenTargetFileAsync;
         Files.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Files.IsOpen)) UpdateTerminalLayout(); };
         ResearchPane.DataContext = Research;
+        DockerPane.DataContext = Docker;
+        InitializeDockerPanel();
         ResearchPane.ShareRequested += text => { if (ViewModel.Chat is { } chat) chat.Draft += (string.IsNullOrWhiteSpace(chat.Draft) ? "" : "\n\n") + text; };
         Research.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Research.IsOpen)) UpdateTerminalLayout(); };
         ViewModel.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(ViewModel.Chat)) Research.SelectConversation(ViewModel.Chat?.ResearchOwnerId); };
@@ -241,7 +260,15 @@ public sealed partial class MainPage : Page
         Grid.SetColumnSpan(SidePanelHost, wide ? 1 : 3);
         SidePanelHost.Width = width;
         SidePanelHost.HorizontalAlignment = HorizontalAlignment.Right;
-    }    public void CloseTerminalDisplays() { closingSidePanels = true; sourceControlTimer.Stop(); SourceControl.Dispose(); processesTimer.Stop(); Processes.IsOpen = false; TerminalPane.CloseDisplays(); }
+    }
+    public void CloseTerminalDisplays()
+    {
+        closingSidePanels = true;
+        sourceControlTimer.Stop(); SourceControl.Dispose();
+        processesTimer.Stop(); Processes.IsOpen = false;
+        dockerTimer.Stop(); Docker.Dispose();
+        TerminalPane.CloseDisplays();
+    }
 
     private void OnSourceControlClicked(object sender, RoutedEventArgs args) => OpenSidePanel("source");
     private void OnProcessesClicked(object sender, RoutedEventArgs args) => OpenSidePanel("processes");    private async Task RefreshProcessesAsync()

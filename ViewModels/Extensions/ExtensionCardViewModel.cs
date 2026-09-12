@@ -13,8 +13,8 @@ public sealed class ExtensionCardViewModel : ObservableObject
     public bool CanToggle => loaded && !saving;
     public bool ShowDetails => !Definition.Bundled;
     public string ToggleLabel => "Enable " + Definition.Name;
-    public string ToggleHint => Definition.WriteEnabled is null ? "Applies before the next request. Turning off keeps existing recovery data."
-        : "Applies next turn. Turning off cancels active research and keeps saved results.";
+    public string ToggleHint => Definition.ToggleHint ?? (Definition.WriteEnabled is null ? "Applies before the next request. Turning off keeps existing recovery data."
+        : "Applies next turn. Turning off cancels active research and keeps saved results.");
     public ExtensionDefinition Definition { get; }
     public string SetupLabel => Definition.Bundled ? "Manage" : "Set up";
     public string Attribution => Definition.Bundled ? "By Pi desktop · our extension" : $"Third-party · by {Definition.Author}";

@@ -4,6 +4,15 @@ namespace PiAgentGui.ViewModels.Extensions;
 
 public static class SupportedExtensions
 {
+    public static ExtensionDefinition Docker(Docker.DockerPanelViewModel docker) => new(
+        "Docker", "Pi desktop", "1.0.0",
+        "Start and stop containers from your conversation. Detect Windows and WSL sources, connect saved SSH targets, and link containers to projects.",
+        "A built-in Pi desktop integration using each source’s Docker CLI and current context. Docker must already be installed and its engine available. Unlinked containers appear in every project; linked containers appear only in their selected projects. Removing a source or disabling this extension leaves containers running. Windows and WSL detection may start WSL distributions. SSH uses the target’s existing connection settings.",
+        "", "", "", new("https://docs.docker.com/engine/"), new("https://docs.docker.com/reference/cli/docker/"),
+        () => (docker.Enabled ? "Enabled · Windows, WSL and SSH" : "Disabled · containers are unchanged", true),
+        Bundled: true, ReadEnabled: () => docker.Enabled, WriteEnabled: docker.SetEnabledAsync,
+        ToggleHint: "Shows the Docker panel. Turning off keeps sources, links and running containers.", Docker: docker);
+
     public static ExtensionDefinition Research(Services.Conversations.ResearchCoordinator coordinator) => new(
         "Background research", "Pi desktop", "1.0.0",
         "Let Pi research in parallel while you keep working. Review results in the conversation’s Research panel and add them to your prompt when ready.",

@@ -1,9 +1,8 @@
 # Future work
 
-Ideas and issues recorded for later consideration. This is not an implementation plan or approval to start work. Items retain the user's original order. Next priority: command palette.
+Ideas and issues recorded for later consideration. This is not an implementation plan or approval to start work. The next agreed item is listed first; other items remain deferred.
 
-1. **Virtualize the conversation.** Improve performance for long conversation histories.
-2. **Virtualize the sidebar list.** Improve performance with many projects and conversations.
-3. **Command palette.** Add a command palette.
-4. **Settings page.** First identify useful app settings to expose; the contents are not yet defined. Build a dedicated page once there are meaningful settings to put in it.
-5. **Docker extension and panel.** A GUI for managing container statuses. Manage Docker sources from the Extensions page and link containers to projects.
+1. **Global Home and local usage analytics — next.** Reconsider opening directly into a project's dashboard. Explore a global Home page focused on returning to work: recent conversations with project names, quick actions, and a compact local usage summary. Preserve useful project-specific overviews. Explore token usage over time, model choices, and activity by project using Pi-reported data; distinguish incomplete local records from account-wide usage or billing. Settle the Home layout and collection scope before implementation. Settings work stays separate and deferred.
+2. **Virtualize the conversation.** Improve performance for long conversation histories.
+3. **Settings page — deferred.** Candidate controls now include startup behavior (Home or resume the last conversation), local analytics collection and retention, and data management: clear analytics, delete all conversations, remove projects, and clear app-owned data. Define each action's scope and confirmation; removing project registrations must not delete workspace folders. Determine behavior for active conversations and related stored data before implementation.
+   Include a legal and privacy section: review applicable terms, privacy/data-handling information, open-source licensing and third-party notices, and links to relevant provider policies. Explain what stays local, what is sent to selected providers or integrations, storage locations, retention, and deletion behavior. Base statements on the actual implementation; being an open-source wrapper does not by itself settle legal obligations. Identify any jurisdiction- or distribution-specific questions that need qualified legal review rather than assuming generic terms are sufficient.
