@@ -3,25 +3,35 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:PiAgentGui.Controls"
     xmlns:extensions="using:PiAgentGui.ViewModels.Extensions">
-    <GridView x:Name="ExtensionCards" ItemsSource="{Binding Cards}" SelectionMode="None" IsItemClickEnabled="False" IsTabStop="False"
-        SizeChanged="OnCardsSizeChanged" Loaded="OnCardsLoaded"
-        ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollMode="Disabled"
-        ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch"
-        AutomationProperties.Name="Supported and recommended extensions">
-        <GridView.Header>
-            <StackPanel Spacing="6" Margin="0,0,0,24">
-                <Grid Margin="0,0,12,0">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                    <TextBlock Text="Extensions" FontSize="24" FontWeight="SemiBold" />
-                    <controls:ActionButton Grid.Column="1" Command="{Binding RefreshCommand}" Style="{StaticResource ShellIconButtonStyle}"
-                        AutomationProperties.Name="Refresh all extensions" ToolTipService.ToolTip="Refresh all extensions">
-                        <FontIcon Glyph="&#xE72C;" FontSize="16" />
-                    </controls:ActionButton>
-                </Grid>
-                <TextBlock Text="Optional Pi extensions for your projects. Workspace checkpoints is maintained by Pi desktop; third-party extensions are attributed to their independent authors. Enable or set up each feature below." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <TextBlock Text="{Binding Error}" TextWrapping="Wrap" />
-            </StackPanel>
-        </GridView.Header>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="8" Margin="0,0,12,32">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Error}" TextWrapping="Wrap"/>
+                <controls:ActionButton Grid.Column="1" Command="{Binding RefreshCommand}" Style="{StaticResource ShellIconButtonStyle}"
+                    AutomationProperties.Name="Refresh all extensions" ToolTipService.ToolTip="Refresh all extensions">
+                    <FontIcon Glyph="&#xE72C;" FontSize="16"/>
+                </controls:ActionButton>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemContainerTransitions>
+                    <TransitionCollection><RepositionThemeTransition /></TransitionCollection>
+                </ItemsControl.ItemContainerTransitions>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="extensions:ExtensionGroup">
+                        <Border BorderThickness="0,0,0,1" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" Padding="0,0,0,20" Margin="0,0,0,28">
+                            <Expander IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                <Expander.Header>
+                                    <StackPanel Spacing="6" Margin="8,12,8,12">
+                                        <TextBlock Text="{x:Bind Name}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{x:Bind Description}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Expander.Header>
+                                <GridView ItemsSource="{x:Bind Cards}" SelectionMode="None" IsTabStop="False"
+                                    Loaded="OnCardsLoaded" SizeChanged="OnCardsSizeChanged" HorizontalContentAlignment="Stretch"
+                                    ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                    ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <GridView.ItemContainerTransitions><TransitionCollection /></GridView.ItemContainerTransitions>
         <GridView.ItemsPanel>
             <ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="3" /></ItemsPanelTemplate>
         </GridView.ItemsPanel>
@@ -44,24 +54,38 @@
                             <TextBlock Text="{x:Bind Attribution}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock Text="{x:Bind VersionLabel}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
-                        <TextBlock Text="{x:Bind Definition.Description}" TextWrapping="Wrap" />
+                        <TextBlock Text="{x:Bind Definition.Description}" FontSize="12" TextWrapping="Wrap" />
                         <TextBlock Text="{x:Bind Status, Mode=OneWay}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <controls:ActionButton Content="Details" Click="OnDetailsClicked" />
+                            <controls:ActionButton Content="Details" Click="OnDetailsClicked"
+                                Visibility="{x:Bind ShowDetails, Converter={StaticResource BooleanToVisibility}}" />
                             <controls:ActionButton Content="{Binding SetupLabel}" Click="OnSetupClicked"
                                 Visibility="{x:Bind NeedsSetup, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                            <ToggleSwitch IsOn="{x:Bind IsEnabled, Mode=OneWay}" IsEnabled="{x:Bind CanToggle, Mode=OneWay}"
+                                Toggled="OnExtensionToggled" VerticalAlignment="Center"
+                                AutomationProperties.Name="{x:Bind ToggleLabel}"
+                                ToolTipService.ToolTip="{x:Bind ToggleHint}"
+                                Visibility="{x:Bind Definition.Bundled, Converter={StaticResource BooleanToVisibility}}" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
             </DataTemplate>
         </GridView.ItemTemplate>
-        <GridView.Footer>
-            <StackPanel Spacing="12" Margin="0,20,12,20" HorizontalAlignment="Stretch"
+                                </GridView>
+                            </Expander>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border BorderThickness="0,0,0,1" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" Padding="0,0,0,20" Margin="0,0,0,28"
                 Visibility="{Binding HasOtherExtensions, Converter={StaticResource BooleanToVisibility}}">
-                <TextBlock Text="Other installed extensions" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <TextBlock Text="Third-party extensions found in your global Pi installation. These are not managed or specifically supported by Pi desktop. Presence on disk does not confirm they are enabled or loaded. Project-local extensions are not listed here."
-                    TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <ItemsControl ItemsSource="{Binding OtherExtensions}">
+                <Expander IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                    <Expander.Header>
+                        <StackPanel Spacing="6" Margin="8,12,8,12">
+                            <TextBlock Text="Other installed extensions" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="Global third-party installs outside our curated list. Installation does not confirm loading." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Expander.Header>                <ItemsControl ItemsSource="{Binding OtherExtensions}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="extensions:InstalledExtension">
                             <StackPanel Spacing="4" Padding="0,10" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
@@ -75,8 +99,8 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-            </StackPanel>
-        </GridView.Footer>
-    </GridView>
+                </Expander>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>
-

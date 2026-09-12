@@ -7,9 +7,6 @@
   <Grid Padding="12,8" ColumnSpacing="4" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <TextBlock Text="Research" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
-   <ToggleSwitch Grid.Column="1" IsOn="{Binding Enabled, Mode=OneWay}" Toggled="OnResearchToggled"
-    OnContent="" OffContent="" MinWidth="0" VerticalAlignment="Center"
-    AutomationProperties.Name="Background research" ToolTipService.ToolTip="{Binding EnableActionLabel}"/>
    <controls:ActionButton Grid.Column="2" Style="{StaticResource ShellIconButtonStyle}" AutomationProperties.Name="About background research" ToolTipService.ToolTip="About background research">
     <FontIcon Glyph="&#xE946;" FontSize="14"/>
     <controls:ActionButton.Flyout><Flyout><StackPanel MaxWidth="280" Spacing="8">
@@ -55,3 +52,4 @@
   </Grid>
  </Grid>
 </UserControl>
+

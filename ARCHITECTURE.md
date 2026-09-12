@@ -62,6 +62,8 @@ RPC traffic uses stdout; bounded stderr diagnostics are separate. Errors expose 
 
 The native terminal uses ConPTY and bundled xterm.js through WebView2, not a runtime bridge. Keep terminal surfaces mounted outside the TabView content presenter: the earlier layout collapsed WebView2 to zero height. Build with a concrete architecture matching native WebView2 dependencies. Markdown streaming must validate Markdig spans before slicing; malformed streaming spans previously escaped a native timer callback.
 
+Side panels share a native tab strip. Each conversation owns its in-memory tab order, selection and open/hidden state; switching conversations restores those tabs, while restarting starts fresh. Non-terminal panels have one tab per type. Terminal tabs own independent sessions, can be renamed and reordered, and are scoped by conversation even when projects share a directory. Hiding or switching tabs keeps shells running; closing a terminal tab or deleting its conversation disposes its shell. Project scripts use the same conversation scope. Existing panel content stays outside the tab content presenter. The empty panel offers available panel types, with existing remote-target and research opt-in restrictions.
+
 ## Scope decisions
 
 The current refined feature list is complete; no additional feature is approved by this document. Durable background execution, scheduled tasks/triggers, automatic worktrees, cross-session memory, product-managed sandboxing, and general-purpose subagents were removed from scope. Users can independently configure sandboxing. The existing opt-in research feature remains.

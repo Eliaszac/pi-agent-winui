@@ -32,7 +32,7 @@ public sealed class ShellViewModel : ObservableObject
     public ViewModels.Providers.ProvidersViewModel? Providers { get; set; }
     public bool ShowExtensions => showExtensions;
     public bool ShowWorkspace => !showExtensions && !showProviders;
-    public ViewModels.Extensions.ExtensionsViewModel Extensions { get; } = new();
+    public ViewModels.Extensions.ExtensionsViewModel Extensions { get; }
     public void OpenExtensions()
     {
         showProviders = false;
@@ -145,9 +145,11 @@ public sealed class ShellViewModel : ObservableObject
 
     /// <summary>Creates the shell without performing disk I/O.</summary>
     /// <param name="repository">The shared project persistence boundary.</param>
-    public ShellViewModel(IProjectRepository repository, ConversationWorkspaceStore? workspaces = null, PiSessionPaths? sessionPaths = null, ConversationDataCleanup? dataCleanup = null)
+    public ShellViewModel(IProjectRepository repository, ConversationWorkspaceStore? workspaces = null, PiSessionPaths? sessionPaths = null, ConversationDataCleanup? dataCleanup = null,
+        ViewModels.Extensions.ExtensionsViewModel? extensions = null)
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        Extensions = extensions ?? new();
         this.workspaces = workspaces;
         this.sessionPaths = sessionPaths ?? new(new ProjectStorageOptions());
         this.dataCleanup = dataCleanup;

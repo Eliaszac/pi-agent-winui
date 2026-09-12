@@ -45,7 +45,11 @@ public sealed partial class MainPage
             if (!Scripts.CanUse) return;
             ScriptError.IsOpen = false;
             await Scripts.RunAsync(id);
-            Capabilities.IsOpen = false; SourceControl.IsOpen = false; Processes.IsOpen = false; Files.IsOpen = false; Research.IsOpen = false;
+            if (Terminals.Selected is { } terminal && terminal.ConversationId == ViewModel.Chat?.ResearchOwnerId)
+            {
+                activeSidePanels?.Open("terminal", terminal.Title, terminal);
+                ApplySidePanel();
+            }
         }
         catch (Exception exception) { ScriptError.Message = exception.Message; ScriptError.IsOpen = true; }
     }

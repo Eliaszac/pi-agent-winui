@@ -349,6 +349,7 @@
                         <FontIcon Glyph="&#xE712;" FontSize="15" />
                         <controls:ActionButton.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <controls:ActionMenuFlyoutItem Text="Side panels" Click="OnShowSidePanels" />
                                 <controls:ActionMenuFlyoutItem Text="Terminal" Click="OnTerminalClicked">
                                     <controls:ActionMenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xE756;" />
@@ -357,7 +358,8 @@
                                 <controls:ActionMenuFlyoutItem Text="File Explorer" Click="OnFilesClicked">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B7;"/></controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
-                                <controls:ActionMenuFlyoutItem Text="Background research" Click="OnResearchClicked">
+                                <controls:ActionMenuFlyoutItem Text="Background research" Click="OnResearchClicked"
+                                    Visibility="{x:Bind Research.Enabled, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE721;" /></controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="Instructions, skills &amp; MCP" Click="OnCapabilitiesClicked">
@@ -466,20 +468,35 @@
             </Grid>
                 <controls:SidebarResizeHandle Grid.Column="1" Grid.RowSpan="3" Style="{StaticResource SidebarResizeHandleStyle}" Width="6" ResizeDelta="OnTerminalResizeDelta" KeyDown="OnTerminalResizeKeyDown" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                     AutomationProperties.Name="Resize terminal panel" />
-                <views:TerminalPanel x:Name="TerminalPane" Grid.Column="2" Grid.RowSpan="3"
+                <Grid x:Name="SidePanelHost" Grid.Column="2" Grid.RowSpan="3" Visibility="Collapsed" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TabView x:Name="SidePanelTabs" CanDragTabs="True" CanReorderTabs="True" AllowDropTabs="True" TabWidthMode="SizeToContent"
+                        SelectionChanged="OnSideTabSelected" TabCloseRequested="OnSideTabClosed" AddTabButtonClick="OnAddSideTab" AutomationProperties.Name="Conversation panels">
+                        <TabView.TabStripHeader>
+                            <controls:ActionButton Click="OnHideSidePanel" Style="{StaticResource ShellIconButtonStyle}" ToolTipService.ToolTip="Hide side panel" AutomationProperties.Name="Hide side panel"><FontIcon Glyph="&#xE76C;" FontSize="12"/></controls:ActionButton>
+                        </TabView.TabStripHeader>
+                        <TabView.TabItemTemplate>
+                            <DataTemplate>
+                                <TabViewItem Header="{Binding Title}" IsClosable="True" RightTapped="OnSideTabRightTapped" KeyDown="OnSideTabKeyDown"/>
+                            </DataTemplate>
+                        </TabView.TabItemTemplate>
+                    </TabView>
+                    <StackPanel x:Name="PanelLauncher" Grid.Row="1" Spacing="8" Margin="24" VerticalAlignment="Center"/>                <views:TerminalPanel x:Name="TerminalPane" Grid.Row="1"
                     Visibility="{x:Bind Terminals.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                <views:ResearchPanel x:Name="ResearchPane" Grid.Column="2" Grid.RowSpan="3"
+                <views:ResearchPanel x:Name="ResearchPane" Grid.Row="1"
                     Visibility="{x:Bind Research.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                <views:FileExplorerPanel x:Name="FilesPane" Grid.Column="2" Grid.RowSpan="3"
+                <views:FileExplorerPanel x:Name="FilesPane" Grid.Row="1"
                     Visibility="{x:Bind Files.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                <views:ProcessesPanel x:Name="ProcessesPane" Grid.Column="2" Grid.RowSpan="3"
+                <views:ProcessesPanel x:Name="ProcessesPane" Grid.Row="1"
                     Visibility="{x:Bind Processes.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                <views:CapabilitiesPanel x:Name="CapabilitiesPane" Grid.Column="2" Grid.RowSpan="3"
+                <views:CapabilitiesPanel x:Name="CapabilitiesPane" Grid.Row="1"
                     Visibility="{x:Bind Capabilities.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                <views:SourceControlPanel x:Name="SourceControlPane" Grid.Column="2" Grid.RowSpan="3"
+                <views:SourceControlPanel x:Name="SourceControlPane" Grid.Row="1"
                     Visibility="{x:Bind SourceControl.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                </Grid>
         </Grid>
         </Grid>
     </SplitView>
 </Page>
+
 

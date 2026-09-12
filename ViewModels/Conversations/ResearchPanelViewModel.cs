@@ -14,7 +14,7 @@ public sealed class ResearchPanelViewModel : ObservableObject
     private string error = "";
     public string Error { get => error; private set { if (SetProperty(ref error, value)) OnPropertyChanged(nameof(HasError)); } }
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
-    public bool IsOpen { get => open; set => SetProperty(ref open, value); }
+    public bool IsOpen { get => open; set => SetProperty(ref open, value && Enabled); }
     public bool Enabled => coordinator.Enabled;
     public bool IsDisabled => !Enabled;
     public string EnabledLabel => Enabled ? "On" : "Off";
@@ -36,6 +36,7 @@ public sealed class ResearchPanelViewModel : ObservableObject
         coordinator.Changed += snapshot => dispatcher.Post(() =>
         {
             all = snapshot;
+            if (!Enabled) IsOpen = false;
             OnPropertyChanged(nameof(Tasks)); OnPropertyChanged(nameof(Enabled)); OnPropertyChanged(nameof(IsDisabled));
             OnPropertyChanged(nameof(HasTasks)); OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(EnabledLabel)); OnPropertyChanged(nameof(EnableActionLabel)); OnPropertyChanged(nameof(EmptyHint));

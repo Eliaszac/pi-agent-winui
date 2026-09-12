@@ -9,6 +9,7 @@ public sealed class TerminalTabViewModel
     public string Title { get; }
     public string? ScriptKey { get; }
     public Guid? TargetId { get; init; }
+    public Guid? ConversationId { get; init; }
     public bool IsFinished => finished;
     internal ITerminalSession Session { get; }
     public TerminalTabViewModel(string directory, int number, ITerminalSession session, string? title = null, string? scriptKey = null)

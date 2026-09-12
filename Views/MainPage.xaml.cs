@@ -120,6 +120,7 @@ public sealed partial class MainPage : Page
         TerminalPane.Bind(Terminals);
         TerminalPane.CurrentDirectory = () => ViewModel.SelectedTarget?.Path;
         Terminals.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(Terminals.IsOpen)) UpdateTerminalLayout(); };
+        InitializeSidePanels();
         WorkspaceContent.SizeChanged += (_, _) => UpdateTerminalLayout();
         OpenIn.PropertyChanged += (_, _) => UpdateOpenInLogo();
         ActualThemeChanged += (_, _) => { UpdateOpenInLogo(); UpdateGitHubLogo(); };
@@ -212,41 +213,14 @@ public sealed partial class MainPage : Page
 
     private void UpdateOpenInLogo() => OpenInLogo.Source = Controls.ApplicationLogoSource.Create(OpenIn.Logo, ActualTheme);
 
-    private void OnTerminalClicked(object sender, RoutedEventArgs args)
-    {
-        Capabilities.IsOpen = false;
-        SourceControl.IsOpen = false;
-        Processes.IsOpen = false;
-        Files.IsOpen = false;
-        Research.IsOpen = false;
-        if (ViewModel.SelectedTarget is { } target) { Terminals.Target = target; Terminals.Toggle(target.Path); }
-    }
-    private void OnResearchClicked(object sender, RoutedEventArgs args)
-    {
-        if (ViewModel.SelectedTarget is { IsLocal: false }) { ViewModel.Chat?.ReportAttachmentError("Background research workers currently support local targets only."); return; }
-        Capabilities.IsOpen = false;
-        SourceControl.IsOpen = false;
-        Processes.IsOpen = false;
-        Files.IsOpen = false;
-        Terminals.Hide();
-        Research.SelectConversation(ViewModel.Chat?.ResearchOwnerId);
-        Research.IsOpen = !Research.IsOpen;
-    }
-    private void OnTerminalResizeDelta(object? sender, double delta)
+    private void OnTerminalClicked(object sender, RoutedEventArgs args) => OpenSidePanel("terminal");
+    private void OnResearchClicked(object sender, RoutedEventArgs args) => OpenSidePanel("research");    private void OnTerminalResizeDelta(object? sender, double delta)
     {
         terminalWidth = Math.Clamp(terminalWidth - delta, 280, Math.Max(280, WorkspaceContent.ActualWidth * 0.6));
         UpdateTerminalLayout();
     }
 
-    private void OnFilesClicked(object sender, RoutedEventArgs args)
-    {
-        Capabilities.IsOpen = false;
-        SourceControl.IsOpen = false;
-        Processes.IsOpen = false;
-        Terminals.Hide(); Research.IsOpen = false;
-        Files.SelectTarget(ViewModel.SelectedTarget);
-        Files.IsOpen = !Files.IsOpen;
-    }
+    private void OnFilesClicked(object sender, RoutedEventArgs args) => OpenSidePanel("files");
     private void OnTerminalResizeKeyDown(object sender, KeyRoutedEventArgs args)
     {
         if (args.Key is not (VirtualKey.Left or VirtualKey.Right)) return;
@@ -255,56 +229,21 @@ public sealed partial class MainPage : Page
     }
     private void UpdateTerminalLayout()
     {
+        if (SidePanelHost is null) return;
         var wide = WorkspaceContent.ActualWidth >= 780;
         var width = Math.Min(terminalWidth, Math.Max(0, WorkspaceContent.ActualWidth * (wide ? 0.6 : 1)));
-        TerminalColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen || Files.IsOpen || Processes.IsOpen || SourceControl.IsOpen || Capabilities.IsOpen) && wide ? width : 0);
-        TerminalSplitterColumn.Width = new GridLength((Terminals.IsOpen || Research.IsOpen || Files.IsOpen || Processes.IsOpen || SourceControl.IsOpen || Capabilities.IsOpen) && wide ? 6 : 0);
-        Grid.SetColumn(CapabilitiesPane, wide ? 2 : 0);
-        Grid.SetColumnSpan(CapabilitiesPane, wide ? 1 : 3);
-        CapabilitiesPane.Width = width;
-        CapabilitiesPane.HorizontalAlignment = HorizontalAlignment.Right;
-        Grid.SetColumn(SourceControlPane, wide ? 2 : 0);
-        Grid.SetColumnSpan(SourceControlPane, wide ? 1 : 3);
-        SourceControlPane.Width = width;
-        SourceControlPane.HorizontalAlignment = HorizontalAlignment.Right;
-        Grid.SetColumn(ProcessesPane, wide ? 2 : 0);
-        Grid.SetColumnSpan(ProcessesPane, wide ? 1 : 3);
-        ProcessesPane.Width = width;
-        ProcessesPane.HorizontalAlignment = HorizontalAlignment.Right;
-        Grid.SetColumn(FilesPane, wide ? 2 : 0);
-        Grid.SetColumnSpan(FilesPane, wide ? 1 : 3);
-        FilesPane.Width = width;
-        FilesPane.HorizontalAlignment = HorizontalAlignment.Right;
-        Grid.SetColumn(ResearchPane, wide ? 2 : 0);
-        Grid.SetColumnSpan(ResearchPane, wide ? 1 : 3);
-        ResearchPane.Width = width;
-        ResearchPane.HorizontalAlignment = HorizontalAlignment.Right;
-        Grid.SetColumn(TerminalPane, wide ? 2 : 0);
-        Grid.SetColumnSpan(TerminalPane, wide ? 1 : 3);
-        TerminalPane.Width = width;
-        TerminalPane.HorizontalAlignment = HorizontalAlignment.Right;
-    }
-    public void CloseTerminalDisplays() { sourceControlTimer.Stop(); SourceControl.Dispose(); processesTimer.Stop(); Processes.IsOpen = false; TerminalPane.CloseDisplays(); }
+        var visible = activeSidePanels?.IsOpen == true && ViewModel.Chat is not null;
+        SidePanelHost.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        TerminalColumn.Width = new GridLength(visible && wide ? width : 0);
+        TerminalSplitterColumn.Width = new GridLength(visible && wide ? 6 : 0);
+        Grid.SetColumn(SidePanelHost, wide ? 2 : 0);
+        Grid.SetColumnSpan(SidePanelHost, wide ? 1 : 3);
+        SidePanelHost.Width = width;
+        SidePanelHost.HorizontalAlignment = HorizontalAlignment.Right;
+    }    public void CloseTerminalDisplays() { closingSidePanels = true; sourceControlTimer.Stop(); SourceControl.Dispose(); processesTimer.Stop(); Processes.IsOpen = false; TerminalPane.CloseDisplays(); }
 
-    private void OnSourceControlClicked(object sender, RoutedEventArgs args)
-    {
-        Capabilities.IsOpen = false;
-        Terminals.Hide(); Research.IsOpen = false; Files.IsOpen = false; Processes.IsOpen = false;
-        SourceControl.SelectTarget(ViewModel.SelectedTarget);
-        SourceControl.IsOpen = !SourceControl.IsOpen;
-    }
-
-    private void OnProcessesClicked(object sender, RoutedEventArgs args)
-    {
-        if (ViewModel.SelectedTarget is { IsLocal: false }) { ViewModel.Chat?.ReportAttachmentError("Use the target terminal to inspect remote processes. This panel shows Windows processes only."); return; }
-        Capabilities.IsOpen = false;
-        SourceControl.IsOpen = false;
-        Terminals.Hide(); Research.IsOpen = false; Files.IsOpen = false;
-        Processes.Select(ViewModel.SelectedTarget is { IsLocal: false } ? null : ViewModel.Chat?.ProcessIdentity);
-        Processes.IsOpen = !Processes.IsOpen;
-    }
-
-    private async Task RefreshProcessesAsync()
+    private void OnSourceControlClicked(object sender, RoutedEventArgs args) => OpenSidePanel("source");
+    private void OnProcessesClicked(object sender, RoutedEventArgs args) => OpenSidePanel("processes");    private async Task RefreshProcessesAsync()
     {
         Processes.Select(ViewModel.SelectedTarget is { IsLocal: false } ? null : ViewModel.Chat?.ProcessIdentity);
         await Processes.RefreshAsync();
@@ -465,4 +404,6 @@ public sealed partial class MainPage : Page
         args.Handled = true;
     }
 }
+
+
 

@@ -53,6 +53,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     public Models.Projects.ExecutionTarget? Target { get; internal set; }
     public bool IsRemoteTarget => Target is { IsLocal: false };
     public Guid ResearchOwnerId { get; internal set; }
+    public event Func<Task>? Closing;
     public PromptFileReferences FileReferences { get; } = new();
     public ObservableCollection<ChatImage> PendingImages { get; } = [];
     public bool HasPendingImages => PendingImages.Count > 0;
@@ -609,6 +610,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         if (disposed) return;
         disposed = true;
+        if (Closing is { } closingHandlers)
+            await Task.WhenAll(closingHandlers.GetInvocationList().Cast<Func<Task>>().Select(close => close()));
         foreach (var snippet in snippets.Values) snippet.Dispose();
         await Task.WhenAll(snippets.Values.Select(snippet => snippet.ActiveOperation ?? Task.CompletedTask));
         processingTimer?.Dispose();
