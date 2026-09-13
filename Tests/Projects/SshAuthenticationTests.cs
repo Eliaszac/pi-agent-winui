@@ -38,8 +38,14 @@ public sealed class SshAuthenticationTests
     }
 
     [TestMethod]
+    [TestCategory("WindowsIntegration")]
     public void CredentialStoreRoundTripsOnlyItsOwnUniqueTestEntry()
     {
+        if (Environment.GetEnvironmentVariable("PI_TEST_WINDOWS_CREDENTIALS") != "1")
+        {
+            Assert.Inconclusive("Opt-in Windows integration test. Set PI_TEST_WINDOWS_CREDENTIALS=1 to allow a temporary Credential Manager entry.");
+            return;
+        }
         var id = Guid.NewGuid();
         var store = new SshCredentialStore();
         try
@@ -74,6 +80,7 @@ public sealed class SshAuthenticationTests
     }
 
     [TestMethod]
+    [TestCategory("WindowsIntegration")]
     public async Task HeadlessHelperReturnsOnlyTheExpectedCredentialAndRejectsOtherPrompts()
     {
         var executable = Environment.GetEnvironmentVariable("PI_TEST_SSH_HELPER_EXE");

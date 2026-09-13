@@ -10,6 +10,7 @@ namespace PiAgentGui.Tests.Pi;
 public sealed class McpLiveConnectionTests
 {
     [TestMethod]
+    [TestCategory("LiveIntegration")]
     public async Task ObsidianConnectsThroughProductionSetupAndTransport()
     {
         if (Environment.GetEnvironmentVariable("PI_MCP_TEST_OBSIDIAN") != "1")
