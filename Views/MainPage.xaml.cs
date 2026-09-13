@@ -213,6 +213,12 @@ public sealed partial class MainPage : Page
         await RefreshGitHubAsync(true);
     }
 
+    private void OnConversationToolTipOpened(object sender, RoutedEventArgs args)
+    {
+        if (sender is ToolTip { Tag: ConversationItemViewModel conversation })
+            conversation.RefreshPullRequestDetails();
+    }
+
     private async void OnOpenPullRequestClicked(object sender, RoutedEventArgs args)
     {
         if (sender is MenuFlyoutItem { Tag: ConversationItemViewModel conversation } && conversation.PullRequestUrl is { } url)

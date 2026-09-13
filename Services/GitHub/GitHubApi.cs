@@ -34,7 +34,12 @@ public sealed class GitHubApi(HttpClient http)
                 if (head.GetProperty("ref").GetString() != branch.Branch ||
                     !string.Equals(head.GetProperty("repo").GetProperty("full_name").GetString(), branch.FullName, StringComparison.OrdinalIgnoreCase)) continue;
                 var number = pull.GetProperty("number").GetInt32();
-                if (number > 0) return new(number, pull.GetProperty("title").GetString() ?? "Pull request", new Uri($"https://github.com/{target}/pull/{number}"));
+                if (number > 0) return new(number, pull.GetProperty("title").GetString() ?? "Pull request", new Uri($"https://github.com/{target}/pull/{number}"),
+                    pull.TryGetProperty("user", out var user) && user.ValueKind == JsonValueKind.Object
+                        && user.TryGetProperty("login", out var login) && login.ValueKind == JsonValueKind.String ? login.GetString() : null,
+                    pull.TryGetProperty("draft", out var draft) && draft.ValueKind is JsonValueKind.True or JsonValueKind.False ? draft.GetBoolean() : null,
+                    pull.TryGetProperty("created_at", out var created) && created.ValueKind == JsonValueKind.String && created.TryGetDateTimeOffset(out var createdAt) ? createdAt : null,
+                    pull.TryGetProperty("updated_at", out var updated) && updated.ValueKind == JsonValueKind.String && updated.TryGetDateTimeOffset(out var updatedAt) ? updatedAt : null);
             }
         }
         return null;

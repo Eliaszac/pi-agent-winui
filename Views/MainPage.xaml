@@ -23,7 +23,7 @@
                     Background="Transparent" BorderThickness="0" Padding="11,7" Margin="0,1" MinHeight="34" FontSize="13.3"
                     AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}" AutomationProperties.HelpText="{x:Bind HoverDetails, Mode=OneWay}">
                     <ToolTipService.ToolTip>
-                        <ToolTip Placement="Right" Padding="20" MaxWidth="392" CornerRadius="8">
+                        <ToolTip Placement="Right" Padding="20" MaxWidth="392" CornerRadius="8" Tag="{x:Bind}" Opened="OnConversationToolTipOpened">
                             <StackPanel Width="328" Spacing="16">
                                 <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                                 <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -42,8 +42,12 @@
                                 <StackPanel Spacing="12" Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                     <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                     <StackPanel Spacing="4">
-                                        <TextBlock Text="{x:Bind PullRequestLabel, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="{x:Bind PullRequestHeading, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         <TextBlock Text="{x:Bind PullRequestTitle, Mode=OneWay}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind PullRequestOpened, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                                            Visibility="{x:Bind HasPullRequestOpened, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                                        <TextBlock Text="{x:Bind PullRequestUpdated, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                                            Visibility="{x:Bind HasPullRequestUpdated, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>

@@ -28,7 +28,6 @@ public sealed partial class ConversationView : UserControl
     private ScrollViewer? scroller;
     private bool followTail = true;
     private bool tailScrollPending;
-    private bool programmaticTailScroll;
     private bool composing;
     private bool synchronizingThinking;
     private bool synchronizingApproval;
@@ -75,6 +74,9 @@ public sealed partial class ConversationView : UserControl
     public ConversationView()
     {
         InitializeComponent();
+        Transcript.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(OnTranscriptScrollInput), true);
+        Transcript.AddHandler(PointerPressedEvent, new PointerEventHandler(OnTranscriptPointerPressed), true);
+        Transcript.AddHandler(KeyDownEvent, new KeyEventHandler(OnTranscriptScrollKey), true);
         PromptRail.PromptSelected += entry =>
         {
             restoringViewport = null;
@@ -148,13 +150,14 @@ public sealed partial class ConversationView : UserControl
     private void OnScrollChanged(object? sender, ScrollViewerViewChangedEventArgs args)
     {
         if (scroller is null || restoringViewport is not null) return;
-        if (programmaticTailScroll)
+        // Layout, virtualization and ChangeView also raise ViewChanged. Only explicit
+        // input may detach a follower; reaching the bottom reattaches a reader.
+        if (!followTail && !args.IsIntermediate && IsAtTranscriptTail()) followTail = true;
+        if (followTail && !IsAtTranscriptTail())
         {
-            if (!args.IsIntermediate) programmaticTailScroll = false;
-            return;
+            tailScrollPending = true;
+            Transcript.InvalidateArrange();
         }
-        if (tailScrollPending) return;
-        followTail = IsAtTranscriptTail();
     }
 
     private void OnTranscriptChanged()
@@ -176,7 +179,8 @@ public sealed partial class ConversationView : UserControl
     private void OnTranscriptLayoutUpdated(object? sender, object args)
     {
         scroller ??= Controls.VisualTreeSearch.FindDescendant<ScrollViewer>(Transcript);
-        if (TryRestoreViewport() || !tailScrollPending) return;
+        if (TryRestoreViewport() || !followTail || ViewModel?.DisplayEntries.Count is not > 0) return;
+        if (!tailScrollPending && IsAtTranscriptTailExact()) return;
         // Realize the destination before using the extent: offscreen row heights are estimates.
         if (ViewModel?.DisplayEntries.LastOrDefault() is { } last && Transcript.ContainerFromItem(last) is null)
         {
@@ -185,11 +189,47 @@ public sealed partial class ConversationView : UserControl
         }
         if (scroller is not null)
         {
-            programmaticTailScroll = true;
             scroller.ChangeView(null, scroller.ScrollableHeight, null, disableAnimation: true);
         }
         tailScrollPending = false;
         followTail = true;
+    }
+
+    private bool IsAtTranscriptTailExact() => scroller is null || scroller.ScrollableHeight - scroller.VerticalOffset < 1;
+
+    private void OnTranscriptScrollInput(object sender, PointerRoutedEventArgs args) => DetachTranscriptTail();
+
+    private void OnTranscriptPointerPressed(object sender, PointerRoutedEventArgs args)
+    {
+        // Mouse text selection is not scrolling. Touch/pen panning and scrollbar
+        // dragging must interrupt following before the ScrollViewer changes offset.
+        if (args.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Mouse)
+        {
+            DetachTranscriptTail();
+            return;
+        }
+        for (var element = args.OriginalSource as DependencyObject; element is not null && element != Transcript;
+             element = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(element))
+            if (element is Microsoft.UI.Xaml.Controls.Primitives.ScrollBar)
+            {
+                DetachTranscriptTail();
+                return;
+            }
+    }
+
+    private void OnTranscriptScrollKey(object sender, KeyRoutedEventArgs args)
+    {
+        if (args.Key is Windows.System.VirtualKey.Up or Windows.System.VirtualKey.Down
+            or Windows.System.VirtualKey.PageUp or Windows.System.VirtualKey.PageDown
+            or Windows.System.VirtualKey.Home or Windows.System.VirtualKey.End)
+            DetachTranscriptTail();
+    }
+
+    private void DetachTranscriptTail()
+    {
+        restoringViewport = null;
+        followTail = false;
+        tailScrollPending = false;
     }
 
     private bool IsAtTranscriptTail() => scroller is null || scroller.ScrollableHeight - scroller.VerticalOffset < 48;

@@ -15,7 +15,12 @@ public sealed class ConversationItemViewModel : ObservableObject
     public string TargetLocation => Target is null || Target.IsLocal ? "Local Windows · This computer" : Target.Kind == "wsl" ? "WSL · " + Target.Host : "SSH · " + Target.Host;
     public string TargetPath => Target?.Path ?? "";
     public string PullRequestTitle => pullRequest?.Title ?? "";
-    public string HoverDetails => $"{Title}\n\n{Target?.Description ?? "Local · This computer"}" + (pullRequest is null ? "" : $"\n\n{PullRequestLabel} · {pullRequest.Title}");
+    public string PullRequestHeading => pullRequest is null ? "" : PullRequestDetailsFormatter.Heading(pullRequest);
+    public string PullRequestOpened => pullRequest is null ? "" : PullRequestDetailsFormatter.Opened(pullRequest, DateTimeOffset.UtcNow);
+    public string PullRequestUpdated => pullRequest is null ? "" : PullRequestDetailsFormatter.Updated(pullRequest, DateTimeOffset.UtcNow);
+    public bool HasPullRequestOpened => PullRequestOpened.Length > 0;
+    public bool HasPullRequestUpdated => PullRequestUpdated.Length > 0;
+    public string HoverDetails => $"{Title}\n\n{Target?.Description ?? "Local · This computer"}" + (pullRequest is null ? "" : $"\n\n{PullRequestHeading} · {pullRequest.Title}\n{PullRequestOpened}\n{PullRequestUpdated}".TrimEnd());
     public string AccessibleName => $"{Title}, {TargetLabel}";
     private Models.GitHub.GitHubPullRequest? pullRequest;
     public bool HasPullRequest => pullRequest is not null;
@@ -29,6 +34,16 @@ public sealed class ConversationItemViewModel : ObservableObject
         OnPropertyChanged(nameof(PullRequestLabel));
         OnPropertyChanged(nameof(PullRequestTitle));
         OnPropertyChanged(nameof(OpenPullRequestLabel));
+        RefreshPullRequestDetails();
+    }
+
+    internal void RefreshPullRequestDetails()
+    {
+        OnPropertyChanged(nameof(PullRequestHeading));
+        OnPropertyChanged(nameof(PullRequestOpened));
+        OnPropertyChanged(nameof(PullRequestUpdated));
+        OnPropertyChanged(nameof(HasPullRequestOpened));
+        OnPropertyChanged(nameof(HasPullRequestUpdated));
         OnPropertyChanged(nameof(HoverDetails));
     }
     /// <summary>Gets the saved conversation.</summary>

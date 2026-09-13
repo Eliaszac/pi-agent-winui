@@ -31,6 +31,8 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 ## Learned constraints
 
+- Sidebar conversation hovercards show PR number and Open/Draft status, title, author/opened age, and updated age. Keep metadata quiet and text-only; omit unavailable author/timestamps. Relative ages refresh when the tooltip opens without a new network request. Sidebar rows remain compact; reviewers, CI, avatars, and descriptions are outside this pass.
+
 - 2026-09-12: Approved: the expanded sidebar uses a compact outlined folder-plus at the right of the Projects heading to open the existing New project dialog. It replaces the separate New project button and stays visually distinct from the plain plus used for new conversations. This supersedes the earlier preference against a heading-level add control.
 
 - 2026-09-12: Home has no introductory “Pick up where you left off” sentence. Place the app version below About local usage. Center the complete content vertically when it fits the viewport; preserve scrolling and equal top/bottom padding when it does not.
