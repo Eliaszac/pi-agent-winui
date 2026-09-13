@@ -3,8 +3,10 @@ using PiAgentGui.Utilities;
 
 namespace PiAgentGui.ViewModels.Conversations;
 
-public sealed class ChangedFileViewModel(IReadOnlyList<FileChange> changes)
+public sealed class ChangedFileViewModel(IReadOnlyList<FileChange> changes) : ObservableObject
 {
+    private bool expanded;
+    public bool IsExpanded { get => expanded; set => SetProperty(ref expanded, value); }
     public string Path => ProjectPathDisplay.ForTool(changes[0].Path);
     public string Kind => changes[^1].Kind == "deleted" ? "Deleted" : changes[0].Kind == "created" ? "Created" : "Modified";
     public string Label => $"{Kind} · {Path}";

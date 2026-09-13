@@ -525,6 +525,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             for (var index = 0; index < rows.Count; index++)
             {
                 if (index < DisplayEntries.Count && ReferenceEquals(DisplayEntries[index], rows[index])) continue;
+                // Initial history and appended responses do not need a linear search through older rows.
+                if (index == DisplayEntries.Count) { DisplayEntries.Add(rows[index]); continue; }
                 var existingIndex = DisplayEntries.IndexOf(rows[index]);
                 if (existingIndex >= 0) DisplayEntries.Move(existingIndex, index);
                 else DisplayEntries.Insert(index, rows[index]);

@@ -63,6 +63,14 @@ Home is the default workspace landing page, reachable from both sidebar layouts 
 
 Usage caching is memory-only, keyed by session file metadata and pruned against the current catalog. No analytics database, prompt copy, or telemetry upload is added. Deleting a conversation removes its contribution on refresh unless a saved fork retains that history. Reads are bounded to 64 MiB per session, 256 MiB of uncached files per scan, two million characters per JSONL record, and a ten-second budget between files; partial/unreadable records are disclosed. Home refreshes on navigation and every thirty seconds while visible, and cancels reads when hidden. Settings can disable the usage reader or persist a cutoff for displayed totals. Resetting totals does not rewrite Pi sessions or provider records.
 
+## Conversation rendering
+
+Conversation virtualization is complete and user-approved following user testing on 13 September 2026.
+
+The transcript uses a native ListView with an explicit ItemsStackPanel, a one-viewport cache setting and KeepItemsInView anchoring. Message-type sections, tool details and summary diffs are created only when needed via x:Load. Tool expansion, changed-file expansion and snippet execution/output live in view models rather than recycled controls. Appending history avoids searching all prior rows; streaming preserves existing row identities.
+
+Reading positions are retained per conversation for the view's lifetime using a message identity and its viewport offset, without keeping UI containers alive. Tail navigation realizes the final item before using the estimated scroll extent. Markdown realization from older rows does not request a tail jump. This is UI virtualization: Pi still supplies the session history, and the app retains its message models. Individual large messages and expanded tool groups are not internally paged. Unit tests cover stable updates across 2,000 messages and existing transcript/snippet behavior; the user reported that the implementation works and approved completion.
+
 ## Settings and legal information
 
 The Settings page is complete and user-approved. Possible additional settings and third-party logo permissions remain separate follow-ups in BACKLOG.md.

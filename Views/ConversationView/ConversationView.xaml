@@ -61,7 +61,7 @@
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </controls:ActionToggleButton>
-                <StackPanel Spacing="8" Margin="24,4,0,8" Visibility="{x:Bind IsExpanded, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel x:Name="ToolDetails" Spacing="8" Margin="24,4,0,8" x:Load="{x:Bind IsExpanded, Mode=OneWay}">
                     <controls:FileDiffView Patch="{x:Bind DiffPatch, Mode=OneWay}"
                         Visibility="{x:Bind HasDiff, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                     <TextBlock Text="{x:Bind DiffNotice, Mode=OneWay}" TextWrapping="Wrap" FontSize="11"
@@ -118,7 +118,7 @@
                             <ItemsControl ItemsSource="{Binding VisibleFiles}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="chat:ChangedFileViewModel">
-                                        <controls:ActionExpander Expanding="OnFileDiffExpanding" Collapsed="OnFileDiffCollapsed" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0" Padding="0" MinHeight="32">
+                                        <controls:ActionExpander IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}" Expanding="OnFileDiffExpanding" Collapsed="OnFileDiffCollapsed" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0" Padding="0" MinHeight="32">
                                             <controls:ActionExpander.Header>
                                                 <Grid ColumnSpacing="12">
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -130,6 +130,8 @@
                                             <StackPanel Spacing="6">
                                                 <TextBlock Text="Diff unavailable for some edits to this file." TextWrapping="Wrap" FontSize="11"
                                                     Visibility="{x:Bind HasUnknownCounts, Converter={StaticResource BooleanToVisibility}}" />
+                                                <controls:FileDiffView x:Name="ExpandedFileDiff" x:Load="{x:Bind IsExpanded, Mode=OneWay}"
+                                                    Patch="{x:Bind Patch, Mode=OneWay}" FileName="{x:Bind Path}" ShowFileName="False"/>
                                             </StackPanel>
                                         </controls:ActionExpander>
                                     </DataTemplate>
@@ -205,6 +207,9 @@
                 IsItemClickEnabled="False" HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                 ScrollViewer.HorizontalScrollMode="Disabled" AutomationProperties.Name="Conversation messages">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate><ItemsStackPanel CacheLength="1" ItemsUpdatingScrollMode="KeepItemsInView"/></ItemsPanelTemplate>
+                </ListView.ItemsPanel>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -216,17 +221,17 @@
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="chat:ChatEntryViewModel">
                         <Grid Padding="4,0,12,0">
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8"
-                                Visibility="{x:Bind IsProcessing, Converter={StaticResource BooleanToVisibility}}">
+                            <StackPanel x:Name="ProcessingRow" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8"
+                                x:Load="{x:Bind IsProcessing, Mode=OneWay}">
                                 <ProgressRing Width="12" Height="12" MinWidth="0" MinHeight="0" IsActive="{x:Bind IsProcessing}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <TextBlock Text="{x:Bind Text, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     VerticalAlignment="Center" />
                             </StackPanel>
-                            <ContentControl Content="{x:Bind}" ContentTemplate="{StaticResource ToolTemplate}" HorizontalContentAlignment="Stretch" Margin="0,0,0,2"
-                                Visibility="{x:Bind IsTool, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
-                            <StackPanel Spacing="4" Margin="0,0,0,8"
-                                Visibility="{x:Bind IsToolGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                            <ContentControl x:Name="ToolRow" Content="{x:Bind}" ContentTemplate="{StaticResource ToolTemplate}" HorizontalContentAlignment="Stretch" Margin="0,0,0,2"
+                                x:Load="{x:Bind IsTool, Mode=OneWay}" />
+                            <StackPanel x:Name="ToolGroupRow" Spacing="4" Margin="0,0,0,8"
+                                x:Load="{x:Bind IsToolGroup, Mode=OneWay}">
                                 <controls:ActionToggleButton IsChecked="{x:Bind IsExpanded, Mode=TwoWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                     Padding="6,4" MinHeight="28" Background="Transparent" BorderThickness="0" AutomationProperties.Name="{x:Bind GroupSummary, Mode=OneWay}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -234,11 +239,11 @@
                                         <TextBlock Text="{x:Bind GroupSummary, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                 </controls:ActionToggleButton>
-                                <ItemsControl ItemsSource="{x:Bind Tools, Mode=OneWay}" ItemTemplate="{StaticResource ToolTemplate}" Margin="16,0,0,0"
-                                    Visibility="{x:Bind IsExpanded, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                                <ItemsControl x:Name="ExpandedTools" ItemsSource="{x:Bind Tools, Mode=OneWay}" ItemTemplate="{StaticResource ToolTemplate}" Margin="16,0,0,0"
+                                    x:Load="{x:Bind IsExpanded, Mode=OneWay}" />
                             </StackPanel>
-                            <StackPanel HorizontalAlignment="Right" MaxWidth="640" Margin="48,0,0,18" Spacing="4"
-                                Visibility="{x:Bind IsUser, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                            <StackPanel x:Name="UserRow" HorizontalAlignment="Right" MaxWidth="640" Margin="48,0,0,18" Spacing="4"
+                                x:Load="{x:Bind IsUser, Mode=OneWay}">
                                 <Border Padding="13,9" CornerRadius="13" Background="{ThemeResource ControlFillColorSecondaryBrush}">
                                     <StackPanel Spacing="8">
                                     <ItemsControl ItemsSource="{x:Bind Images, Mode=OneWay}" Visibility="{x:Bind HasImages, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
@@ -253,8 +258,8 @@
                                     AutomationProperties.Name="Copy prompt" ToolTipService.ToolTip="Copy prompt"
                                     Visibility="{x:Bind CanCopyUser, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                             </StackPanel>
-                            <StackPanel Spacing="6" HorizontalAlignment="Stretch" Margin="0,0,0,18"
-                                Visibility="{x:Bind IsLeftAligned, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                            <StackPanel x:Name="ResponseRow" Spacing="6" HorizontalAlignment="Stretch" Margin="0,0,0,18"
+                                x:Load="{x:Bind IsLeftAligned, Mode=OneWay}">
                             <StackPanel Orientation="Horizontal" Spacing="12"
                                 Visibility="{x:Bind HasHeader, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                 <TextBlock Text="{x:Bind Speaker, Mode=OneWay}" FontWeight="SemiBold"
@@ -263,8 +268,8 @@
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                             <controls:MarkdownMessage Text="{x:Bind Text, Mode=OneWay}" ResponsiveWidth="True" ContentRendered="OnMarkdownContentRendered"
-                                SnippetFactory="{x:Bind SnippetFactory}" SnippetsEnabled="{x:Bind CanCopyResponse, Mode=OneWay}" />
-                            <ContentControl Content="{x:Bind Summary, Mode=OneWay}" ContentTemplate="{StaticResource RunSummaryTemplate}" HorizontalContentAlignment="Stretch" Visibility="{x:Bind HasSummary, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                                SnippetFactory="{x:Bind SnippetFactory, Mode=OneWay}" SnippetsEnabled="{x:Bind CanCopyResponse, Mode=OneWay}" />
+                            <ContentControl x:Name="SummaryRow" Content="{x:Bind Summary, Mode=OneWay}" ContentTemplate="{StaticResource RunSummaryTemplate}" HorizontalContentAlignment="Stretch" x:Load="{x:Bind HasSummary, Mode=OneWay}" />
                             <StackPanel Orientation="Horizontal" Spacing="4"
                                 Visibility="{x:Bind ShowInlineActions, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                             <controls:CopyFeedbackButton Click="OnCopyMessageClicked" HorizontalAlignment="Left" Style="{StaticResource ShellIconButtonStyle}"

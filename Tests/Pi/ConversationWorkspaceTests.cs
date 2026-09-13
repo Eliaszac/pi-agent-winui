@@ -12,6 +12,30 @@ namespace PiAgentGui.Tests.Pi;
 public sealed class ConversationWorkspaceTests
 {
     [TestMethod]
+    public async Task LongHistoryKeepsRowsStableDuringStreamingAndDoesNotResetTheCollection()
+    {
+        var dispatcher = new QueuedUiDispatcher();
+        var session = new FakeConversationSession();
+        await using var workspace = new ConversationViewModel(session, dispatcher);
+        for (var index = 0; index < 2000; index++)
+            session.Emit(new() { Entry = new ChatEntry("message-" + index, "Pi", "Response " + index, IsAssistant: true) });
+        dispatcher.Drain();
+        Assert.AreEqual(2000, workspace.DisplayEntries.Count);
+        var historical = workspace.DisplayEntries.ToArray();
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        workspace.DisplayEntries.CollectionChanged += (_, args) => changes.Add(args.Action);
+        session.Emit(new() { Entry = new ChatEntry("message-1999", "Pi", "Updated response", IsAssistant: true) });
+        dispatcher.Drain();
+        for (var index = 0; index < historical.Length; index++) Assert.AreSame(historical[index], workspace.DisplayEntries[index]);
+        Assert.AreEqual("Updated response", workspace.DisplayEntries[^1].Text);
+        Assert.AreEqual(0, changes.Count);
+        session.Emit(new() { Entry = new ChatEntry("message-2000", "Pi", "New response", IsAssistant: true) });
+        dispatcher.Drain();
+        Assert.AreEqual(2001, workspace.DisplayEntries.Count);
+        CollectionAssert.AreEqual(new[] { System.Collections.Specialized.NotifyCollectionChangedAction.Add }, changes);
+    }
+
+    [TestMethod]
     public async Task ProviderRefreshWaitsForTheRunningConversationAndKeepsItsModelAndDraft()
     {
         var dispatcher = new QueuedUiDispatcher();

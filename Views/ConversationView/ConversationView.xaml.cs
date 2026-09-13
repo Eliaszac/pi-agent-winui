@@ -34,13 +34,13 @@ public sealed partial class ConversationView : UserControl
     public event EventHandler? ApprovalSetupRequested;
     private void OnFileDiffExpanding(Expander sender, ExpanderExpandingEventArgs args)
     {
+        if (!sender.IsLoaded) return;
         followTail = false;
         tailScrollPending = false;
-        if (sender.DataContext is ChangedFileViewModel file && sender.Content is StackPanel { Children.Count: 1 } panel)
-            panel.Children.Add(new Controls.FileDiffView { Patch = file.Patch, FileName = file.Path, ShowFileName = false });
     }
     private void OnFileDiffCollapsed(Expander sender, ExpanderCollapsedEventArgs args)
     {
+        if (!sender.IsLoaded) return;
         followTail = false;
         tailScrollPending = false;
     }
@@ -76,6 +76,7 @@ public sealed partial class ConversationView : UserControl
         InitializeComponent();
         PromptRail.PromptSelected += entry =>
         {
+            restoringViewport = null;
             followTail = false;
             tailScrollPending = false;
             Transcript.ScrollIntoView(entry, ScrollIntoViewAlignment.Leading);
@@ -85,8 +86,9 @@ public sealed partial class ConversationView : UserControl
     private static void OnViewModelChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
         var view = (ConversationView)sender;
+        view.SaveViewport(args.OldValue as ConversationViewModel);
         view.Root.DataContext = args.NewValue;
-        view.followTail = true;
+        view.RestoreViewport(args.NewValue as ConversationViewModel);
         view.tailScrollPending = false;
         view.PromptRail.Reset();
         view.ResetCommands();
@@ -125,6 +127,7 @@ public sealed partial class ConversationView : UserControl
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
     {
+        SaveViewport(observed);
         if (observed is not null)
         {
             observed.TranscriptChanged -= OnTranscriptChanged;
@@ -140,7 +143,7 @@ public sealed partial class ConversationView : UserControl
 
     private void OnScrollChanged(object? sender, ScrollViewerViewChangedEventArgs args)
     {
-        if (scroller is not null && !tailScrollPending) followTail = scroller.ScrollableHeight - scroller.VerticalOffset < 48;
+        if (scroller is not null && !tailScrollPending && restoringViewport is null) followTail = scroller.ScrollableHeight - scroller.VerticalOffset < 48;
     }
 
     private void OnTranscriptChanged()
@@ -155,13 +158,20 @@ public sealed partial class ConversationView : UserControl
     private void OnMarkdownContentRendered(object? sender, EventArgs args)
     {
         // Follow coalesced content changes, never local layout changes such as sorting a table.
-        if (followTail) tailScrollPending = true;
+        if (followTail && sender is FrameworkElement { DataContext: ChatEntryViewModel entry }
+            && ViewModel?.DisplayEntries.LastOrDefault(item => item.IsLeftAligned) == entry) tailScrollPending = true;
     }
 
     private void OnTranscriptLayoutUpdated(object? sender, object args)
     {
-        if (!tailScrollPending) return;
         scroller ??= Controls.VisualTreeSearch.FindDescendant<ScrollViewer>(Transcript);
+        if (TryRestoreViewport() || !tailScrollPending) return;
+        // Realize the destination before using the extent: offscreen row heights are estimates.
+        if (ViewModel?.DisplayEntries.LastOrDefault() is { } last && Transcript.ContainerFromItem(last) is null)
+        {
+            Transcript.ScrollIntoView(last);
+            return;
+        }
         scroller?.ChangeView(null, scroller.ScrollableHeight, null, disableAnimation: true);
         tailScrollPending = false;
     }
