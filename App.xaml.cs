@@ -55,6 +55,7 @@ public partial class App : Application
         var storage = new ProjectStorageOptions();
         var repository = new JsonProjectRepository(storage);
         var paths = new PiSessionPaths(storage);
+        var defaultHistory = new ConversationDefaultsReader(repository, new Services.Home.SessionUsageReader(paths));
         var startInfo = new PiProcessStartInfoFactory(locator);
         var researchDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "research");
         var researchStore = new ResearchStore(researchDirectory);
@@ -68,6 +69,7 @@ public partial class App : Application
                 Target: ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id)),
                 () => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout))
             {
+                ReadDefaultHistory = defaultHistory.ReadAsync,
                 ResearchRequested = async payload => await research.DispatchAsync(new Models.Conversations.ResearchTask(Guid.NewGuid(), conversation.Id, project.Path,
                     PiJson.Text(payload, "title"), PiJson.Text(payload, "question"), PiJson.Text(payload, "provider"), PiJson.Text(payload, "model"),
                     PiJson.Text(payload, "effort"), "Queued", "", DateTimeOffset.UtcNow))

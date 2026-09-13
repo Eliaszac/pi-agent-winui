@@ -37,7 +37,7 @@ internal sealed class MarkdownTableView : UserControl
                 var content = new StackPanel { Spacing = 8, MinWidth = 120, MaxWidth = 320 };
                 foreach (var block in cell)
                 {
-                    var element = MarkdownRenderer.RenderBlock(block);
+                    var element = MarkdownRenderer.RenderBlock(block, prose: false);
                     if (element is RichTextBlock text)
                     {
                         text.FontSize = 14 * ReadingPreferences.Scale; text.LineHeight = 22 * ReadingPreferences.Scale;

@@ -35,6 +35,22 @@ public sealed class HomeTests
     public void Cleanup() { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
 
     [TestMethod]
+    public async Task UsageReaderCarriesEffortMetadataAndRefreshesAfterNewResponses()
+    {
+        var conversation = Conversation("Default learning"); var project = Project(conversation);
+        var prefix = """{"type":"thinking_level_change","id":"effort","parentId":null,"thinkingLevel":"high"}""";
+        var data = prefix + "\n" + Entry();
+        await WriteAsync(project, conversation, data);
+        var reader = new SessionUsageReader(Paths);
+        var history = await reader.ReadAsync([project]);
+        Assert.AreEqual("high", history.Samples.Single().Effort);
+        await WriteAsync(project, conversation, data + "\n" + """{"type":"thinking_level_change","id":"effort2","thinkingLevel":"low"}""" + "\n" + Entry("new"));
+        history = await reader.ReadAsync([project]);
+        Assert.AreEqual(2, history.Samples.Count);
+        Assert.AreEqual("low", history.Samples.Last().Effort);
+    }
+
+    [TestMethod]
     public async Task StartsOnHomeAndPreservesConversationWhenReturningHome()
     {
         var draft = Conversation("Existing"); var project = Project(draft);

@@ -70,6 +70,7 @@ public sealed class SessionUsageReader(PiSessionPaths paths)
         var rows = new List<UsageSample>();
         var skipped = 0;
         var lineNumber = 0;
+        var efforts = new SessionEffortTracker();
         foreach (var line in BoundedJsonLines.Read(reader, cancellationToken))
         {
             lineNumber++;
@@ -77,7 +78,10 @@ public sealed class SessionUsageReader(PiSessionPaths paths)
             if (string.IsNullOrWhiteSpace(line)) continue;
             try
             {
-                if (SessionUsageParser.Parse(line, projectId, conversationId, lineNumber) is { } sample) rows.Add(sample);
+                using var document = JsonDocument.Parse(line);
+                var effort = efforts.Read(document.RootElement);
+                if (SessionUsageParser.Parse(document.RootElement, projectId, conversationId, lineNumber) is { } sample)
+                    rows.Add(sample with { Effort = effort });
                 if (rows.Count >= 100_000) { skipped++; break; }
             }
             catch (Exception error) when (error is JsonException or FormatException or ArgumentOutOfRangeException) { skipped++; }

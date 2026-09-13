@@ -1,5 +1,6 @@
 """Private, bounded workspace snapshots. Invoked through the checkpoint extension only."""
 import contextlib
+import errno
 import difflib
 import hashlib
 import json
@@ -49,25 +50,51 @@ class CheckpointEngine:
         self.records.mkdir(exist_ok=True, mode=0o700)
 
     @contextlib.contextmanager
-    def lock(self):
+    def lock(self, timeout=5.0):
         # An OS-held target-side lock survives transport interruption until the helper exits.
         with (self.base / 'operation.lock').open('a+b') as stream:
             if os.name == 'nt':
+                import ctypes
                 import msvcrt
-                stream.seek(0)
-                stream.write(b'0')
-                stream.flush()
-                stream.seek(0)
-                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                from ctypes import wintypes
+                kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+                for name in ('LockFile', 'UnlockFile'):
+                    function = getattr(kernel, name)
+                    function.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD]
+                    function.restype = wintypes.BOOL
+                handle = msvcrt.get_osfhandle(stream.fileno())
+                # Windows permits locking beyond EOF: never write into another holder's range.
+                def acquire():
+                    if kernel.LockFile(handle, 0, 0, 1, 0):
+                        return True
+                    code = ctypes.get_last_error()
+                    if code == 33:  # ERROR_LOCK_VIOLATION, not ERROR_ACCESS_DENIED.
+                        return False
+                    raise ctypes.WinError(code)
             else:
                 import fcntl
-                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                def acquire():
+                    try:
+                        fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        return True
+                    except OSError as error:
+                        if error.errno not in (errno.EAGAIN, errno.EWOULDBLOCK):
+                            raise
+                        return False
+            deadline = time.monotonic() + timeout
+            while not acquire():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError('Checkpoints are busy in another chat. Try again shortly.')
+                time.sleep(min(0.05, remaining))
             try:
                 yield
             finally:
                 if os.name == 'nt':
-                    stream.seek(0)
-                    msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+                    if not kernel.UnlockFile(handle, 0, 0, 1, 0):
+                        raise ctypes.WinError(ctypes.get_last_error())
+                else:
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
     def path(self, relative):
         if not isinstance(relative, str) or not relative or '\\' in relative or ':' in relative or any(ord(c) < 32 for c in relative):
@@ -506,13 +533,17 @@ class CheckpointEngine:
 
 
 def main():
+    action = 'initialize'
     try:
         request = json.load(sys.stdin)
+        requested_action = request.get('action')
+        if requested_action in ('list', 'begin', 'finish', 'manifest', 'preview', 'apply', 'recover', 'clear', 'prune'):
+            action = requested_action
         engine = CheckpointEngine(request['root'], request['session'])
         result = engine.run(request)
         print(json.dumps({'ok': True, 'data': result}, ensure_ascii=True))
     except Exception as error:
-        print(json.dumps({'ok': False, 'error': str(error)}, ensure_ascii=True))
+        print(json.dumps({'ok': False, 'error': f'Checkpoint {action}: {error}'}, ensure_ascii=True))
 
 
 if __name__ == '__main__':

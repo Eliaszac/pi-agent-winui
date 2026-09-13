@@ -11,12 +11,14 @@ public sealed partial class ConversationViewModel
     public string CheckpointStatus { get; private set; } = "Enable Workspace checkpoints in Extensions to capture future changes.";
     public string? CheckpointRecoveryId { get; private set; }
     public bool HasCheckpointRecovery => CheckpointRecoveryId is not null;
+    public bool HasCheckpointError { get; private set; }
 
     private void ObserveCheckpoint(JsonElement packet)
     {
         var state = PiJson.Text(packet, "status");
         if (state.Length > 0)
         {
+            HasCheckpointError = state == "error";
             CheckpointStatus = state switch
             {
                 "ready" => "Workspace checkpoints ready",
@@ -28,6 +30,7 @@ public sealed partial class ConversationViewModel
             if (state == "error") warning = CheckpointStatus;
             if (state == "recovery") CheckpointRecoveryId = PiJson.Text(packet, "recoveryId");
             OnPropertyChanged(nameof(CheckpointStatus));
+            OnPropertyChanged(nameof(HasCheckpointError));
             OnPropertyChanged(nameof(CheckpointRecoveryId));
             OnPropertyChanged(nameof(HasCheckpointRecovery));
         }

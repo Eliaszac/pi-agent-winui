@@ -448,7 +448,7 @@
             <Border Grid.Row="1" Grid.RowSpan="2" CornerRadius="20" Padding="8"
                 Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
             <Grid RowSpacing="8">
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <TextBox x:Name="Composer" Text="{Binding Draft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 Paste="OnComposerPaste"
                 TextChanged="OnComposerTextChanged" SelectionChanged="OnComposerSelectionChanged" PreviewKeyDown="OnComposerPreviewKeyDown"
@@ -510,12 +510,12 @@
                     </controls:ComposerActionButton>
                 </Grid>
             </Grid>
-            <TextBlock x:Name="SendKeyHint" Grid.Row="2" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
             </Grid>
             </Border>
         </Grid>
     </Grid>
     <StackPanel VerticalAlignment="Top">
+        <InfoBar IsOpen="{Binding HasCheckpointError}" Severity="Warning" IsClosable="False" Title="Workspace checkpoints" Message="{Binding CheckpointStatus}" />
         <InfoBar IsOpen="{Binding HasCheckpointRecovery}" Severity="Warning" IsClosable="False" Title="Checkpoint recovery" Message="{Binding CheckpointStatus}">
             <InfoBar.ActionButton><controls:ActionButton Content="Inspect recovery" Click="OnCheckpointRecovery" /></InfoBar.ActionButton>
         </InfoBar>

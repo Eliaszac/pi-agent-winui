@@ -9,7 +9,11 @@ public static class SessionUsageParser
     public static UsageSample? Parse(string line, Guid projectId, Guid conversationId, int lineNumber)
     {
         using var document = JsonDocument.Parse(line);
-        var entry = document.RootElement;
+        return Parse(document.RootElement, projectId, conversationId, lineNumber);
+    }
+
+    public static UsageSample? Parse(JsonElement entry, Guid projectId, Guid conversationId, int lineNumber)
+    {
         if (PiJson.Text(entry, "type") != "message") return null;
         var message = PiJson.Field(entry, "message");
         if (PiJson.Text(message, "role") != "assistant" || PiJson.Text(message, "stopReason") == "pending") return null;

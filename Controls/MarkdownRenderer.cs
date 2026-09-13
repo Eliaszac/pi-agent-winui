@@ -32,14 +32,14 @@ internal static class MarkdownRenderer
         }
         return false;
     }
-    internal static StackPanel Render(ContainerBlock document, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null)
+    internal static StackPanel Render(ContainerBlock document, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null, bool prose = true)
     {
         var panel = new StackPanel { Spacing = 10 };
-        foreach (var block in document) panel.Children.Add(RenderBlock(block, snippets));
+        foreach (var block in document) panel.Children.Add(RenderBlock(block, snippets, prose));
         return panel;
     }
 
-    internal static FrameworkElement RenderBlock(Markdig.Syntax.Block block, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null)
+    internal static FrameworkElement RenderBlock(Markdig.Syntax.Block block, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null, bool prose = true)
     {
         switch (block)
         {
@@ -55,26 +55,26 @@ internal static class MarkdownRenderer
                 if (snippets is not null) codeView.AttachSnippet(snippets(code.Span.Start.ToString(), "text", code.Lines.ToString()));
                 return codeView;
             case HeadingBlock heading:
-                var title = Text(heading.Inline);
+                var title = Text(heading.Inline, prose);
                 title.FontSize = (heading.Level switch { 1 => 28, 2 => 23, 3 => 19, _ => 16 }) * ReadingPreferences.Scale;
                 title.LineHeight = title.FontSize * 1.35;
                 title.FontWeight = FontWeights.SemiBold;
-                title.Margin = new Thickness(0, 12, 0, 0);
+                title.Margin = new Thickness(0, prose ? 6 : 12, 0, 0);
                 return title;
             case ParagraphBlock paragraph:
-                return Text(paragraph.Inline);
+                return Text(paragraph.Inline, prose);
             case QuoteBlock quote:
                 return new Border { BorderThickness = new Thickness(3, 0, 0, 0), Padding = new Thickness(12, 2, 0, 2),
-                    BorderBrush = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"], Child = Render(quote, snippets) };
+                    BorderBrush = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"], Child = Render(quote, snippets, prose) };
             case ListBlock list:
                 var depth = 0;
                 for (var ancestor = list.Parent; ancestor is not null; ancestor = ancestor.Parent)
                     if (ancestor is ListBlock) depth++;
-                var items = new StackPanel { Spacing = list.IsLoose ? 12 : 6,
+                var items = new StackPanel { Spacing = list.IsLoose ? (prose ? 14 : 12) : (prose ? 8 : 6),
                     Margin = new Thickness(depth > 0 ? 16 : 0, 0, 0, 0) };
                 var number = int.TryParse(list.OrderedStart, out var start) ? start : 1;
-                var bullet = depth == 0 ? "• " : depth == 1 ? "◦ " : "▪ ";
-                var markers = Enumerable.Range(0, list.Count).Select(index => list.IsOrdered ? $"{number + index}. " : bullet).ToArray();
+                var separator = prose ? "\u2002" : " ";
+                var markers = Enumerable.Range(0, list.Count).Select(index => list.IsOrdered ? $"{number + index}.{separator}" : "–" + separator).ToArray();
                 var widths = markers.Select(marker =>
                 {
                     var measure = new TextBlock { Text = marker, FontSize = ReadingPreferences.Body };
@@ -84,9 +84,9 @@ internal static class MarkdownRenderer
                 var gutter = widths.Length > 0 ? widths.Max() : 0;
                 for (var index = 0; index < list.Count; index++)
                 {
-                    var body = Render((ContainerBlock)list[index], snippets);
+                    var body = Render((ContainerBlock)list[index], snippets, prose);
                     if (body.Children.FirstOrDefault() is not RichTextBlock)
-                        body.Children.Insert(0, Text(null));
+                        body.Children.Insert(0, Text(null, prose));
                     var first = (RichTextBlock)body.Children[0];
                     first.Padding = new Thickness(gutter, 0, 0, 0);
                     var paragraph = (Paragraph)first.Blocks[0];
@@ -102,16 +102,22 @@ internal static class MarkdownRenderer
             case LeafBlock leaf:
                 return new TextBlock { Text = leaf.Lines.ToString(), FontSize = ReadingPreferences.Body, LineHeight = 24 * ReadingPreferences.Scale, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
             case ContainerBlock container:
-                return Render(container, snippets);
+                return Render(container, snippets, prose);
             default:
                 return new TextBlock();
         }
     }
 
-    internal static RichTextBlock Text(ContainerInline? source)
+    internal static RichTextBlock Text(ContainerInline? source, bool prose = false)
     {
         var text = new RichTextBlock { IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontSize = ReadingPreferences.Body,
             LineHeight = 24 * ReadingPreferences.Scale, LineStackingStrategy = LineStackingStrategy.MaxHeight, HorizontalAlignment = HorizontalAlignment.Stretch };
+        if (prose)
+        {
+            text.MaxWidth = 720 * ReadingPreferences.Scale;
+            text.HorizontalAlignment = HorizontalAlignment.Left;
+            text.LineHeight = 27 * ReadingPreferences.Scale;
+        }
         var paragraph = new Paragraph();
         if (source is not null) AddInlines(paragraph.Inlines, source);
         text.Blocks.Add(paragraph);

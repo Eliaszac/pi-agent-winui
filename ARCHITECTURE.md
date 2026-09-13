@@ -42,12 +42,15 @@ Deleting a conversation stops its runtime and removes its session, settings, and
 
 Checkpoint bytes live on each target under `$HOME/.pi-desktop-checkpoints`, outside the workspace. Keep the latest five completed checkpoints per conversation; active/recovery/Undo data receives protection, with the documented 30-day age limit for completed/reverted records. See [CHECKPOINTS.md](docs/CHECKPOINTS.md).
 
+Checkpoint operations retain one target-wide OS lock. Acquisition waits up to five seconds for contention; Windows uses the explicit lock-violation code and never writes to the locked byte. Access failures remain separate from busy timeouts, and engine errors identify the operation. Initialization errors remain in checkpoint status and a dedicated banner; a later prompt retries initialization before capture.
+
 ## Implemented product surfaces
 
 - Native project/conversation sidebar with rename, settle/restore, delete, target details, resize/collapse, keyboard access, and system light/dark/high-contrast themes.
 - Streaming Markdown and tool output, extension questions, Stop, steering/follow-up queue, screenshots/file references, command picker, session details/export/compaction, and conversation fork/clone. Fork/clone copies session history; it does not branch source files.
 - Processing elapsed time in seconds, switching to minutes/seconds after one minute. The empty-conversation prompt is hidden while processing.
 - Searchable provider/model picker with global favorites and per-conversation confirmed model/effort/approval preferences.
+- New conversations select the most-used currently available provider/model from saved assistant-response history, then the most-used supported effort for that model. Counts are responses, not tokens; shared fork identities count once and ties use recency. Existing sessions and explicit saved choices are preserved. Missing history keeps Pi's model and the existing low-effort fallback where supported; rejected automatic choices do not prevent connection. Reads reuse the bounded session-usage reader with a memory-only cache, independently of Home visibility and its usage-display cutoff. Effort follows parent links in Pi's session tree; unknown historical effort is not guessed. Initial learned choices are saved in the conversation settings sidecar.
 - Providers page with Pi-owned sign-in/API-key flows and non-secret status. Credential changes refresh idle runtimes and defer busy ones. Configured credentials do not prove valid access. Ollama imports tool-capable models from local or explicitly connected endpoints at app startup or explicit Connect and sync; it does not download or run models.
 - Global Extensions page for supported packages and bundled opt-ins, plus skills/MCP inventory and supported setup. Remote third-party I/O is restricted as described in the target guide.
 - **Workspace checkpoints and deterministic revert: done.** Opt-in Manage dialog, Clear stored data, Created/Modified/Deleted summaries, selective revert, conflict checks, Undo, interrupted-write inspection, and automatic cleanup. Ask agent to revert is removed; unavailable recovery has no agent-assisted fallback.

@@ -15,6 +15,7 @@ export default function checkpoints(pi: ExtensionAPI): void {
     let transport: CheckpointTransport | undefined;
     let pending = Promise.resolve();
     let enabled = false;
+    let initialized = false;
     let activity: CheckpointActivity | undefined;
     const emit = (ctx: ExtensionContext, data: RecordValue) => ctx.ui.setStatus(statusKey, JSON.stringify({ version: 1, ...data }));
     const serialize = (work: () => Promise<void>): Promise<void> => {
@@ -33,6 +34,7 @@ export default function checkpoints(pi: ExtensionAPI): void {
         }
     };
     const initialize = async (ctx: ExtensionContext) => {
+        initialized = false;
         enabled = await configured();
         for (const entry of ctx.sessionManager.getBranch()) {
             if (entry.type === "custom" && entry.customType === "pi-gui-checkpoint") {
@@ -54,6 +56,7 @@ export default function checkpoints(pi: ExtensionAPI): void {
                 }
             }
         }
+        initialized = true;
     };
     pi.on("session_start", async (_event, ctx) => {
         try { await serialize(() => initialize(ctx)); }
@@ -64,6 +67,7 @@ export default function checkpoints(pi: ExtensionAPI): void {
             try {
                 enabled = await configured();
                 if (!enabled || active) return;
+                if (!initialized) await initialize(ctx);
                 transport ??= new CheckpointTransport(ctx.cwd, ctx.sessionManager.getSessionFile() ?? ctx.sessionManager.getSessionId());
                 activity = new CheckpointActivity(ctx.sessionManager.getSessionFile() ?? ctx.sessionManager.getSessionId());
                 const begin = object(await transport.request({ action: "begin", overlap: await activity.begin() }));
