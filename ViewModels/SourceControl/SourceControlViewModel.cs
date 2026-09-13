@@ -8,6 +8,7 @@ namespace PiAgentGui.ViewModels.SourceControl;
 public sealed class SourceControlViewModel : ObservableObject, IDisposable
 {
     private readonly GitRepositoryService localService;
+    private readonly SynchronizationContext? uiContext = SynchronizationContext.Current;
     private GitRepositoryService service;
     public SourceControlViewModel(GitRepositoryService service) { this.service = service; localService = service; }
     private Models.Projects.ExecutionTarget? target;
@@ -34,6 +35,7 @@ public sealed class SourceControlViewModel : ObservableObject, IDisposable
     private string message = "";
     private string error = "";
     private string notice = "";
+    private int noticeVersion;
     private string? remote;
     public ObservableCollection<GitChange> Staged { get; } = [];
     public ObservableCollection<GitChange> Changes { get; } = [];
@@ -180,7 +182,7 @@ public sealed class SourceControlViewModel : ObservableObject, IDisposable
         {
             if (disposed || version != revision) return;
             await operation(snapshot, lifetime.Token);
-            if (version == revision && !disposed) { onSuccess?.Invoke(); Notice = success; }
+            if (version == revision && !disposed) { onSuccess?.Invoke(); ShowNotice(success); }
         }
         catch (OperationCanceledException) when (disposed) { }
         catch (Exception exception) { if (!disposed && version == revision) Error = GitErrorMessage.Format(exception.Message); }
@@ -189,6 +191,22 @@ public sealed class SourceControlViewModel : ObservableObject, IDisposable
             if (!disposed && version == revision) await ReadCoreAsync(path, version);
             gate.Release(); IsBusy = false;
         }
+    }
+
+    private void ShowNotice(string text)
+    {
+        Notice = text;
+        var version = ++noticeVersion;
+        _ = ClearNoticeLaterAsync(version);
+    }
+
+    private async Task ClearNoticeLaterAsync(int version)
+    {
+        try { await Task.Delay(TimeSpan.FromSeconds(2), lifetime.Token); }
+        catch (OperationCanceledException) { return; }
+        if (disposed || version != noticeVersion) return;
+        if (uiContext is not null) uiContext.Post(_ => { if (!disposed && version == noticeVersion) Notice = ""; }, null);
+        else Notice = "";
     }
 
     private void NotifyState()
