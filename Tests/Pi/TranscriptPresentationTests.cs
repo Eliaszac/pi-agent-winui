@@ -40,12 +40,12 @@ public sealed class TranscriptPresentationTests
     }
 
     [TestMethod]
-    public void FourConsecutiveToolsGroupAndKeepExpansionDuringUpdates()
+    public void ConsecutiveToolsGroupAndKeepExpansionDuringUpdates()
     {
         var projection = new TranscriptPresentation();
         var tools = Enumerable.Range(0, 4).Select(index => new ChatEntryViewModel(
             new ChatEntry($"tool:{index}", "bash", "output", Status: "Completed", IsTool: true))).ToList();
-        Assert.AreEqual(3, projection.Project(tools.Take(3)).Count);
+        Assert.IsTrue(projection.Project(tools.Take(2)).Single().IsToolGroup);
         var group = projection.Project(tools).Single();
         Assert.IsTrue(group.IsToolGroup);
         Assert.IsFalse(group.IsExpanded);

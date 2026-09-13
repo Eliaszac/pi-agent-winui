@@ -5,7 +5,7 @@ Remaining work and optional ideas. Listing an item does not authorize implementa
 ## Remaining work
 
 1. **Storage overview and targeted cleanup.** Show session, research, checkpoint and diagnostic storage separately. Add Open app data folder, Clear diagnostics, Clear completed research, and pending-cleanup retry. Scan off the UI thread, protect active work and recovery data, and respect Windows/WSL/SSH ownership. Do not delete project files, shared Pi credentials or unrelated data.
-2. **Public-release identity and packaging.** Confirm the publisher identity and whether to retain “Pi desktop” or choose an independent product name. Check upgrade cleanup for removed artwork; a fresh build excludes it, but ordinary installer replacement can leave old files behind. See [branding](BRANDING.md) and [installer guidance](Installer/README.md).
+2. **Public-release identity and packaging.** Confirm the publisher identity and whether to retain “Pi desktop” or choose an independent product name. Check upgrade cleanup for removed artwork; a fresh build excludes it, but ordinary installer replacement can leave old files behind. See [branding](BRANDING.md) and [installer guidance](../Installer/README.md).
 
 ## Optional Settings ideas
 

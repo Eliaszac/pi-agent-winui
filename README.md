@@ -49,7 +49,7 @@ See [architecture](ARCHITECTURE.md) for implementation details and tradeoffs.
 - Windows 10 version 2004/build 19041 or later, or Windows 11. The current installer targets **x64**.
 - **.NET 10 SDK** and Windows/WinUI build tooling. A Visual Studio installation with Windows application development tools is the straightforward setup; package versions are pinned in `PiAgentGui.csproj`.
 - **WebView2 Runtime** for embedded terminal rendering. The local installer checks for it.
-- **Pi installed separately**, plus its runtime prerequisites and a configured model provider. See [Pi setup](PI-SETUP.md). Pi is not needed for the default tests.
+- **Pi installed separately**, plus its runtime prerequisites and a configured model provider. See [Pi setup](docs/PI-SETUP.md). Pi is not needed for the default tests.
 
 From the repository root:
 
@@ -72,7 +72,7 @@ This builds the current checkout, installs for the current Windows user and veri
 
 The default test command skips explicitly opt-in Windows credential/helper and live MCP checks. It does not require a provider account. See [test instructions](Tests/README.md) for selecting those checks and their prerequisites.
 
-The app is a personal project under active development. Local Windows is the primary desktop experience; some native panels and third-party integrations remain local-only even when agent tools run in WSL/SSH. Live SSH and some end-to-end workflows have not been fully verified. See [execution targets](EXECUTION-TARGETS.md) and [checkpoints](CHECKPOINTS.md) for precise limits.
+The app is a personal project under active development. Local Windows is the primary desktop experience; some native panels and third-party integrations remain local-only even when agent tools run in WSL/SSH. Live SSH and some end-to-end workflows have not been fully verified. See [execution targets](docs/EXECUTION-TARGETS.md) and [checkpoints](docs/CHECKPOINTS.md) for precise limits.
 
 Agent tools and Run actions execute with the selected environment’s permissions. Approval controls are not a sandbox. Review changes and use backups for important work.
 
@@ -81,18 +81,18 @@ Agent tools and Run actions execute with the selected environment’s permission
 | Guide | Contents |
 | --- | --- |
 | [Architecture](ARCHITECTURE.md) | Runtime ownership, persistence and current behavior |
-| [Pi setup](PI-SETUP.md) | Runtime discovery, providers and integrations |
-| [Execution targets](EXECUTION-TARGETS.md) | Windows, WSL and SSH setup and limits |
-| [Workspace checkpoints](CHECKPOINTS.md) | Capture, revert, Undo and cleanup |
-| [GitHub setup](GITHUB-SETUP.md) | Optional GitHub App/device-flow configuration |
+| [Pi setup](docs/PI-SETUP.md) | Runtime discovery, providers and integrations |
+| [Execution targets](docs/EXECUTION-TARGETS.md) | Windows, WSL and SSH setup and limits |
+| [Workspace checkpoints](docs/CHECKPOINTS.md) | Capture, revert, Undo and cleanup |
+| [GitHub setup](docs/GITHUB-SETUP.md) | Optional GitHub App/device-flow configuration |
 | [Tests](Tests/README.md) | Default tests and opt-in integration checks |
 | [Installer](Installer/README.md) | Local build, installation and upgrades |
-| [Backlog](BACKLOG.md) | Remaining work and optional ideas |
+| [Backlog](docs/BACKLOG.md) | Remaining work and optional ideas |
 
 For changes, follow existing MVVM/service boundaries, add relevant tests, and update the guide that describes the affected behavior. [AGENTS.md](AGENTS.md) contains repository instructions for coding agents; [the design brief](.ui-craft/brief.md) records UI constraints.
 
 ## License and attribution
 
-Original code and documentation are available under the [MIT license](LICENSE), copyright Eliaszac. Dependencies and bundled artwork retain their own terms; see [third-party notices](Legal/THIRD-PARTY-NOTICES.md) and [branding](BRANDING.md). The MIT license does not relicense third-party assets.
+Original code and documentation are available under the [MIT license](LICENSE), copyright Eliaszac. Dependencies and bundled artwork retain their own terms; see [third-party notices](Legal/THIRD-PARTY-NOTICES.md) and [branding](docs/BRANDING.md). The MIT license does not relicense third-party assets.
 
 [Terms](Legal/TERMS.md) and [privacy/data information](Legal/PRIVACY.md) are also available offline in Settings → Legal & privacy.

@@ -18,7 +18,7 @@ Creation supports an existing folder or explicit Git clone into a new destinatio
 
 Pi and sessions remain on Windows. The bundled target extension delegates workspace tools to WSL/SSH, loads target ancestor instructions, and requires a matching target acknowledgement. Unavailable targets never fall back to Windows execution. Separate checkouts do not synchronize automatically; conversations on the same target folder share working files. There are no automatic worktrees.
 
-See [EXECUTION-TARGETS.md](EXECUTION-TARGETS.md) for prerequisites, authentication, cancellation, native-panel limits, and verification scope.
+See [EXECUTION-TARGETS.md](docs/EXECUTION-TARGETS.md) for prerequisites, authentication, cancellation, native-panel limits, and verification scope.
 
 ## Persistence and data lifecycle
 
@@ -40,7 +40,7 @@ The versioned JSON catalog uses an exclusive lock, reread-before-mutation, and a
 
 Deleting a conversation stops its runtime and removes its session, settings, and unused checkpoint data. Project deletion applies this to its conversations, preserving source folders and independent copies. Deletion intent is saved before the catalog mutation; cleanup only runs once the identity is absent. Offline target cleanup retries on a later catalog load. Pending restore recovery is protected. No broad user-folder/orphan sweep runs. Settling a conversation only organizes the sidebar and preserves its data/runtime.
 
-Checkpoint bytes live on each target under `$HOME/.pi-desktop-checkpoints`, outside the workspace. Keep the latest five completed checkpoints per conversation; active/recovery/Undo data receives protection, with the documented 30-day age limit for completed/reverted records. See [CHECKPOINTS.md](CHECKPOINTS.md).
+Checkpoint bytes live on each target under `$HOME/.pi-desktop-checkpoints`, outside the workspace. Keep the latest five completed checkpoints per conversation; active/recovery/Undo data receives protection, with the documented 30-day age limit for completed/reverted records. See [CHECKPOINTS.md](docs/CHECKPOINTS.md).
 
 ## Implemented product surfaces
 
@@ -52,7 +52,7 @@ Checkpoint bytes live on each target under `$HOME/.pi-desktop-checkpoints`, outs
 - Global Extensions page for supported packages and bundled opt-ins, plus skills/MCP inventory and supported setup. Remote third-party I/O is restricted as described in the target guide.
 - **Workspace checkpoints and deterministic revert: done.** Opt-in Manage dialog, Clear stored data, Created/Modified/Deleted summaries, selective revert, conflict checks, Undo, interrupted-write inspection, and automatic cleanup. Ask agent to revert is removed; unavailable recovery has no agent-assisted fallback.
 - Target-aware terminals, run scripts, file browsing and source control, with documented local-only capabilities. Scripts execute only on explicit Run; saved definitions do not schedule or resume work.
-- Local GitHub PR discovery/device login and Open in integration. See [GITHUB-SETUP.md](GITHUB-SETUP.md).
+- Local GitHub PR discovery/device login and Open in integration. See [GITHUB-SETUP.md](docs/GITHUB-SETUP.md).
 - Optional background research: at most two concurrent one-shot workers, twelve active/queued tasks, twenty-minute timeout. Results stay in the panel until the user copies or adds them to a draft. Shutdown interrupts workers; restart never replays them. This is distinct from durable background execution.
 - **Docker extension and panel: done, accepted by the user.** Optional integration under Our extensions: Windows/WSL CLI detection, explicit addition of saved SSH targets, and a conversation tab with container status and Start/Stop. Manage owns source removal and project links. Unlinked containers appear in every project; full container IDs share links and avoid duplicate rows when Windows and WSL reach the same engine. This is a native GUI integration, not a Pi tool or npm extension.
 
@@ -74,7 +74,7 @@ Reading positions are retained per conversation for the view's lifetime using a 
 
 ## Settings and legal information
 
-Settings and its appearance/input additions are complete and user-approved. Storage overview/cleanup remains separate in [BACKLOG.md](BACKLOG.md).
+Settings and its appearance/input additions are complete and user-approved. Storage overview/cleanup remains separate in [BACKLOG.md](docs/BACKLOG.md).
 
 Settings is a global page available from either sidebar layout and the command palette. Search matches category titles and keywords, expands matching categories temporarily, and restores expansion state after clearing the query. Preferences are saved atomically in `settings.json` under the app data directory. Startup defaults to Home; optionally the most recently used conversation across projects is selected on the first catalog load. Global page navigation preserves conversation runtimes.
 
@@ -82,7 +82,7 @@ Appearance defaults to System, with Light and Dark overrides. Conversation text 
 
 Bulk deletion uses the existing catalog/session/checkpoint cleanup boundary. It requires typed confirmation and no active conversations, snippets, research or terminal sessions. Conversation deletion can preserve projects; project removal also removes their conversations and never deletes registered source folders. Offline target cleanup remains pending and visible. Research records, shared Pi credentials, extension packages and unrelated local files are explicitly outside these actions; there is no broad folder wipe.
 
-The separate Legal & privacy page reads bundled offline documents and dependency notices, including Microsoft's original image-library EULA. The project's original code/documentation uses MIT; dependencies and branding retain their own terms. Publisher/contact details are Eliaszac (Denmark), eliaszacho@gmail.com. These notices are implementation documentation, not a certification of legal compliance or third-party trademark permission. [BRANDING.md](BRANDING.md) records current artwork and unresolved publisher/naming decisions; [BACKLOG.md](BACKLOG.md) holds remaining work and optional ideas.
+The separate Legal & privacy page reads bundled offline documents and dependency notices, including Microsoft's original image-library EULA. The project's original code/documentation uses MIT; dependencies and branding retain their own terms. Publisher/contact details are Eliaszac (Denmark), eliaszacho@gmail.com. These notices are implementation documentation, not a certification of legal compliance or third-party trademark permission. [BRANDING.md](docs/BRANDING.md) records current artwork and unresolved publisher/naming decisions; [BACKLOG.md](docs/BACKLOG.md) holds remaining work and optional ideas.
 
 Provider authentication remains in Pi's global store, respecting its agent-directory override. Dedicated provider-management processes use the bundled integration with no session or workspace tools. Secrets are not sent as chat prompts or persisted in the catalog. GitHub tokens use Windows Credential Locker; SSH passwords/passphrases use Windows Credential Manager. The setup guides describe their separate ownership.
 

@@ -27,7 +27,7 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
     }
     public string ExpansionGlyph => expanded ? "\uE70D" : "\uE76C";
     public IReadOnlyList<ChatEntryViewModel> Tools => tools;
-    public bool IsToolGroup => tools.Count > 3;
+    public bool IsToolGroup => tools.Count > 1;
     public bool IsTool => entry.IsTool;
     public bool IsProcessing { get; init; }
     public bool IsMessage => !IsTool && !IsToolGroup && !IsProcessing;

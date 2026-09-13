@@ -28,6 +28,7 @@ public sealed partial class ConversationView : UserControl
     private ScrollViewer? scroller;
     private bool followTail = true;
     private bool tailScrollPending;
+    private bool programmaticTailScroll;
     private bool composing;
     private bool synchronizingThinking;
     private bool synchronizingApproval;
@@ -146,7 +147,14 @@ public sealed partial class ConversationView : UserControl
 
     private void OnScrollChanged(object? sender, ScrollViewerViewChangedEventArgs args)
     {
-        if (scroller is not null && !tailScrollPending && restoringViewport is null) followTail = scroller.ScrollableHeight - scroller.VerticalOffset < 48;
+        if (scroller is null || restoringViewport is not null) return;
+        if (programmaticTailScroll)
+        {
+            if (!args.IsIntermediate) programmaticTailScroll = false;
+            return;
+        }
+        if (tailScrollPending) return;
+        followTail = IsAtTranscriptTail();
     }
 
     private void OnTranscriptChanged()
@@ -175,9 +183,16 @@ public sealed partial class ConversationView : UserControl
             Transcript.ScrollIntoView(last);
             return;
         }
-        scroller?.ChangeView(null, scroller.ScrollableHeight, null, disableAnimation: true);
+        if (scroller is not null)
+        {
+            programmaticTailScroll = true;
+            scroller.ChangeView(null, scroller.ScrollableHeight, null, disableAnimation: true);
+        }
         tailScrollPending = false;
+        followTail = true;
     }
+
+    private bool IsAtTranscriptTail() => scroller is null || scroller.ScrollableHeight - scroller.VerticalOffset < 48;
 
     private void OnSendInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {

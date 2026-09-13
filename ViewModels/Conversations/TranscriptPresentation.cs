@@ -34,7 +34,7 @@ public sealed class TranscriptPresentation
 
     private void Flush(List<ChatEntryViewModel> run, List<ChatEntryViewModel> rows, HashSet<string> activeGroups)
     {
-        if (run.Count > 3)
+        if (run.Count > 1)
         {
             var id = run[0].Id;
             activeGroups.Add(id);

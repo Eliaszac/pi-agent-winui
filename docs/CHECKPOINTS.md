@@ -17,7 +17,7 @@ The extension uses Pi's public lifecycle hooks, custom session entries, commands
 
 ## Behavior
 
-Capture begins before an agent operation and finishes at `agent_settled`. The final response card receives net Created, Modified, and Deleted rows, including shell-driven changes inside capture coverage. Renames appear as deletion plus creation. Direct write-tool evidence can show Created/Modified even without checkpoints; old requests do not acquire recovery data retroactively.
+Capture begins before an agent operation and finishes at `agent_settled`. The final response card receives net Created, Modified, Deleted, and Moved rows, including shell-driven changes inside capture coverage. A delete/create pair with the same filename and identical captured bytes is presented as Moved. Direct write-tool evidence can show Created/Modified even without checkpoints; old requests do not acquire recovery data retroactively.
 
 **Revert changes** opens a file selection preview. Modified files must still match their captured final bytes and permissions. Created files are removed only if unchanged; deleted files are recreated only if still absent. Later changes to the same file cause a conflict, even when they are on different lines. Unrelated paths are preserved. Git branches, commits, index, stash, and Pi conversation history are untouched.
 

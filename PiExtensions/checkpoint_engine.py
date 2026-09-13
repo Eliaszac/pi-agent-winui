@@ -247,7 +247,8 @@ class CheckpointEngine:
             except (UnicodeError, OSError):
                 pass
             result.append({'path': relative, 'kind': 'created' if a is None else 'deleted' if b is None else 'modified',
-                           'patch': patch, 'added': added, 'removed': removed})
+                           'patch': patch, 'added': added, 'removed': removed,
+                           'beforeHash': a.get('hash') if a else None, 'afterHash': b.get('hash') if b else None})
         # Bound the transport independently of snapshot coverage.
         budget = 512 * 1024
         for item in result:
