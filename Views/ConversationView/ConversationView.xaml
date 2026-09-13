@@ -251,7 +251,7 @@
                                             <DataTemplate><controls:ScreenshotPreview Image="{Binding}" Margin="0,0,0,6" AutomationProperties.Name="Attached screenshot" /></DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                    <TextBlock Text="{x:Bind Text, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                    <TextBlock Text="{x:Bind Text, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" controls:ReadingText.Enabled="True" />
                                     </StackPanel>
                                 </Border>
                                 <controls:CopyFeedbackButton Click="OnCopyMessageClicked" HorizontalAlignment="Right" Style="{StaticResource ShellIconButtonStyle}"
@@ -448,7 +448,7 @@
             <Border Grid.Row="1" Grid.RowSpan="2" CornerRadius="20" Padding="8"
                 Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
             <Grid RowSpacing="8">
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <TextBox x:Name="Composer" Text="{Binding Draft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 Paste="OnComposerPaste"
                 TextChanged="OnComposerTextChanged" SelectionChanged="OnComposerSelectionChanged" PreviewKeyDown="OnComposerPreviewKeyDown"
@@ -510,6 +510,7 @@
                     </controls:ComposerActionButton>
                 </Grid>
             </Grid>
+            <TextBlock x:Name="SendKeyHint" Grid.Row="2" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
             </Grid>
             </Border>
         </Grid>

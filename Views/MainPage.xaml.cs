@@ -293,7 +293,7 @@ public sealed partial class MainPage : Page
         foreach (var app in editors.Concat(others))
         {
             if (app == others.FirstOrDefault() && editors.Any()) OpenInMenu.Items.Add(new MenuFlyoutSeparator());
-            var item = new Controls.ActionMenuFlyoutItem { Text = app.Name,
+            var item = new Controls.ActionMenuFlyoutItem { Text = "Open in " + app.Name,
                 Icon = new ImageIcon { Source = Controls.ApplicationLogoSource.Create(app.Logo, ActualTheme) } };
             item.Click += async (_, _) => await OpenIn.OpenAsync(app.Id);
             OpenInMenu.Items.Add(item);

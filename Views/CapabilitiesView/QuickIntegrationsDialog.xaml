@@ -21,7 +21,7 @@
                             <Grid ColumnSpacing="12" RowSpacing="8">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                <Image Source="{x:Bind IconPath}" Width="26" Height="26" VerticalAlignment="Top" AutomationProperties.AccessibilityView="Raw"/>
+                                <controls:IntegrationLogo Integration="{x:Bind Icon}" Width="26" Height="26" VerticalAlignment="Top" AutomationProperties.AccessibilityView="Raw"/>
                                 <StackPanel Grid.Column="1" Spacing="4">
                                     <TextBlock Text="{x:Bind Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
                                     <TextBlock Text="{x:Bind Description}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>

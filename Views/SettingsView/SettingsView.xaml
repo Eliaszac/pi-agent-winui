@@ -8,6 +8,26 @@
             <TextBox PlaceholderText="Search settings" Text="{Binding Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search settings" Margin="0,0,0,8"/>
             <InfoBar IsOpen="{Binding HasMessage}" Message="{Binding Message}" Severity="Informational" IsClosable="False"/>
             <TextBlock Text="No matching settings. Try a different search." TextWrapping="Wrap" Visibility="{Binding NoResults, Converter={StaticResource BooleanToVisibility}}"/>
+            <Expander IsEnabled="{Binding CanEdit}" Header="Appearance" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Appearance.Expanded, Mode=TwoWay}" Visibility="{Binding Appearance.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="16">
+                    <ComboBox x:Name="ThemeChoice" Header="Theme" SelectedIndex="{Binding ThemeIndex, Mode=OneWay}" SelectionChanged="OnThemeChanged" AutomationProperties.Name="Theme">
+                        <ComboBoxItem Content="System"/><ComboBoxItem Content="Light"/><ComboBoxItem Content="Dark"/>
+                    </ComboBox>
+                    <NumberBox Header="Conversation text size" Value="{Binding ConversationTextSize, Mode=OneWay}" Minimum="12" Maximum="22" SmallChange="1" SpinButtonPlacementMode="Compact" ValueChanged="OnBodySizeChanged" AutomationProperties.Name="Conversation text size" Width="220" HorizontalAlignment="Left"/>
+                    <TextBlock Text="A little more room to read." FontSize="{Binding ConversationTextSize}" TextWrapping="Wrap"/>
+                    <NumberBox Header="Code text size" Value="{Binding CodeTextSize, Mode=OneWay}" Minimum="10" Maximum="20" SmallChange="1" SpinButtonPlacementMode="Compact" ValueChanged="OnCodeSizeChanged" AutomationProperties.Name="Code text size" Width="220" HorizontalAlignment="Left"/>
+                    <TextBlock Text="print('Hello, world!')" FontFamily="Consolas" FontSize="{Binding CodeTextSize}" TextWrapping="Wrap"/>
+                    <controls:ActionButton Content="Reset text sizes" Click="OnResetTextSizes" HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Expander>
+            <Expander IsEnabled="{Binding CanEdit}" Header="Conversation" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Conversation.Expanded, Mode=TwoWay}" Visibility="{Binding Conversation.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="10">
+                    <ComboBox x:Name="SendKeyChoice" Header="Send a message with" SelectedIndex="{Binding SendKeyIndex, Mode=OneWay}" SelectionChanged="OnSendKeyChanged" AutomationProperties.Name="Send a message with">
+                        <ComboBoxItem Content="Enter"/><ComboBoxItem Content="Ctrl + Enter"/>
+                    </ComboBox>
+                    <TextBlock Text="The other shortcut inserts a new line. Enter still selects suggestions when a picker is open." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Expander>
             <Expander IsEnabled="{Binding CanEdit}" Header="General" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding General.Expanded, Mode=TwoWay}" Visibility="{Binding General.Visible, Converter={StaticResource BooleanToVisibility}}">
                 <StackPanel Spacing="10">
                     <TextBlock Text="On startup" FontWeight="SemiBold"/>
@@ -15,6 +35,14 @@
                     <ComboBox x:Name="Startup" SelectedIndex="{Binding StartupIndex, Mode=OneWay}" SelectionChanged="OnStartupChanged" AutomationProperties.Name="Startup page" HorizontalAlignment="Left">
                         <ComboBoxItem Content="Home"/><ComboBoxItem Content="Most recently opened conversation"/>
                     </ComboBox>
+                    <Border Height="1" Margin="0,6" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                    <ComboBox x:Name="EditorChoice" Header="Preferred editor" DisplayMemberPath="Name" SelectionChanged="OnEditorChanged" AutomationProperties.Name="Preferred editor"/>
+                    <TextBlock x:Name="EditorStatus" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <controls:ActionButton Content="Refresh editors" Tag="editors" Click="OnDataAction" HorizontalAlignment="Left"/>
+                    <Border Height="1" Margin="0,6" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                    <TextBlock Text="Command palette" FontWeight="SemiBold"/>
+                    <TextBlock Text="Commands are ordered by use. Reset clears counts and recency; search text is never stored." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <controls:ActionButton Content="Reset command ranking" Tag="palette" Click="OnDataAction" HorizontalAlignment="Left"/>
                 </StackPanel>
             </Expander>
             <Expander IsEnabled="{Binding CanEdit}" Header="Local usage" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Usage.Expanded, Mode=TwoWay}" Visibility="{Binding Usage.Visible, Converter={StaticResource BooleanToVisibility}}">

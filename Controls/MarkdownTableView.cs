@@ -40,7 +40,7 @@ internal sealed class MarkdownTableView : UserControl
                     var element = MarkdownRenderer.RenderBlock(block);
                     if (element is RichTextBlock text)
                     {
-                        text.FontSize = 14; text.LineHeight = 22;
+                        text.FontSize = 14 * ReadingPreferences.Scale; text.LineHeight = 22 * ReadingPreferences.Scale;
                         if (row.IsHeader) text.FontWeight = FontWeights.SemiBold;
                         if (column < table.ColumnDefinitions.Count)
                             text.TextAlignment = table.ColumnDefinitions[column].Alignment switch
@@ -61,7 +61,7 @@ internal sealed class MarkdownTableView : UserControl
                 if (row.IsHeader)
                 {
                     border.Background = (Brush)Application.Current.Resources["ControlFillColorSecondaryBrush"];
-                    var caption = new TextBlock { Text = string.IsNullOrWhiteSpace(data.Headers[column]) ? $"Column {column + 1}" : data.Headers[column], FontSize = 14, FontWeight = FontWeights.SemiBold,
+                    var caption = new TextBlock { Text = string.IsNullOrWhiteSpace(data.Headers[column]) ? $"Column {column + 1}" : data.Headers[column], FontSize = 14 * ReadingPreferences.Scale, FontWeight = FontWeights.SemiBold,
                         TextWrapping = TextWrapping.Wrap, MaxWidth = 300 };
                     var arrow = new TextBlock { Text = "", Width = 14, VerticalAlignment = VerticalAlignment.Center };
                     var label = new Grid { ColumnSpacing = 6, MinWidth = 120, MaxWidth = 320 };

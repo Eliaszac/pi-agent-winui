@@ -5,6 +5,7 @@ Native Windows frontend for the Pi coding agent, built with WinUI 3 and C#. Pi r
 ## Documentation
 
 - [Future work](BACKLOG.md) — ideas and issues to revisit.
+- [Branding](BRANDING.md) — current artwork, provenance and remaining release decisions.
 - [MIT license](LICENSE), [terms](Legal/TERMS.md), [privacy and data](Legal/PRIVACY.md), and [third-party notices](Legal/THIRD-PARTY-NOTICES.md) — also available offline in Settings → Legal & privacy.
 - [Architecture and current scope](ARCHITECTURE.md) — ownership, implemented features, storage, decisions, and verification limits.
 - [Pi setup](PI-SETUP.md) — runtime discovery, providers, and optional integrations.

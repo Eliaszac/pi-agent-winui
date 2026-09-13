@@ -15,13 +15,14 @@ public sealed class AppSettingsStore(string path)
         await gate.WaitAsync();
         try
         {
-            if (File.Exists(path)) Current = JsonSerializer.Deserialize<AppPreferences>(await File.ReadAllTextAsync(path)) ?? new();
+            if (File.Exists(path)) Current = (JsonSerializer.Deserialize<AppPreferences>(await File.ReadAllTextAsync(path)) ?? new()).Normalize();
         }
         finally { gate.Release(); }
     }
 
     public async Task SaveAsync(AppPreferences preferences)
     {
+        preferences = preferences.Normalize();
         await gate.WaitAsync();
         var temporary = path + ".tmp";
         try

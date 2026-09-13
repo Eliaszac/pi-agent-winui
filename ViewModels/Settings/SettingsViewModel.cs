@@ -9,11 +9,21 @@ public sealed class SettingsViewModel(AppSettingsStore store) : ObservableObject
     private string query = "";
     private string message = "";
     private bool busy;
-    public SettingsCategory General { get; } = new("General", "startup home resume last conversation launch");
+    public SettingsCategory Appearance { get; } = new("Appearance", "theme system light dark font text code size readability reset");
+    public SettingsCategory Conversation { get; } = new("Conversation", "send enter ctrl control shortcut keyboard newline");
+    public SettingsCategory General { get; } = new("General", "startup home resume last conversation launch editor open in preferred system default command palette ranking reset usage");
     public SettingsCategory Usage { get; } = new("Local usage", "analytics tokens models reset clear history privacy");
     public SettingsCategory Data { get; } = new("Data management", "delete conversations projects screenshots restore checkpoints files storage");
     public SettingsCategory About { get; } = new("About", "version legal terms privacy license licences notices contact publisher open source");
-    public IReadOnlyList<SettingsCategory> Categories => [General, Usage, Data, About];
+    public IReadOnlyList<SettingsCategory> Categories => [Appearance, Conversation, General, Usage, Data, About];
+    public int ThemeIndex => store.Current.Theme;
+    public double ConversationTextSize => store.Current.ConversationTextSize;
+    public double CodeTextSize => store.Current.CodeTextSize;
+    public int SendKeyIndex => store.Current.ControlEnterToSend ? 1 : 0;
+    public Task SetThemeAsync(int index) => SaveAsync(store.Current with { Theme = index });
+    public Task SetTextSizeAsync(double size, bool code) => SaveAsync(code ? store.Current with { CodeTextSize = size } : store.Current with { ConversationTextSize = size });
+    public Task ResetTextSizesAsync() => SaveAsync(store.Current with { ConversationTextSize = 15, CodeTextSize = 12 });
+    public Task SetSendKeyAsync(int index) => SaveAsync(store.Current with { ControlEnterToSend = index == 1 });
     public string Query { get => query; set { if (!SetProperty(ref query, value)) return; foreach (var category in Categories) category.Filter(value); OnPropertyChanged(nameof(NoResults)); } }
     public bool NoResults => Categories.All(category => !category.Visible);
     public bool Busy { get => busy; set { if (SetProperty(ref busy, value)) OnPropertyChanged(nameof(CanEdit)); } }
@@ -38,6 +48,7 @@ public sealed class SettingsViewModel(AppSettingsStore store) : ObservableObject
         {
             Busy = false;
             OnPropertyChanged(nameof(StartupIndex)); OnPropertyChanged(nameof(ShowLocalUsage)); OnPropertyChanged(nameof(UsageResetLabel));
+            OnPropertyChanged(nameof(ThemeIndex)); OnPropertyChanged(nameof(ConversationTextSize)); OnPropertyChanged(nameof(CodeTextSize)); OnPropertyChanged(nameof(SendKeyIndex));
         }
     }
 }

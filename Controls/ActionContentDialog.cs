@@ -6,6 +6,7 @@ public class ActionContentDialog : ContentDialog
 {
     public ActionContentDialog()
     {
+        Opened += (_, _) => RequestedTheme = XamlRoot?.Content is FrameworkElement root ? root.RequestedTheme : ElementTheme.Default;
         AddHandler(PointerMovedEvent, new PointerEventHandler(UpdateCursor), true);
         AddHandler(PointerEnteredEvent, new PointerEventHandler(UpdateCursor), true);
     }

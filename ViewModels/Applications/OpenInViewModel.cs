@@ -16,6 +16,27 @@ public sealed class OpenInViewModel(IApplicationLocator locator, OpenInPreferenc
     public string Logo => selected?.Logo ?? "explorer.svg";
     public bool CanOpen => selected is not null && directory is not null && !opening;
     public event Action<string>? Failed;
+    public string? PreferredEditor => preferred;
+    public IReadOnlyList<EditorPreferenceOption> EditorOptions
+    {
+        get
+        {
+            var result = new List<EditorPreferenceOption> { new(null, "System default") };
+            result.AddRange(Applications.Where(app => app.Kind is ApplicationKind.Editor or ApplicationKind.SolutionEditor)
+                .Select(app => new EditorPreferenceOption(app.Id, app.Name)));
+            if (preferred is not null && result.All(option => option.Id != preferred)) result.Add(new(preferred, preferred + " (unavailable)", false));
+            return result;
+        }
+    }
+    public async Task SetPreferredEditorAsync(string? id)
+    {
+        if (id is not null && !EditorOptions.Any(option => option.Id == id && option.Available))
+            throw new InvalidOperationException("Choose an available editor or System default.");
+        await Task.Run(() => preferences.Save(id));
+        preferred = id;
+        await RefreshAsync(directory);
+    }
+    public Task RefreshEditorsAsync() => RefreshAsync(directory, discover: true);
 
     public async Task RefreshAsync(string? path, bool discover = false)
     {
@@ -78,5 +99,6 @@ public sealed class OpenInViewModel(IApplicationLocator locator, OpenInPreferenc
         OnPropertyChanged(nameof(Label));
         OnPropertyChanged(nameof(Logo));
         OnPropertyChanged(nameof(CanOpen));
+        OnPropertyChanged(nameof(EditorOptions));
     }
 }

@@ -54,8 +54,8 @@ External editors and detached processes cannot be fully excluded. Files are chec
 
 ## Verification status
 
-- C# suite: 465 passed, one existing headless credential-helper test skipped. Ordinary WinUI build: zero warnings/errors.
+- Implementation verification passed the C# suite and ordinary WinUI build; the headless credential-helper check had an existing skip. These are recorded results, not a current whole-app test report.
 - Engine tests cover exact bytes, create/modify/delete, Undo, conflicts, unrelated work, overlapping sessions, backup failure, partial retry, interrupted-write reconciliation, retention, path/content validation, ignored files, scan failure, and Git index/history preservation.
 - Live Pi 0.85.1 probes passed on Windows and Ubuntu WSL, using disposable folders without model requests. The probe drives lifecycle callbacks through a test extension and exercises the real target transports; it is not a provider-driven end-to-end conversation test.
-- The native verification build launched and exposed its accessible window tree. Full dialog interaction remains unverified because the computer-use helper rejected input (`SendInput ... GetLastError=87`).
+- Native preview launches were verified; complete checkpoint dialog interaction remains unverified.
 - Linux SSH implementation uses the same engine and existing SSH transport. The user declined live SSH checks; real SSH, interrupted-connection checks, and the native dialog flow remain unverified. The feature is marked done at the user's request; this does not represent completed release verification for those paths.

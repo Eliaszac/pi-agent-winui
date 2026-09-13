@@ -1,5 +1,7 @@
-# Integration marks
+# Integration symbols
 
-Obsidian, Atlassian, GitHub, Linear, Notion, and Supabase SVG marks were retrieved from `https://cdn.simpleicons.org/<slug>/777777` on 2026-09-12. Geometry is from [Simple Icons](https://github.com/simple-icons/simple-icons), distributed under CC0-1.0. The monochrome fill is used on native themed cards.
+GitHub reuses the official theme-specific Invertocat in Assets/OpenIn.
 
-Brand names and marks remain their respective owners' property; inclusion identifies an integration and does not imply endorsement. Assets are bundled locally; no runtime CDN requests are made.
+Linear uses unchanged `logo-dark.svg` and `logo-light.svg` from https://static.linear.app/design-assets/Linear-Brand-Assets.zip?v=3, retrieved 2026-09-13 under https://linear.app/brand. Filenames here describe the destination UI theme: `linear-light.svg` is the dark mark; `linear-dark.svg` is the white mark. Geometry and colors are unchanged. Used only to identify the Linear integration, with surrounding space and no endorsement claim.
+
+Obsidian, Atlassian, Notion and Supabase use neutral native symbols alongside their names. The previously recolored Simple Icons marks have been removed. No runtime image downloads occur.

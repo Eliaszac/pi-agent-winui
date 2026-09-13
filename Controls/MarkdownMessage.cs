@@ -35,10 +35,12 @@ public sealed class MarkdownMessage : UserControl
         timer.Interval = TimeSpan.FromMilliseconds(100);
         timer.IsRepeating = false;
         timer.Tick += (_, _) => Render();
-        Loaded += (_, _) => Render();
-        Unloaded += (_, _) => timer.Stop();
+        Loaded += (_, _) => { ReadingPreferences.TypographyChanged += OnReadingChanged; OnReadingChanged(null, EventArgs.Empty); Render(); };
+        Unloaded += (_, _) => { timer.Stop(); ReadingPreferences.TypographyChanged -= OnReadingChanged; };
         ActualThemeChanged += (_, _) => { rendered = null; blockSources.Clear(); panel.Children.Clear(); Render(); };
     }
+
+    private void OnReadingChanged(object? sender, EventArgs args) => ResetActions();
 
     private void Schedule() { if (IsLoaded && !timer.IsRunning) timer.Start(); }
 

@@ -10,8 +10,22 @@ public sealed class PaletteUsageStore(string path)
     private readonly SemaphoreSlim gate = new(1, 1);
     public async Task LoadAsync()
     {
+        await gate.WaitAsync();
         try { if (File.Exists(path)) usage = JsonSerializer.Deserialize<Dictionary<string, long[]>>(await File.ReadAllTextAsync(path)) ?? []; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException) { usage = []; }
+        finally { gate.Release(); }
+    }
+    public async Task ClearAsync()
+    {
+        await gate.WaitAsync();
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllTextAsync(path + ".tmp", "{}");
+            File.Move(path + ".tmp", path, true);
+            usage = [];
+        }
+        finally { gate.Release(); }
     }
     public IReadOnlyList<PaletteCommand> Rank(IEnumerable<PaletteCommand> commands, string query)
     {

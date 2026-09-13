@@ -136,7 +136,23 @@ public partial class App : Application
         shell.ResumeConversationOnStartup = settingsStore.Current.ResumeConversation;
         var settings = new ViewModels.Settings.SettingsViewModel(settingsStore) { Message = settingsError };
         var home = new ViewModels.Home.HomeViewModel(shell, new Services.Home.SessionUsageReader(paths), settingsStore);
+        Controls.ReadingPreferences.Apply(settingsStore.Current);
         window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions, docker, home, settings);
+        void ApplyPreferences(object? sender, EventArgs args)
+        {
+            Controls.ReadingPreferences.Apply(settingsStore.Current);
+            if (window.Content is FrameworkElement root) root.RequestedTheme = (ElementTheme)settingsStore.Current.Theme;
+            window.AppWindow.TitleBar.PreferredTheme = settingsStore.Current.Theme switch
+            {
+                1 => Microsoft.UI.Windowing.TitleBarTheme.Light,
+                2 => Microsoft.UI.Windowing.TitleBarTheme.Dark,
+                _ => Microsoft.UI.Windowing.TitleBarTheme.UseDefaultAppMode
+            };
+            shell.ResumeConversationOnStartup = settingsStore.Current.ResumeConversation;
+        }
+        settingsStore.Changed += ApplyPreferences;
+        ApplyPreferences(null, EventArgs.Empty);
+        window.Closed += (_, _) => settingsStore.Changed -= ApplyPreferences;
     }
 
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)

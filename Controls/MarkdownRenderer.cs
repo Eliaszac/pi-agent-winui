@@ -56,7 +56,7 @@ internal static class MarkdownRenderer
                 return codeView;
             case HeadingBlock heading:
                 var title = Text(heading.Inline);
-                title.FontSize = heading.Level switch { 1 => 28, 2 => 23, 3 => 19, _ => 16 };
+                title.FontSize = (heading.Level switch { 1 => 28, 2 => 23, 3 => 19, _ => 16 }) * ReadingPreferences.Scale;
                 title.LineHeight = title.FontSize * 1.35;
                 title.FontWeight = FontWeights.SemiBold;
                 title.Margin = new Thickness(0, 12, 0, 0);
@@ -77,7 +77,7 @@ internal static class MarkdownRenderer
                 var markers = Enumerable.Range(0, list.Count).Select(index => list.IsOrdered ? $"{number + index}. " : bullet).ToArray();
                 var widths = markers.Select(marker =>
                 {
-                    var measure = new TextBlock { Text = marker, FontSize = 15 };
+                    var measure = new TextBlock { Text = marker, FontSize = ReadingPreferences.Body };
                     measure.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
                     return measure.DesiredSize.Width;
                 }).ToArray();
@@ -100,7 +100,7 @@ internal static class MarkdownRenderer
             case ThematicBreakBlock:
                 return new Border { Height = 1, Margin = new Thickness(0, 6, 0, 6), Background = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"] };
             case LeafBlock leaf:
-                return new TextBlock { Text = leaf.Lines.ToString(), FontSize = 15, LineHeight = 24, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
+                return new TextBlock { Text = leaf.Lines.ToString(), FontSize = ReadingPreferences.Body, LineHeight = 24 * ReadingPreferences.Scale, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
             case ContainerBlock container:
                 return Render(container, snippets);
             default:
@@ -110,8 +110,8 @@ internal static class MarkdownRenderer
 
     internal static RichTextBlock Text(ContainerInline? source)
     {
-        var text = new RichTextBlock { IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontSize = 15,
-            LineHeight = 24, LineStackingStrategy = LineStackingStrategy.MaxHeight, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var text = new RichTextBlock { IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontSize = ReadingPreferences.Body,
+            LineHeight = 24 * ReadingPreferences.Scale, LineStackingStrategy = LineStackingStrategy.MaxHeight, HorizontalAlignment = HorizontalAlignment.Stretch };
         var paragraph = new Paragraph();
         if (source is not null) AddInlines(paragraph.Inlines, source);
         text.Blocks.Add(paragraph);
@@ -126,7 +126,7 @@ internal static class MarkdownRenderer
             {
                 case LiteralInline literal: target.Add(new Run { Text = literal.Content.ToString() }); break;
                 case CodeInline code:
-                    target.Add(new Run { Text = code.Content, FontFamily = new FontFamily("Consolas"), FontSize = 14 }); break;
+                    target.Add(new Run { Text = code.Content, FontFamily = new FontFamily("Consolas"), FontSize = 14 * ReadingPreferences.Scale }); break;
                 case TaskList task:
                     target.Add(new Run { Text = task.Checked ? "☑ " : "☐ " });
                     break;

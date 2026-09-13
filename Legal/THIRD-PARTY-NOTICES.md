@@ -20,12 +20,12 @@ This project's MIT license covers its original code and documentation. Component
 
 ## Icons, logos and trademarks
 
-- Provider icons from **LobeHub icons-static-svg 1.95.0**: MIT, copyright LobeHub; license in Assets/Providers.
+- Providers use neutral native symbols. Historical LobeHub notices remain for provenance; its provider artwork is no longer bundled.
 - File-type icons from **Material Icon Theme**: MIT, copyright Material Extensions; license in Assets/FileTypes.
 - Legacy/fallback file icons from the **Visual Studio 2026 Image Library**: Microsoft license terms, not MIT. The original EULA is included in this page's document selector and Assets/FileTypes, and remains the installer's license screen. The image library is not offered as a standalone icon collection.
-- Integration SVGs sourced from **Simple Icons**: CC0-1.0 for the icon collection; trademark rights remain separate.
-- Open-in/application logos identify their respective products, including JetBrains applications, Visual Studio Code, Visual Studio, Zed, Windows Terminal, File Explorer, Cursor, Windsurf and GitHub. Asset README files record their original sources and branding guidance. Microsoft Terminal and PowerToys source assets retain their upstream MIT notices where applicable.
-- The Pi badge is sourced from the official Pi branding. Pi and other third-party names and logos belong to their respective owners. Inclusion is for product identification and does not imply sponsorship, endorsement or a grant of trademark rights.
+- Linear integration artwork is supplied unchanged by [Linear](https://linear.app/brand). GitHub integration artwork reuses the official Invertocat. Other integrations use neutral native symbols.
+- Official [GitHub](https://brand.github.com/foundations/logo), [VS Code](https://code.visualstudio.com/brand) and [Windsurf](https://windsurf.com/brand) artwork identifies the corresponding feature or Open in action. Other Open in choices use original neutral symbols. Asset README files record provenance. Product names and retained marks belong to their respective owners.
+- The application icon is original project artwork under MIT, distinct from the upstream Pi badge. This is an independent frontend for Pi. References to third-party products do not imply sponsorship, endorsement or a grant of trademark rights.
 
 ## Separately installed software
 

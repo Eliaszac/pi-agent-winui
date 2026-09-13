@@ -120,6 +120,8 @@ public sealed partial class ConversationView : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs args)
     {
+        Controls.ReadingPreferences.Changed += OnReadingPreferencesChanged;
+        OnReadingPreferencesChanged(null, EventArgs.Empty);
         scroller = Controls.VisualTreeSearch.FindDescendant<ScrollViewer>(Transcript);
         if (scroller is not null) scroller.ViewChanged += OnScrollChanged;
         Observe();
@@ -127,6 +129,7 @@ public sealed partial class ConversationView : UserControl
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
     {
+        Controls.ReadingPreferences.Changed -= OnReadingPreferencesChanged;
         SaveViewport(observed);
         if (observed is not null)
         {
@@ -182,6 +185,7 @@ public sealed partial class ConversationView : UserControl
         args.Handled = true;
         if (FileReferencePanel.Visibility == Visibility.Visible) { AcceptFileReference(); return; }
         if (CommandPanel.Visibility == Visibility.Visible && CommandList.Items.Count > 0) { AcceptCommand(); return; }
+        if (!Utilities.ComposerEnterBehavior.Sends(false, Controls.ReadingPreferences.Current.ControlEnterToSend)) { InsertNewLine(); return; }
         if (ViewModel?.CanSend == true) ViewModel.SendCommand.Execute(null);
     }
 
@@ -189,10 +193,26 @@ public sealed partial class ConversationView : UserControl
     {
         if (composing) return;
         args.Handled = true;
+        if (Utilities.ComposerEnterBehavior.Sends(true, Controls.ReadingPreferences.Current.ControlEnterToSend))
+        {
+            if (ViewModel?.CanSend == true) ViewModel.SendCommand.Execute(null);
+            return;
+        }
+        InsertNewLine();
+    }
+
+    private void InsertNewLine()
+    {
         var caret = Composer.SelectionStart;
         Composer.SelectedText = "\r";
         Composer.Select(caret + 1, 0);
     }
+
+    private void OnReadingPreferencesChanged(object? sender, EventArgs args)
+    {
+        SendKeyHint.Text = Utilities.ComposerEnterBehavior.Hint(Controls.ReadingPreferences.Current.ControlEnterToSend);
+    }
+
 
     private void OnPresentationChanged(object? sender, PropertyChangedEventArgs args)
     {

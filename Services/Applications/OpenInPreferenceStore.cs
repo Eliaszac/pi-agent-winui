@@ -11,7 +11,7 @@ public sealed class OpenInPreferenceStore(string file)
         return json.RootElement.TryGetProperty("preferredEditor", out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     }
 
-    public void Save(string id)
+    public void Save(string? id)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         var temporary = file + "." + Guid.NewGuid().ToString("N") + ".tmp";

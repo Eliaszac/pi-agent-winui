@@ -9,12 +9,32 @@ public sealed partial class MainPage
     private void InitializeSettings(SettingsViewModel settings)
     {
         SettingsPane.DataContext = settings;
+        SettingsPane.Loaded += async (_, _) => await OpenIn.RefreshEditorsAsync();
+        OpenIn.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == nameof(OpenIn.EditorOptions)) SettingsPane.SetEditors(OpenIn.EditorOptions, OpenIn.PreferredEditor);
+        };
+        SettingsPane.SetEditors(OpenIn.EditorOptions, OpenIn.PreferredEditor);
         LegalPane.BackRequested += (_, _) => ViewModel.OpenSettings();
         SettingsPane.ActionRequested += async (_, action) =>
         {
             if (action == "legal") { ViewModel.OpenSettings(legal: true); return; }
             if (action == "extensions") { ViewModel.OpenExtensions(); return; }
             if (dialogOpen || settings.Busy) return;
+            if (action is "palette" or "editors" || action.StartsWith("editor:", StringComparison.Ordinal))
+            {
+                settings.Busy = true;
+                try
+                {
+                    if (action == "palette") { await paletteUsage.ClearAsync(); settings.Message = "Command ranking has been reset."; }
+                    else if (action == "editors") await OpenIn.RefreshEditorsAsync();
+                    else await OpenIn.SetPreferredEditorAsync(action.Length == 7 ? null : action[7..]);
+                }
+                catch (Exception error) { settings.Message = "The preference could not be updated. " + error.Message; }
+                finally { settings.Busy = false; SettingsPane.SetEditors(OpenIn.EditorOptions, OpenIn.PreferredEditor); }
+                return;
+            }
+            if (action is not ("usage" or "projects" or "conversations")) return;
             var usage = action == "usage";
             var projects = action == "projects";
             if (!usage && (!ViewModel.CanManageSidebar || ViewModel.HasActiveWork || Research.HasActiveTasks || Terminals.Tabs.Any(tab => !tab.IsFinished)))

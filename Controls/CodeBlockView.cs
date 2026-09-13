@@ -105,7 +105,7 @@ public sealed class CodeBlockView : UserControl
         Grid.SetColumn(headerActions, 1);
         header.Children.Add(headerActions);
         panel.Children.Add(header);
-        var text = new TextBlock { Text = code, FontFamily = new FontFamily("Consolas"), FontSize = 12,
+        var text = new TextBlock { Text = code, FontFamily = new FontFamily("Consolas"), FontSize = ReadingPreferences.Code,
             IsTextSelectionEnabled = true, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(11, 7, 11, 11) };
         codeText = text;
         panel.Children.Add(new ScrollViewer { Content = text, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,

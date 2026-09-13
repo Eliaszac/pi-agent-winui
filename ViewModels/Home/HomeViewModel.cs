@@ -11,6 +11,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
     private readonly ShellViewModel shell;
     private readonly SessionUsageReader reader;
     private readonly Services.Settings.AppSettingsStore? settings;
+    private Models.Settings.AppPreferences? observedPreferences;
     public bool ShowLocalUsage => settings?.Current.ShowLocalUsage ?? true;
     private CancellationTokenSource? read;
     private UsageInventory inventory = new([], 0, 0);
@@ -52,6 +53,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
         this.shell = shell;
         this.reader = reader;
         this.settings = settings;
+        observedPreferences = settings?.Current;
         if (settings is not null) settings.Changed += OnSettingsChanged;
         RefreshCommand = new(_ => RefreshAsync(), exception => Error = exception.Message);
         shell.PropertyChanged += OnShellChanged;
@@ -60,6 +62,9 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
 
     private void OnSettingsChanged(object? sender, EventArgs args)
     {
+        var previous = observedPreferences;
+        observedPreferences = settings?.Current;
+        if (previous?.ShowLocalUsage == observedPreferences?.ShowLocalUsage && previous?.UsageResetAt == observedPreferences?.UsageResetAt) return;
         read?.Cancel();
         inventory = new([], 0, 0); hasRead = false;
         OnPropertyChanged(nameof(ShowLocalUsage));

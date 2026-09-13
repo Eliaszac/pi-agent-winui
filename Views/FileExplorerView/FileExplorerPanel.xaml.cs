@@ -93,7 +93,7 @@ public sealed partial class FileExplorerPanel : UserControl
         if (item.IsRoot || Model.IsBusy || Model.Editing is not null) return;
         try
         {
-            var dialog = new ContentDialog { XamlRoot = XamlRoot, Title = "Move to Recycle Bin?", Content = item.Name,
+            var dialog = new Controls.ActionContentDialog { XamlRoot = XamlRoot, Title = "Move to Recycle Bin?", Content = item.Name,
                 PrimaryButtonText = "Delete", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close };
             if (await dialog.ShowAsync() == ContentDialogResult.Primary) await Model.DeleteAsync(item);
         }
