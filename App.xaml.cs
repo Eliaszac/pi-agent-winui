@@ -110,6 +110,9 @@ public partial class App : Application
         var openIn = new ViewModels.Applications.OpenInViewModel(new Services.Applications.InstalledApplicationLocator(),
             new Services.Applications.OpenInPreferenceStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "open-in.json")),
             new Services.Applications.ProjectApplicationLauncher());
+        var fileEditor = new Services.Applications.WorkspaceEditorLauncher(new Services.Applications.InstalledApplicationLocator(),
+            new Services.Applications.OpenInPreferenceStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "open-in.json")));
+        workspaces.FileLinkFactory = target => new Services.Files.WorkspaceFileLinks(target, fileEditor.OpenAsync);
         var githubOptions = GitHubOptions.Load();
         var githubApi = new Services.GitHub.GitHubApi(githubHttp);
         var github = new ViewModels.GitHub.GitHubViewModel(new Services.GitHub.GitHubAuthentication(githubOptions, githubApi,

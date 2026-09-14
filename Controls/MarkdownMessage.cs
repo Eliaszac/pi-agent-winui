@@ -7,6 +7,11 @@ namespace PiAgentGui.Controls;
 /// <summary>Coalesces streamed Markdown updates into native text controls.</summary>
 public sealed class MarkdownMessage : UserControl
 {
+    public static readonly DependencyProperty FileLinksProperty = DependencyProperty.Register(nameof(FileLinks), typeof(Services.Files.WorkspaceFileLinks),
+        typeof(MarkdownMessage), new PropertyMetadata(null, (sender, _) => ((MarkdownMessage)sender).ResetActions()));
+    public Services.Files.WorkspaceFileLinks? FileLinks
+    { get => (Services.Files.WorkspaceFileLinks?)GetValue(FileLinksProperty); set => SetValue(FileLinksProperty, value); }
+
     public static readonly DependencyProperty SnippetFactoryProperty = DependencyProperty.Register(nameof(SnippetFactory), typeof(Func<string, string, string, ViewModels.Conversations.SnippetViewModel>),
         typeof(MarkdownMessage), new PropertyMetadata(null, (sender, _) => ((MarkdownMessage)sender).ResetActions()));
     public Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? SnippetFactory
@@ -68,7 +73,7 @@ public sealed class MarkdownMessage : UserControl
                 blockSources[index] = signature;
                 continue;
             }
-            var element = MarkdownRenderer.RenderBlock(block, SnippetsEnabled ? SnippetFactory : null);
+            var element = MarkdownRenderer.RenderBlock(block, SnippetsEnabled ? SnippetFactory : null, files: FileLinks);
             if (index < panel.Children.Count) { panel.Children[index] = element; blockSources[index] = signature; }
             else { panel.Children.Add(element); blockSources.Add(signature); }
         }

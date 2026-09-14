@@ -50,6 +50,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     public RunChangesViewModel? RunChanges { get; private set; }
     public bool HasRunChanges => RunChanges is { Files.Count: > 0 } && !running;
     public ChatEntryViewModel? SummaryResponse => HasRunChanges ? responseActionsEntry : null;
+    public Services.Files.WorkspaceFileLinks? FileLinks { get; internal set; }
     public string? WorkingDirectory { get; internal set; }
     public Models.Projects.ExecutionTarget? Target { get; internal set; }
     public bool IsRemoteTarget => Target is { IsLocal: false };
@@ -540,6 +541,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         if (entries.TryGetValue(entry.Id, out var existing)) existing.Update(entry);
         else { var item = new ChatEntryViewModel(entry) { ForkCommand = ForkCommand, CloneCommand = CloneCommand,
+            FileLinks = FileLinks,
             SnippetFactory = (key, label, code) => GetSnippet(entry.Id + ":" + key + ":" + label + ":" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(code))), label, code) }; entries.Add(entry.Id, item); Entries.Add(item); }
     }
 
@@ -613,6 +615,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         if (disposed) return;
         disposed = true;
+        FileLinks?.Dispose();
         if (Closing is { } closingHandlers)
             await Task.WhenAll(closingHandlers.GetInvocationList().Cast<Func<Task>>().Select(close => close()));
         foreach (var snippet in snippets.Values) snippet.Dispose();

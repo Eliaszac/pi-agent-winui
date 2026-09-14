@@ -77,6 +77,14 @@ Reading positions are retained per conversation for the view's lifetime using a 
 
 This is UI virtualization: Pi still supplies the session history, and the app retains its message models. Individual large messages and expanded tool groups are not internally paged. Unit tests cover stable updates across 2,000 messages and existing transcript/snippet behavior.
 
+### File references in responses
+
+Assistant Markdown recognizes file-shaped mentions in prose and inline code, including bare names (`foo.js`), paths, common extensionless names, and `:line[:column]` / `#Lline` locations. Existing web links and fenced code remain unchanged. A conversation-owned resolver discovers files asynchronously on that conversation's fixed target, caching snapshots and lookup failures for 15 seconds. Unique names open directly; duplicate basenames offer a native path picker. Unresolved candidates remain quiet monospace highlights. File-link context menus offer Open in editor and Copy path; web links retain their separate browser actions.
+
+Discovery skips linked entries and common dependency/build directories, is limited to 50,000 entries/files and ten seconds, and never treats an incomplete scan as a unique match. Rendering recognizes at most 256 candidates per text segment and leaves oversized or pathological text unchanged. Local opening revalidates workspace containment and link boundaries; remote opening checks the target file before invoking an editor. Preferred-editor discovery never shell-opens a referenced file, so mentioning an executable does not run it. Line navigation uses supported editor CLI arguments. Remote editor opening currently requires VS Code plus its WSL/Remote SSH extension and independent editor-side SSH configuration/authentication; app-managed SSH credentials are not transferred. Unsupported remote editors fail visibly without opening a Windows file. Missing references and lookup errors are rechecked when re-realized; this is not a live filesystem watcher.
+
+Verification: native build and file-reference unit tests pass. UI interaction and live remote/editor launching have not been verified for file references.
+
 ## Settings and legal information
 
 Settings and its appearance/input additions are complete and user-approved. Storage overview/cleanup remains separate in [BACKLOG.md](docs/BACKLOG.md).

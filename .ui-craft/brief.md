@@ -119,6 +119,8 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 ## Response Markdown and tables
 
+- File references include bare filenames in ordinary prose (for example, “I changed foo.js”), not only backticked or qualified paths. Confirm against the conversation's workspace before offering an editor action. Duplicate names open a path picker; unresolved mentions stay subtly highlighted. Preserve source-line references and keep web links separate. File context actions are Open in editor and Copy path.
+
 - Keep response typography native: 15px body text with 24px line spacing, distinct headings, and quieter inline code. Preserve surrounding response buttons, summaries, and tool-call controls.
 - Conversation responses use 70% of available transcript width, with a 680px reading width where space permits and available width below that. Other Markdown previews retain their existing width.
 - Preserve nested-list hierarchy with an additional 16px indent beyond the parent gutter, hollow second-level bullets, and square deeper bullets. Markers share the text baseline with compact spacing.

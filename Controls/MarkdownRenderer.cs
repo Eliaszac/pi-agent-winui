@@ -6,6 +6,8 @@ using Microsoft.UI.Xaml.Media;
 using Windows.UI.Text;
 using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
+using PiAgentGui.Services.Files;
+using PiAgentGui.Utilities;
 
 namespace PiAgentGui.Controls;
 
@@ -27,24 +29,24 @@ internal static class MarkdownRenderer
         {
             var target = (Paragraph)text.Blocks[0];
             target.Inlines.Clear();
-            if (paragraph.Inline is not null) AddInlines(target.Inlines, paragraph.Inline);
+            if (paragraph.Inline is not null) AddInlines(target.Inlines, paragraph.Inline, text);
             return true;
         }
         return false;
     }
-    internal static StackPanel Render(ContainerBlock document, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null, bool prose = true)
+    internal static StackPanel Render(ContainerBlock document, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null, bool prose = true, WorkspaceFileLinks? files = null)
     {
         var panel = new StackPanel { Spacing = 10 };
-        foreach (var block in document) panel.Children.Add(RenderBlock(block, snippets, prose));
+        foreach (var block in document) panel.Children.Add(RenderBlock(block, snippets, prose, files));
         return panel;
     }
 
-    internal static FrameworkElement RenderBlock(Markdig.Syntax.Block block, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null, bool prose = true)
+    internal static FrameworkElement RenderBlock(Markdig.Syntax.Block block, Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? snippets = null, bool prose = true, WorkspaceFileLinks? files = null)
     {
         switch (block)
         {
             case Table table:
-                return new MarkdownTableView(table);
+                return new MarkdownTableView(table, files);
             case FencedCodeBlock code:
                 var label = string.Join(" ", new[] { code.Info, code.Arguments }.Where(value => !string.IsNullOrWhiteSpace(value)));
                 var fencedView = new CodeBlockView(label, code.Lines.ToString());
@@ -55,17 +57,17 @@ internal static class MarkdownRenderer
                 if (snippets is not null) codeView.AttachSnippet(snippets(code.Span.Start.ToString(), "text", code.Lines.ToString()));
                 return codeView;
             case HeadingBlock heading:
-                var title = Text(heading.Inline, prose);
+                var title = Text(heading.Inline, prose, files);
                 title.FontSize = (heading.Level switch { 1 => 28, 2 => 23, 3 => 19, _ => 16 }) * ReadingPreferences.Scale;
                 title.LineHeight = title.FontSize * 1.35;
                 title.FontWeight = FontWeights.SemiBold;
                 title.Margin = new Thickness(0, prose ? 6 : 12, 0, 0);
                 return title;
             case ParagraphBlock paragraph:
-                return Text(paragraph.Inline, prose);
+                return Text(paragraph.Inline, prose, files);
             case QuoteBlock quote:
                 return new Border { BorderThickness = new Thickness(3, 0, 0, 0), Padding = new Thickness(12, 2, 0, 2),
-                    BorderBrush = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"], Child = Render(quote, snippets, prose) };
+                    BorderBrush = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"], Child = Render(quote, snippets, prose, files) };
             case ListBlock list:
                 var depth = 0;
                 for (var ancestor = list.Parent; ancestor is not null; ancestor = ancestor.Parent)
@@ -84,9 +86,9 @@ internal static class MarkdownRenderer
                 var gutter = widths.Length > 0 ? widths.Max() : 0;
                 for (var index = 0; index < list.Count; index++)
                 {
-                    var body = Render((ContainerBlock)list[index], snippets, prose);
+                    var body = Render((ContainerBlock)list[index], snippets, prose, files);
                     if (body.Children.FirstOrDefault() is not RichTextBlock)
-                        body.Children.Insert(0, Text(null, prose));
+                        body.Children.Insert(0, Text(null, prose, files));
                     var first = (RichTextBlock)body.Children[0];
                     first.Padding = new Thickness(gutter, 0, 0, 0);
                     var paragraph = (Paragraph)first.Blocks[0];
@@ -102,15 +104,15 @@ internal static class MarkdownRenderer
             case LeafBlock leaf:
                 return new TextBlock { Text = leaf.Lines.ToString(), FontSize = ReadingPreferences.Body, LineHeight = 24 * ReadingPreferences.Scale, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
             case ContainerBlock container:
-                return Render(container, snippets, prose);
+                return Render(container, snippets, prose, files);
             default:
                 return new TextBlock();
         }
     }
 
-    internal static RichTextBlock Text(ContainerInline? source, bool prose = false)
+    internal static RichTextBlock Text(ContainerInline? source, bool prose = false, WorkspaceFileLinks? files = null)
     {
-        var text = new RichTextBlock { IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontSize = ReadingPreferences.Body,
+        var text = new RichTextBlock { Tag = files, IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontSize = ReadingPreferences.Body,
             LineHeight = 24 * ReadingPreferences.Scale, LineStackingStrategy = LineStackingStrategy.MaxHeight, HorizontalAlignment = HorizontalAlignment.Stretch };
         if (prose)
         {
@@ -119,20 +121,39 @@ internal static class MarkdownRenderer
             text.LineHeight = 27 * ReadingPreferences.Scale;
         }
         var paragraph = new Paragraph();
-        if (source is not null) AddInlines(paragraph.Inlines, source);
+        if (source is not null) AddInlines(paragraph.Inlines, source, text);
         text.Blocks.Add(paragraph);
         return text;
     }
 
-    private static void AddInlines(InlineCollection target, ContainerInline source)
+    private static void AddText(InlineCollection target, string value, RichTextBlock owner, bool recognizeFiles, bool code)
+    {
+        void Plain(string text, bool monospace)
+        {
+            var run = new Run { Text = text };
+            if (monospace) { run.FontFamily = new FontFamily("Consolas"); run.FontSize = 14 * ReadingPreferences.Scale; }
+            target.Add(run);
+        }
+        if (!recognizeFiles || owner.Tag is not WorkspaceFileLinks files) { Plain(value, code); return; }
+        var offset = 0;
+        foreach (var mention in FileMentionParser.Find(value))
+        {
+            if (mention.Start > offset) Plain(value[offset..mention.Start], code);
+            target.Add(new InlineUIContainer { Child = new MarkdownFileLink(files, mention, owner) });
+            offset = mention.Start + mention.Length;
+        }
+        if (offset < value.Length) Plain(value[offset..], code);
+    }
+
+    private static void AddInlines(InlineCollection target, ContainerInline source, RichTextBlock owner, bool recognizeFiles = true)
     {
         foreach (var inline in source)
         {
             switch (inline)
             {
-                case LiteralInline literal: target.Add(new Run { Text = literal.Content.ToString() }); break;
+                case LiteralInline literal: AddText(target, literal.Content.ToString(), owner, recognizeFiles, false); break;
                 case CodeInline code:
-                    target.Add(new Run { Text = code.Content, FontFamily = new FontFamily("Consolas"), FontSize = 14 * ReadingPreferences.Scale }); break;
+                    AddText(target, code.Content, owner, recognizeFiles, true); break;
                 case TaskList task:
                     target.Add(new Run { Text = task.Checked ? "☑ " : "☐ " });
                     break;
@@ -144,29 +165,33 @@ internal static class MarkdownRenderer
                     if (emphasis.DelimiterChar == '~') span.TextDecorations = TextDecorations.Strikethrough;
                     else if (emphasis.DelimiterCount >= 2) span.FontWeight = FontWeights.SemiBold;
                     else span.FontStyle = FontStyle.Italic;
-                    AddInlines(span.Inlines, emphasis);
+                    AddInlines(span.Inlines, emphasis, owner, recognizeFiles);
                     target.Add(span);
                     break;
                 case LinkInline link:
                     if (!link.IsImage && Uri.TryCreate(link.Url, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" or "mailto")
                     {
-                        var hyperlink = new Hyperlink { NavigateUri = uri };
-                        AddInlines(hyperlink.Inlines, link);
-                        target.Add(hyperlink);
+                        var label = new TextBlock();
+                        AddInlines(label.Inlines, link, owner, recognizeFiles: false);
+                        target.Add(new InlineUIContainer { Child = MarkdownLinkActions.Create(uri, label, owner) });
                     }
-                    else AddInlines(target, link);
+                    else if (!link.IsImage && owner.Tag is WorkspaceFileLinks fileLinks && link.Url is { } destination
+                        && FileMentionParser.Find(destination) is { Count: 1 } mentions && mentions[0].Length == destination.Length)
+                    {
+                        var mention = mentions[0] with { Text = MarkdownCellText.ReadInline(link) };
+                        target.Add(new InlineUIContainer { Child = new MarkdownFileLink(fileLinks, mention, owner) });
+                    }
+                    else AddInlines(target, link, owner, recognizeFiles: false);
                     break;
                 case AutolinkInline auto:
                     if (Uri.TryCreate(auto.IsEmail ? "mailto:" + auto.Url : auto.Url, UriKind.Absolute, out var address) && address.Scheme is "http" or "https" or "mailto")
                     {
-                        var hyperlink = new Hyperlink { NavigateUri = address };
-                        hyperlink.Inlines.Add(new Run { Text = auto.Url });
-                        target.Add(hyperlink);
+                        target.Add(new InlineUIContainer { Child = MarkdownLinkActions.Create(address, new TextBlock { Text = auto.Url }, owner) });
                     }
                     else target.Add(new Run { Text = auto.Url });
                     break;
                 case HtmlInline html: target.Add(new Run { Text = html.Tag }); break;
-                case ContainerInline container: AddInlines(target, container); break;
+                case ContainerInline container: AddInlines(target, container, owner, recognizeFiles); break;
             }
         }
     }

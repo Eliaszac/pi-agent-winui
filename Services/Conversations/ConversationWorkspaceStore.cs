@@ -15,6 +15,7 @@ public sealed class ConversationWorkspaceStore(
     public event Action<Guid, Guid, string>? SessionNameChanged;
     public event Action<Guid, Guid, string>? ExplicitSessionNameChanged;
     public event Action? ViewedRunCompleted;
+    public Func<ExecutionTarget, Files.WorkspaceFileLinks>? FileLinkFactory { get; set; }
     public Func<ConversationViewModel, bool, Task>? CopyRequested { get; set; }
     public void InvalidateProviderModels()
     {
@@ -31,6 +32,7 @@ public sealed class ConversationWorkspaceStore(
             if (modelFavorites is not null) workspace.ModelPicker = new ViewModels.Providers.ModelPickerViewModel(modelFavorites);
             workspace.Target = Utilities.ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id);
             workspace.WorkingDirectory = workspace.Target.Path;
+            workspace.FileLinks = FileLinkFactory?.Invoke(workspace.Target);
             workspace.ResearchOwnerId = conversation.Id;
             workspace.ViewedRunCompleted += () => ViewedRunCompleted?.Invoke();
             workspace.SessionNameChanged += name => SessionNameChanged?.Invoke(project.Id, conversation.Id, name);

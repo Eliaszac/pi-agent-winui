@@ -5,6 +5,7 @@ namespace PiAgentGui.ViewModels.Conversations;
 
 public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
 {
+    public Services.Files.WorkspaceFileLinks? FileLinks { get; init; }
     public Func<string, string, string, SnippetViewModel>? SnippetFactory { get; init; }
     private ChatEntry entry = entry;
     private RunChangesViewModel? summary;
