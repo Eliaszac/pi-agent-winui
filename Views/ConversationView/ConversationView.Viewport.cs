@@ -26,6 +26,7 @@ public sealed partial class ConversationView
     {
         var state = model is not null && viewports.TryGetValue(model, out var saved) ? saved : new();
         followTail = state.FollowTail;
+        initialTailPending = followTail;
         restoringViewport = !state.FollowTail && state.AnchorId is not null ? state : null;
         restoreAttempts = 0;
     }

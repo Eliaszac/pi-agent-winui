@@ -15,8 +15,16 @@ public sealed class TranscriptScrollPolicyTests
         => Assert.AreEqual(1080d, TranscriptScrollPolicy.TailOffset(1000, 680, 600, 2000));
 
     [TestMethod]
-    public void RemovingProcessingRowCorrectsUpwardWithoutJumpingToEstimatedEnd()
-        => Assert.AreEqual(970d, TranscriptScrollPolicy.TailOffset(1000, 570, 600, 2000));
+    public void RemovingProcessingRowLeavesUpwardCorrectionToNativeAnchoring()
+        => Assert.AreEqual(1000d, TranscriptScrollPolicy.TailOffset(1000, 570, 600, 2000));
+
+    [TestMethod]
+    public void StaleRowGeometryCannotPullViewportBackToPreviousResponse()
+        => Assert.AreEqual(3000d, TranscriptScrollPolicy.TailOffset(3000, -1200, 600, 5000));
+
+    [TestMethod]
+    public void UnrealizedTailCannotResumeFollowingUsingEstimatedExtent()
+        => Assert.IsFalse(TranscriptScrollPolicy.ShouldResumeFollowing(true, 900, 1000, double.PositiveInfinity));
 
     [TestMethod]
     public void ShortTranscriptNeverRequestsNegativeOffset()

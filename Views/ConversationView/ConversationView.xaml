@@ -213,7 +213,7 @@
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                 ScrollViewer.HorizontalScrollMode="Disabled" AutomationProperties.Name="Conversation messages">
                 <ListView.ItemsPanel>
-                    <ItemsPanelTemplate><ItemsStackPanel CacheLength="1" ItemsUpdatingScrollMode="KeepItemsInView"/></ItemsPanelTemplate>
+                    <ItemsPanelTemplate><ItemsStackPanel CacheLength="1" ItemsUpdatingScrollMode="KeepLastItemInView"/></ItemsPanelTemplate>
                 </ListView.ItemsPanel>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
