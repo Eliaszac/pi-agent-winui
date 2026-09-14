@@ -95,7 +95,10 @@ export default function registerExecutionTarget(pi: ExtensionAPI): void {
     } });
     pi.on("tool_call", event => !instructionsReady ? { block: true, reason: "Target instructions could not be loaded for this turn. Reconnect before executing tools." }
         : allowed.has(event.toolName) ? undefined : { block: true, reason: "This tool has not been enabled for the execution target." });
-    pi.on("session_start", () => pi.setActiveTools([...allowed]));
+    pi.on("session_start", () => {
+        for (const tool of pi.getAllTools()) if (tool.name.startsWith("embedded_browser_")) allowed.add(tool.name);
+        pi.setActiveTools([...allowed]);
+    });
     pi.registerCommand("pi-gui-instructions", { description: "Internal loaded instruction inventory for Pi desktop", handler: (_args, ctx) => {
         ctx.ui.setStatus("pi-gui-instructions-v1", JSON.stringify(instructionInventory));
     } });

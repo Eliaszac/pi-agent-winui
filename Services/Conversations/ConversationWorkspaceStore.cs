@@ -10,6 +10,7 @@ public sealed class ConversationWorkspaceStore(
 {
     private readonly Dictionary<(Guid Project, Guid Conversation), ConversationViewModel> workspaces = [];
     private bool disposed;
+    private readonly HashSet<ConversationViewModel> activeComputerWorkspaces = [];
     public int ActiveRunCount => workspaces.Values.Count(workspace => workspace.HasActiveWork);
     public bool HasActiveSnippet => workspaces.Values.Any(workspace => workspace.HasActiveSnippet);
     public event Action<Guid, Guid, string>? SessionNameChanged;
@@ -52,6 +53,7 @@ public sealed class ConversationWorkspaceStore(
         disposed = true;
         await Task.WhenAll(workspaces.Values.Select(workspace => workspace.DisposeAsync().AsTask()));
         workspaces.Clear();
+        activeComputerWorkspaces.Clear();
         ComputerUseChanged?.Invoke();
     }
 
@@ -61,6 +63,7 @@ public sealed class ConversationWorkspaceStore(
         foreach (var pair in removed)
         {
             pair.Value.PropertyChanged -= OnWorkspacePropertyChanged;
+            activeComputerWorkspaces.Remove(pair.Value);
             workspaces.Remove(pair.Key);
         }
         ComputerUseChanged?.Invoke();
@@ -69,6 +72,10 @@ public sealed class ConversationWorkspaceStore(
 
     private void OnWorkspacePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(ConversationViewModel.IsComputerUseActive)) ComputerUseChanged?.Invoke();
+        if (args.PropertyName == nameof(ConversationViewModel.IsComputerUseActive) && sender is ConversationViewModel workspace)
+        {
+            var changed = workspace.IsComputerUseActive ? activeComputerWorkspaces.Add(workspace) : activeComputerWorkspaces.Remove(workspace);
+            if (changed) ComputerUseChanged?.Invoke();
+        }
     }
 }

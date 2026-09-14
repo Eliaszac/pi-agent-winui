@@ -48,6 +48,14 @@ Checkpoint response attribution snapshots the session branch before capture and 
 
 ## Implemented product surfaces
 
+### Embedded browser
+
+Conversation-owned Browser tabs share the existing side-panel tab strip and allow multiple pages. Switching conversations retains their controls; closing tabs or the app closes the displays. HTTP(S) Markdown links offer Open in embedded browser. Missing Pi Browser installation routes the user to Extensions instead of opening a browser.
+
+The bundled `embedded-browser.ts` adapter imports the installed Pi Browser extension and exposes `embedded_browser_*` tools. It reuses upstream page actions while native RPC requests create/select/close tabs and supply the correct per-tab WebView2 debugging endpoint. This adapter does not launch a separate browser or add a separate Node process. Each tab has an isolated profile and endpoint, separate from terminal WebView2. Profiles are removed after browser-process exit when no runtime file handles block deletion; crash leftovers are not automatically swept.
+
+Pi runs on Windows for every execution target, so the supported Pi Browser package is detected there. Remote conversations explicitly allow the bundled embedded-browser tools, excluding Windows file upload and storage-file operations. Loopback preview URLs are forwarded through target-specific SSH standard-I/O channels or WSL Python 3 relays; tunnels live until the conversation closes. Development servers must be started separately. Absolute localhost subresource URLs, cross-port APIs, and HTTPS certificates tied to a different hostname may require application-specific development-server configuration. Live WebView2 attach, browser permissions/downloads, WSL and SSH forwarding remain unverified; automated checks do not launch Pi or a GUI.
+
 - Native project/conversation sidebar with rename, settle/restore, delete, target details, resize/collapse, keyboard access, and system light/dark/high-contrast themes.
 - Streaming Markdown and tool output, extension questions, Stop, steering/follow-up queue, screenshots/file references, command picker, session details/export/compaction, and conversation fork/clone. Fork/clone copies session history; it does not branch source files.
 - Processing elapsed time in seconds, switching to minutes/seconds after one minute. The empty-conversation prompt is hidden while processing.

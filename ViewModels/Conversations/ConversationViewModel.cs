@@ -388,6 +388,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         for (var count = 0; count < 128 && updates.TryDequeue(out var update); count++)
         {
             if (disposed) continue;
+            if (update.BrowserRequest is { } browserRequest) _ = HandleBrowserRequestAsync(browserRequest);
             ObserveComputerUse(update);
             if (update.Checkpoint is { } checkpoint) { ObserveCheckpoint(checkpoint); checkpointSummaries.Clear(); changed = true; }
             if (update.McpStatus is { } mcpStatus) { McpStatus = mcpStatus; OnPropertyChanged(nameof(McpStatus)); }

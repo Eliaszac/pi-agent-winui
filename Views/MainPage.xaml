@@ -395,6 +395,9 @@
                                         <FontIcon Glyph="&#xE756;" />
                                     </controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Browser" Click="OnBrowserClicked">
+                                    <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;"/></controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="File Explorer" Click="OnFilesClicked">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B7;"/></controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
@@ -525,6 +528,7 @@
                             </DataTemplate>
                         </TabView.TabItemTemplate>
                     </TabView>
+                    <Grid x:Name="BrowserHost" Grid.Row="1" Visibility="Collapsed"/>
                     <StackPanel x:Name="PanelLauncher" Grid.Row="1" Spacing="8" Margin="24" VerticalAlignment="Center"/>                <views:TerminalPanel x:Name="TerminalPane" Grid.Row="1"
                     Visibility="{x:Bind Terminals.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:ResearchPanel x:Name="ResearchPane" Grid.Row="1"

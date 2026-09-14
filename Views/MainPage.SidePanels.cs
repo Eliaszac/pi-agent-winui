@@ -65,6 +65,9 @@ public sealed partial class MainPage
             {
                 sidePanels[key] = activeSidePanels = new();
                 ViewModel.Chat!.Closing += () => CloseConversationPanelsAsync(key);
+                var chat = ViewModel.Chat;
+                chat.BrowserRequestHandler = request => HandleBrowserRequestAsync(chat, request);
+                chat.OpenBrowser = uri => OpenBrowserAsync(chat, uri);
             }
             Terminals.ConversationId = id;
             Terminals.Target = ViewModel.SelectedTarget;
@@ -79,11 +82,12 @@ public sealed partial class MainPage
     }
 
     private bool PanelAvailable(string kind) => ViewModel.Chat is not null &&
-        (kind == "docker" ? Docker.Enabled : kind is "terminal" or "files" or "source" || ViewModel.SelectedTarget?.IsLocal != false && (kind != "research" || Research.Enabled));
+        (kind == "docker" ? Docker.Enabled : kind is "browser" or "terminal" or "files" or "source" || ViewModel.SelectedTarget?.IsLocal != false && (kind != "research" || Research.Enabled));
 
     private void OpenSidePanel(string kind)
     {
         if (!PanelAvailable(kind) || activeSidePanels is null) return;
+        if (kind == "browser") { _ = OpenBrowserAsync(ViewModel.Chat!, BrowserAddress.DefaultPage); return; }
         if (kind == "terminal")
         {
             if (ViewModel.SelectedTarget is not { } target) return;
@@ -116,6 +120,8 @@ public sealed partial class MainPage
             Capabilities.IsOpen = tab?.Kind == "capabilities";
             Research.IsOpen = tab?.Kind == "research" && Research.Enabled;
             Docker.IsOpen = tab?.Kind == "docker" && Docker.Enabled;
+            BrowserHost.Visibility = tab?.Kind == "browser" ? Visibility.Visible : Visibility.Collapsed;
+            foreach (var pair in browserSurfaces) pair.Value.Visibility = ReferenceEquals(pair.Key, tab) ? Visibility.Visible : Visibility.Collapsed;
             PanelLauncher.Visibility = activeSidePanels?.Tabs.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             BuildPanelLauncher();
         }
@@ -127,6 +133,7 @@ public sealed partial class MainPage
     {
         if (applyingSidePanel || activeSidePanels is null || SidePanelTabs.SelectedItem is not SidePanelTab tab) return;
         activeSidePanels.Selected = tab;
+        if (tab.Kind == "browser" && ViewModel.Chat is { } chat) selectedBrowsers[chat.ResearchOwnerId] = tab;
         ApplySidePanel();
     }
 
@@ -134,6 +141,7 @@ public sealed partial class MainPage
     {
         if (activeSidePanels is not { } owner || args.Item is not SidePanelTab tab) return;
         owner.Close(tab);
+        CloseBrowserTab(tab);
         ApplySidePanel();
         if (tab.Terminal is { } terminal)
         {
@@ -156,6 +164,9 @@ public sealed partial class MainPage
         {
             try
             {
+                if (sidePanels.TryGetValue(id, out var browserOwner))
+                    foreach (var tab in browserOwner.Tabs.Where(tab => tab.Kind == "browser").ToArray()) CloseBrowserTab(tab);
+                foreach (var key in browserTunnels.Keys.Where(key => key.Owner == id).ToArray()) { browserTunnels[key].Dispose(); browserTunnels.Remove(key); }
                 if (sidePanels.Remove(id, out var state) && ReferenceEquals(activeSidePanels, state))
                 {
                     activeSidePanels = null;

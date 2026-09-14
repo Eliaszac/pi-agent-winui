@@ -14,6 +14,7 @@ internal sealed class MarkdownFileLink : ActionHyperlinkButton
     private readonly FileMention mention;
     private readonly TextBlock label;
     private CancellationTokenSource? lifetime;
+    internal event Action<Brush>? MissingFileResolved;
 
     internal MarkdownFileLink(WorkspaceFileLinks files, FileMention mention, RichTextBlock owner)
     {
@@ -69,6 +70,7 @@ internal sealed class MarkdownFileLink : ActionHyperlinkButton
                 1 => "Open in editor · " + files.FullPath(matches[0]),
                 _ => $"Choose among {matches.Count} files · {files.Target.Label}"
             });
+            if (matches.Count == 0) MissingFileResolved?.Invoke(label.Foreground);
         }
         catch (OperationCanceledException) { if (!token.IsCancellationRequested) ToolTipService.SetToolTip(this, "File lookup timed out."); }
         catch (Exception) { if (!token.IsCancellationRequested) ToolTipService.SetToolTip(this, "File lookup unavailable. Check the workspace connection or permissions."); }

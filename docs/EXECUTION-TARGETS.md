@@ -21,7 +21,7 @@ The app discovers WSL distributions in the background at startup and keeps a sha
 
 ## Current scope
 
-Agent file and shell tools, terminal sessions, target-specific run scripts, and ordinary Git actions execute on the selected target. Target ancestor instruction files load before each turn. Arbitrary third-party extensions, MCP integrations, skills and prompt templates are disabled for remote conversations because their own I/O may still run locally. The supported local Permission Modes integration remains available.
+Agent file and shell tools, terminal sessions, target-specific run scripts, and ordinary Git actions execute on the selected target. Target ancestor instruction files load before each turn. Arbitrary third-party extensions, MCP integrations, skills and prompt templates are disabled for remote conversations because their own I/O may still run locally. The supported local Permission Modes integration remains available. The bundled embedded-browser adapter is also explicitly allowed when Pi Browser is installed on Windows: it controls conversation-owned Windows WebView2 tabs and forwards target loopback preview ports. WSL forwarding requires Python 3; SSH forwarding uses the configured authentication and verified host. Windows file upload and storage-file browser tools are excluded on remote targets. Live browser/forwarding verification remains outstanding.
 
 Remote file browsing/text preview is read-only; use agent tools or the target terminal to edit. Native conflict editing, untracked diff previews/recycling, GitHub PR discovery, Open in, process inspection and background research remain local-only. Target editing/removal and moving existing conversations between targets are not yet offered.
 

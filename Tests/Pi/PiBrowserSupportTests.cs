@@ -29,6 +29,7 @@ public sealed class PiBrowserSupportTests
             var dependency = Directory.CreateDirectory(Path.Combine(directory, "node_modules", "playwright")).FullName;
             File.WriteAllText(Path.Combine(dependency, "package.json"), "{}");
             Assert.IsFalse(PiBrowserSupport.GetInstallationState(root).NeedsSetup);
+            Assert.AreEqual(directory, PiBrowserSupport.FindPackage(root));
             Assert.AreEqual(0, new InstalledExtensionDiscovery().Discover(root).Count);
         }
         finally

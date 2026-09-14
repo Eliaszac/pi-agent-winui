@@ -273,6 +273,10 @@ public sealed partial class MainPage : Page
     public void CloseTerminalDisplays()
     {
         closingSidePanels = true;
+        foreach (var surface in browserSurfaces.Values) surface.Dispose();
+        browserSurfaces.Clear(); BrowserHost.Children.Clear();
+        foreach (var tunnel in browserTunnels.Values) tunnel.Dispose();
+        browserTunnels.Clear();
         sourceControlTimer.Stop(); SourceControl.Dispose();
         processesTimer.Stop(); Processes.IsOpen = false;
         dockerTimer.Stop(); Docker.Dispose();
@@ -442,6 +446,5 @@ public sealed partial class MainPage : Page
         args.Handled = true;
     }
 }
-
 
 

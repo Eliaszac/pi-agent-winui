@@ -66,6 +66,21 @@ internal static class MarkdownLinkActions
             }
         };
         menu.Items.Add(open);
+        if (uri.Scheme is "http" or "https")
+        {
+            var embedded = new MenuFlyoutItem { Text = "Open in embedded browser", Icon = new FontIcon { Glyph = "\uE774" } };
+            embedded.Click += async (_, _) =>
+            {
+                DependencyObject? parent = link;
+                while (parent is not null && parent is not Views.ConversationView) parent = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(parent);
+                if (parent is Views.ConversationView { ViewModel.OpenBrowser: { } launch })
+                {
+                    try { await launch(uri); } catch (Exception error) { ShowError(link, error.Message); }
+                }
+                else ShowError(link, "Open a conversation to use the embedded browser.");
+            };
+            menu.Items.Add(embedded);
+        }
         menu.Items.Add(copy);
         link.ContextFlyout = menu;
         // Handle the request at the embedded control, before RichTextBlock can

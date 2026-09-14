@@ -139,7 +139,7 @@ internal static class MarkdownRenderer
         foreach (var mention in FileMentionParser.Find(value))
         {
             if (mention.Start > offset) Plain(value[offset..mention.Start], code);
-            target.Add(new InlineUIContainer { Child = new MarkdownFileLink(files, mention, owner) });
+            AddFileMention(target, files, mention, owner);
             offset = mention.Start + mention.Length;
         }
         if (offset < value.Length) Plain(value[offset..], code);
@@ -179,7 +179,7 @@ internal static class MarkdownRenderer
                         && FileMentionParser.Find(destination) is { Count: 1 } mentions && mentions[0].Length == destination.Length)
                     {
                         var mention = mentions[0] with { Text = MarkdownCellText.ReadInline(link) };
-                        target.Add(new InlineUIContainer { Child = new MarkdownFileLink(fileLinks, mention, owner) });
+                        AddFileMention(target, fileLinks, mention, owner);
                     }
                     else AddInlines(target, link, owner, recognizeFiles: false);
                     break;
@@ -194,5 +194,22 @@ internal static class MarkdownRenderer
                 case ContainerInline container: AddInlines(target, container, owner, recognizeFiles); break;
             }
         }
+    }
+
+    private static void AddFileMention(InlineCollection target, WorkspaceFileLinks files, FileMention mention, RichTextBlock owner)
+    {
+        var link = new MarkdownFileLink(files, mention, owner);
+        var container = new InlineUIContainer { Child = link };
+        link.MissingFileResolved += foreground =>
+        {
+            var index = target.IndexOf(container);
+            if (index < 0) return;
+            // A non-interactive filename should use the paragraph's native text baseline.
+            var text = new Run { Text = mention.Text, FontFamily = new FontFamily("Consolas"),
+                FontSize = 14 * ReadingPreferences.Scale, Foreground = foreground };
+            target.RemoveAt(index);
+            target.Insert(index, text);
+        };
+        target.Add(container);
     }
 }
