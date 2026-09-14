@@ -10,6 +10,27 @@ namespace PiAgentGui.Tests.Files;
 [TestClass]
 public sealed class WorkspaceFileLinkTests
 {
+    [TestMethod]
+    public async Task ExactSummaryPathOpensWithoutAmbiguousFilenameSearchAndRejectsMissingFiles()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "summary-link-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "src"));
+        try
+        {
+            var file = Path.Combine(root, "src", "same.cs");
+            await File.WriteAllTextAsync(file, "");
+            await File.WriteAllTextAsync(Path.Combine(root, "same.cs"), "");
+            string? opened = null;
+            using var links = new WorkspaceFileLinks(Target(root), (_, path, _, _) => { opened = path; return Task.CompletedTask; });
+            await links.OpenExactAsync(file, default);
+            Assert.AreEqual(file, opened);
+            await Assert.ThrowsExceptionAsync<IOException>(() => links.OpenExactAsync("../outside.cs", default));
+            File.Delete(file);
+            await Assert.ThrowsExceptionAsync<IOException>(() => links.OpenExactAsync(file, default));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static ExecutionTarget Target(string path, string kind = "local") => new() { Id = Guid.NewGuid(), Name = "Test", Path = path, Kind = kind, Host = "Ubuntu" };
 
     [TestMethod]

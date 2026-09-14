@@ -374,7 +374,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         if (disposed) return;
         updates.Enqueue(update);
-        if (Interlocked.Exchange(ref drainScheduled, 1) == 0 && !dispatcher.Post(Drain))
+        if (Interlocked.Exchange(ref drainScheduled, 1) == 0 && !dispatcher.PostBackground(Drain))
         {
             updates.Clear();
             Interlocked.Exchange(ref drainScheduled, 0);
@@ -383,9 +383,13 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
 
     private void Drain()
     {
-        // A bounded batch keeps streaming background conversations from monopolizing the UI thread.
+        // Yield between expensive updates as well as limiting their count. A fixed
+        // count alone can occupy several input frames on a slower or busy machine.
+        var batchStarted = System.Diagnostics.Stopwatch.GetTimestamp();
         var changed = false;
-        for (var count = 0; count < 128 && updates.TryDequeue(out var update); count++)
+        for (var count = 0; count < 128
+            && (count == 0 || System.Diagnostics.Stopwatch.GetElapsedTime(batchStarted).TotalMilliseconds < 4)
+            && updates.TryDequeue(out var update); count++)
         {
             if (disposed) continue;
             if (update.BrowserRequest is { } browserRequest) _ = HandleBrowserRequestAsync(browserRequest);
@@ -518,7 +522,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             RefreshTranscript();
         }
         Interlocked.Exchange(ref drainScheduled, 0);
-        if (!updates.IsEmpty && Interlocked.Exchange(ref drainScheduled, 1) == 0) dispatcher.Post(Drain);
+        if (!updates.IsEmpty && Interlocked.Exchange(ref drainScheduled, 1) == 0) dispatcher.PostBackground(Drain);
     }
 
     private void RefreshTranscript()

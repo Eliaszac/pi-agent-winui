@@ -37,6 +37,7 @@ public sealed partial class ConversationView : UserControl
         }
     }
     private bool tailScrollPending;
+    private bool tailScrollInProgress;
     private bool initialTailPending = true;
     private object? realizingTail;
     private bool transcriptScrollInputPending;
@@ -103,6 +104,7 @@ public sealed partial class ConversationView : UserControl
         view.Root.DataContext = args.NewValue;
         view.RestoreViewport(args.NewValue as ConversationViewModel);
         view.tailScrollPending = false;
+        view.tailScrollInProgress = false;
         view.realizingTail = null;
         view.transcriptScrollInputPending = false;
         view.PromptRail.Reset();
@@ -154,6 +156,7 @@ public sealed partial class ConversationView : UserControl
         ResetCommands();
         if (scroller is not null) scroller.ViewChanged -= OnScrollChanged;
         scroller = null;
+        tailScrollInProgress = false;
     }
 
     private void OnScrollChanged(object? sender, ScrollViewerViewChangedEventArgs args)
@@ -166,7 +169,12 @@ public sealed partial class ConversationView : UserControl
                 transcriptScrollInputPending, previousTranscriptOffset, offset, offset + TranscriptTailDistance()))
             followTail = true;
         previousTranscriptOffset = offset;
-        if (!args.IsIntermediate) transcriptScrollInputPending = false;
+        if (!args.IsIntermediate)
+        {
+            transcriptScrollInputPending = false;
+            tailScrollInProgress = false;
+            if (followTail && tailScrollPending) Transcript.InvalidateArrange();
+        }
     }
 
     private void OnTranscriptChanged()
@@ -195,7 +203,7 @@ public sealed partial class ConversationView : UserControl
         AttachTranscriptScroller();
         UpdateTranscriptAnchoring();
         if (TryRestoreViewport() || !followTail || ViewModel?.DisplayEntries.Count is not > 0) return;
-        if (!tailScrollPending) return;
+        if (!tailScrollPending || tailScrollInProgress) return;
         // Only initial navigation may request a distant item. Streaming uses native
         // bottom anchoring, never a queued ScrollIntoView on each appended row.
         var last = ViewModel.DisplayEntries.LastOrDefault();
@@ -211,6 +219,7 @@ public sealed partial class ConversationView : UserControl
         }
         realizingTail = null;
         if (!container.IsLoaded || container.ActualHeight <= 0) return;
+        var initialNavigation = initialTailPending;
         initialTailPending = false;
         tailScrollPending = false;
         // Use the realized row, not the estimated extent of virtualized history.
@@ -219,7 +228,13 @@ public sealed partial class ConversationView : UserControl
         if (correction < 1) return;
         var offset = Utilities.TranscriptScrollPolicy.TailOffset(scroller.VerticalOffset, bottom, scroller.ViewportHeight, scroller.ScrollableHeight);
         if (Math.Abs(offset - scroller.VerticalOffset) < 1) return;
-        scroller.ChangeView(null, offset, null, disableAnimation: true);
+        var animate = Utilities.TranscriptScrollPolicy.ShouldAnimateTail(initialNavigation,
+            new Windows.UI.ViewManagement.UISettings().AnimationsEnabled,
+            offset - scroller.VerticalOffset, scroller.ViewportHeight);
+        // Let one correction finish before consuming newer streamed geometry. Repeated
+        // ChangeView calls otherwise interrupt each other and make line growth stutter.
+        tailScrollInProgress = animate;
+        if (!scroller.ChangeView(null, offset, null, disableAnimation: !animate)) tailScrollInProgress = false;
     }
 
     private void UpdateTranscriptAnchoring()
@@ -304,6 +319,7 @@ public sealed partial class ConversationView : UserControl
         followTail = false;
         tailScrollPending = false;
         transcriptScrollInputPending = false;
+        tailScrollInProgress = false;
         realizingTail = null;
         initialTailPending = false;
     }

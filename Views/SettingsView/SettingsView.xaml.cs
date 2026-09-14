@@ -6,7 +6,19 @@ public sealed partial class SettingsView : UserControl
 {
     public event EventHandler<string>? ActionRequested;
     private SettingsViewModel? Model => DataContext as SettingsViewModel;
-    public SettingsView() => InitializeComponent();
+    public SettingsView()
+    {
+        InitializeComponent();
+        Loaded += (_, _) => UpdateWeightPreview();
+    }
+    private void UpdateWeightPreview() => BodyPreview.FontWeight = new Windows.UI.Text.FontWeight
+        { Weight = (ushort)(400 + (Model?.TextWeightIndex ?? 0) * 100) };
+    private async void OnTextWeightChanged(object sender, SelectionChangedEventArgs args)
+    {
+        if (IsLoaded && Model is { CanEdit: true } model && TextWeightChoice.SelectedIndex >= 0 && TextWeightChoice.SelectedIndex != model.TextWeightIndex)
+            await model.SetTextWeightAsync(TextWeightChoice.SelectedIndex);
+        UpdateWeightPreview();
+    }
     private async void OnThemeChanged(object sender, SelectionChangedEventArgs args)
     {
         if (IsLoaded && Model is { CanEdit: true } model && ThemeChoice.SelectedIndex >= 0 && ThemeChoice.SelectedIndex != model.ThemeIndex)

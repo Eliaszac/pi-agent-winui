@@ -9,4 +9,7 @@ public static class TranscriptScrollPolicy
 
     public static bool ShouldResumeFollowing(bool userScrolled, double previousOffset, double offset, double scrollableHeight)
         => userScrolled && offset > previousOffset + 0.5 && scrollableHeight - offset < 48;
+
+    public static bool ShouldAnimateTail(bool initialNavigation, bool animationsEnabled, double distance, double viewportHeight)
+        => !initialNavigation && animationsEnabled && distance >= 1 && distance <= viewportHeight / 2;
 }

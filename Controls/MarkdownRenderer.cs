@@ -60,7 +60,7 @@ internal static class MarkdownRenderer
                 var title = Text(heading.Inline, prose, files);
                 title.FontSize = (heading.Level switch { 1 => 28, 2 => 23, 3 => 19, _ => 16 }) * ReadingPreferences.Scale;
                 title.LineHeight = title.FontSize * 1.35;
-                title.FontWeight = FontWeights.SemiBold;
+                title.FontWeight = prose ? ReadingPreferences.EmphasisWeight : FontWeights.SemiBold;
                 title.Margin = new Thickness(0, prose ? 6 : 12, 0, 0);
                 return title;
             case ParagraphBlock paragraph:
@@ -116,6 +116,7 @@ internal static class MarkdownRenderer
             LineHeight = 24 * ReadingPreferences.Scale, LineStackingStrategy = LineStackingStrategy.MaxHeight, HorizontalAlignment = HorizontalAlignment.Stretch };
         if (prose)
         {
+            text.FontWeight = ReadingPreferences.BodyWeight;
             text.MaxWidth = 720 * ReadingPreferences.Scale;
             text.HorizontalAlignment = HorizontalAlignment.Left;
             text.LineHeight = 27 * ReadingPreferences.Scale;
@@ -163,7 +164,7 @@ internal static class MarkdownRenderer
                 case EmphasisInline emphasis:
                     var span = new Span();
                     if (emphasis.DelimiterChar == '~') span.TextDecorations = TextDecorations.Strikethrough;
-                    else if (emphasis.DelimiterCount >= 2) span.FontWeight = FontWeights.SemiBold;
+                    else if (emphasis.DelimiterCount >= 2) span.FontWeight = owner.FontWeight.Weight >= 600 ? FontWeights.Bold : FontWeights.SemiBold;
                     else span.FontStyle = FontStyle.Italic;
                     AddInlines(span.Inlines, emphasis, owner, recognizeFiles);
                     target.Add(span);

@@ -43,7 +43,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
     public bool ShowUsageEmpty => hasRead && summary.Responses == 0;
     public string Coverage => !hasRead ? "Reading local session records…" : summary.MissingUsage > 0 || inventory.UnavailableSessions > 0 || inventory.SkippedRecords > 0
         ? $"Partial history · {summary.MissingUsage:N0} responses without token counts · {inventory.UnavailableSessions:N0} unreadable or size-limited sessions · {inventory.SkippedRecords:N0} skipped records."
-        : "Based on your saved conversations on this computer. Shared fork history is counted once.";
+        : "Local usage includes deleted conversations. Shared fork history is counted once.";
     public string PeriodStart => summary.Days[0].Date.ToString("MMM d");
     public string PeriodEnd => summary.Days[^1].Date.ToString("MMM d");
     public AsyncRelayCommand RefreshCommand { get; }
@@ -110,7 +110,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
         try
         {
             var catalog = shell.Projects.Select(item => item.Project with { Conversations = item.Conversations.Select(conversation => conversation.Conversation).ToArray() }).ToArray();
-            var next = await reader.ReadAsync(catalog, request.Token);
+            var next = await reader.ReadAsync(catalog, request.Token, settings?.Current.UsageResetAt);
             request.Token.ThrowIfCancellationRequested();
             inventory = next; hasRead = true;
             ApplySummary();

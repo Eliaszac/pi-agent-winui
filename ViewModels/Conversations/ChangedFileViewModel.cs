@@ -8,6 +8,7 @@ public sealed class ChangedFileViewModel(IReadOnlyList<FileChange> changes) : Ob
     private bool expanded;
     public bool IsExpanded { get => expanded; set => SetProperty(ref expanded, value); }
     public string Path => ProjectPathDisplay.ForTool(changes[0].Path);
+    public string OpenPath => changes[0].MovedToPath ?? changes[0].Path;
     public string? MovedFrom => changes[0].Kind == "moved" ? changes[0].MovedFromPath : null;
     public string? MovedTo => changes[0].Kind == "moved" ? changes[0].MovedToPath : null;
     public string Kind => changes[0].Kind == "moved" ? "Moved" : changes[^1].Kind == "deleted" ? "Deleted" : changes[0].Kind == "created" ? "Created" : "Modified";

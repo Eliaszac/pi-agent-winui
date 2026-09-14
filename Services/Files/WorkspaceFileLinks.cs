@@ -64,6 +64,17 @@ public sealed class WorkspaceFileLinks(ExecutionTarget target, Func<ExecutionTar
 
     public string FullPath(string relative) => target.IsLocal ? Path.Combine(target.Path, relative.Replace('/', Path.DirectorySeparatorChar)) : target.Path.TrimEnd('/') + "/" + relative;
 
+    public Task OpenExactAsync(string path, CancellationToken token)
+    {
+        var normalized = path.Replace('\\', '/');
+        var root = target.Path.Replace('\\', '/').TrimEnd('/');
+        if (normalized.StartsWith(root + "/", target.IsLocal ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            normalized = normalized[(root.Length + 1)..];
+        if (normalized.StartsWith('/') || normalized.Contains(':') || normalized.Split('/').Any(part => part is ".." or ""))
+            throw new IOException("This file is outside the conversation workspace.");
+        return OpenAsync(normalized, new(0, path.Length, path, path, null, null), token);
+    }
+
     public async Task OpenAsync(string relative, FileMention mention, CancellationToken token)
     {
         var full = FullPath(relative);

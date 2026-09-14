@@ -127,7 +127,9 @@
                                             <controls:ActionExpander.Header>
                                                 <Grid ColumnSpacing="12">
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{x:Bind Label}" TextTrimming="CharacterEllipsis" FontSize="11" />
+                                                    <controls:ActionButton Click="OnSummaryFileClicked" Padding="0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Open file in your preferred editor" AutomationProperties.Name="{x:Bind Label}">
+                                                        <TextBlock Text="{x:Bind Label}" TextTrimming="CharacterEllipsis" FontSize="11" controls:ReadingWeight.Enabled="True" />
+                                                    </controls:ActionButton>
                                                     <TextBlock Grid.Column="1" Text="{x:Bind Added}" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontSize="11" />
                                                     <TextBlock Grid.Column="2" Text="{x:Bind Removed}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="11" />
                                                 </Grid>

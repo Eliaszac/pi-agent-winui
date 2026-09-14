@@ -55,7 +55,8 @@ public partial class App : Application
         var storage = new ProjectStorageOptions();
         var repository = new JsonProjectRepository(storage);
         var paths = new PiSessionPaths(storage);
-        var defaultHistory = new ConversationDefaultsReader(repository, new Services.Home.SessionUsageReader(paths));
+        var usageReader = new Services.Home.SessionUsageReader(paths);
+        var defaultHistory = new ConversationDefaultsReader(repository, usageReader);
         var startInfo = new PiProcessStartInfoFactory(locator);
         var researchDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "research");
         var researchStore = new ResearchStore(researchDirectory);
@@ -87,7 +88,7 @@ public partial class App : Application
         window.Closed += (_, _) => docker.Dispose();
         var extensions = new ViewModels.Extensions.ExtensionsViewModel(ViewModels.Extensions.SupportedExtensions.All
             .Append(ViewModels.Extensions.SupportedExtensions.Research(research)).Append(ViewModels.Extensions.SupportedExtensions.Docker(docker)));
-        var shell = new ShellViewModel(repository, workspaces, paths, new ConversationDataCleanup(paths, repository, checkpointData.ForgetAsync), extensions);
+        var shell = new ShellViewModel(repository, workspaces, paths, new ConversationDataCleanup(paths, repository, checkpointData.ForgetAsync, usageReader), extensions);
         providers = new ProviderService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "management"));
         var ollamaHttp = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
@@ -139,8 +140,13 @@ public partial class App : Application
         try { await settingsStore.LoadAsync(); }
         catch (Exception error) { settingsError = "Saved preferences could not be read; defaults are shown. " + error.Message; }
         shell.ResumeConversationOnStartup = settingsStore.Current.ResumeConversation;
-        var settings = new ViewModels.Settings.SettingsViewModel(settingsStore) { Message = settingsError };
-        var home = new ViewModels.Home.HomeViewModel(shell, new Services.Home.SessionUsageReader(paths), settingsStore);
+        var settings = new ViewModels.Settings.SettingsViewModel(settingsStore, usageReader) { Message = settingsError };
+        if (settingsStore.Current.UsageResetAt is { } usageCutoff)
+        {
+            try { await usageReader.ResetAsync(usageCutoff); }
+            catch (Exception error) { settings.Message = "Could not apply the saved usage reset. " + error.Message; }
+        }
+        var home = new ViewModels.Home.HomeViewModel(shell, usageReader, settingsStore);
         Controls.ReadingPreferences.Apply(settingsStore.Current);
         window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions, docker, home, settings);
         void ApplyPreferences(object? sender, EventArgs args)

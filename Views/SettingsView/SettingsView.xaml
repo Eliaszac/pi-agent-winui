@@ -14,7 +14,11 @@
                         <ComboBoxItem Content="System"/><ComboBoxItem Content="Light"/><ComboBoxItem Content="Dark"/>
                     </ComboBox>
                     <NumberBox Header="Conversation text size" Value="{Binding ConversationTextSize, Mode=OneWay}" Minimum="12" Maximum="22" SmallChange="1" SpinButtonPlacementMode="Compact" ValueChanged="OnBodySizeChanged" AutomationProperties.Name="Conversation text size" Width="220" HorizontalAlignment="Left"/>
-                    <TextBlock Text="A little more room to read." FontSize="{Binding ConversationTextSize}" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="BodyPreview" Text="A little more room to read." FontSize="{Binding ConversationTextSize}" TextWrapping="Wrap"/>
+                    <ComboBox x:Name="TextWeightChoice" Header="Response text weight" SelectedIndex="{Binding TextWeightIndex, Mode=OneWay}" SelectionChanged="OnTextWeightChanged" AutomationProperties.Name="Response text weight">
+                        <ComboBoxItem Content="Regular"/><ComboBoxItem Content="Medium"/><ComboBoxItem Content="Semibold"/>
+                    </ComboBox>
+                    <TextBlock Text="Changes letter thickness without changing the font. Bold text and headings stay emphasized." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     <NumberBox Header="Code text size" Value="{Binding CodeTextSize, Mode=OneWay}" Minimum="10" Maximum="20" SmallChange="1" SpinButtonPlacementMode="Compact" ValueChanged="OnCodeSizeChanged" AutomationProperties.Name="Code text size" Width="220" HorizontalAlignment="Left"/>
                     <TextBlock Text="print('Hello, world!')" FontFamily="Consolas" FontSize="{Binding CodeTextSize}" TextWrapping="Wrap"/>
                     <controls:ActionButton Content="Reset text sizes" Click="OnResetTextSizes" HorizontalAlignment="Left"/>
@@ -48,7 +52,7 @@
             <Expander IsEnabled="{Binding CanEdit}" Header="Local usage" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Usage.Expanded, Mode=TwoWay}" Visibility="{Binding Usage.Visible, Converter={StaticResource BooleanToVisibility}}">
                 <StackPanel Spacing="12">
                     <ToggleSwitch x:Name="UsageToggle" Header="Show local usage on Home" IsOn="{Binding ShowLocalUsage, Mode=OneWay}" Toggled="OnUsageChanged"/>
-                    <TextBlock Text="Calculated on this computer from saved Pi sessions. Turning this off stops the Home usage reader; Pi still records token counts in its sessions. Nothing is sent to the publisher." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="Usage metadata is stored locally and survives conversation deletion. Turning this off hides Home analytics; it does not stop local usage retention. Reset usage totals to clear retained history without deleting chats. Nothing is sent to the publisher." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     <TextBlock Text="{Binding UsageResetLabel}" FontSize="12"/>
                     <controls:ActionButton Content="Reset usage totals…" Click="OnResetUsage" HorizontalAlignment="Left"/>
                 </StackPanel>

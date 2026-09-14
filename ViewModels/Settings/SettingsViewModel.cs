@@ -4,12 +4,12 @@ using PiAgentGui.Utilities;
 
 namespace PiAgentGui.ViewModels.Settings;
 
-public sealed class SettingsViewModel(AppSettingsStore store) : ObservableObject
+public sealed class SettingsViewModel(AppSettingsStore store, Services.Home.SessionUsageReader? usage = null) : ObservableObject
 {
     private string query = "";
     private string message = "";
     private bool busy;
-    public SettingsCategory Appearance { get; } = new("Appearance", "theme system light dark font text code size readability reset");
+    public SettingsCategory Appearance { get; } = new("Appearance", "theme system light dark font text code size weight thickness regular medium semibold readability reset");
     public SettingsCategory Conversation { get; } = new("Conversation", "send enter ctrl control shortcut keyboard newline");
     public SettingsCategory General { get; } = new("General", "startup home resume last conversation launch editor open in preferred system default command palette ranking reset usage");
     public SettingsCategory Usage { get; } = new("Local usage", "analytics tokens models reset clear history privacy");
@@ -19,6 +19,8 @@ public sealed class SettingsViewModel(AppSettingsStore store) : ObservableObject
     public int ThemeIndex => store.Current.Theme;
     public double ConversationTextSize => store.Current.ConversationTextSize;
     public double CodeTextSize => store.Current.CodeTextSize;
+    public int TextWeightIndex => (store.Current.ConversationTextWeight - 400) / 100;
+    public Task SetTextWeightAsync(int index) => SaveAsync(store.Current with { ConversationTextWeight = 400 + Math.Clamp(index, 0, 2) * 100 });
     public int SendKeyIndex => store.Current.ControlEnterToSend ? 1 : 0;
     public Task SetThemeAsync(int index) => SaveAsync(store.Current with { Theme = index });
     public Task SetTextSizeAsync(double size, bool code) => SaveAsync(code ? store.Current with { CodeTextSize = size } : store.Current with { ConversationTextSize = size });
@@ -37,7 +39,19 @@ public sealed class SettingsViewModel(AppSettingsStore store) : ObservableObject
 
     public async Task SetStartupAsync(int index) => await SaveAsync(store.Current with { ResumeConversation = index == 1 });
     public async Task SetUsageAsync(bool enabled) => await SaveAsync(store.Current with { ShowLocalUsage = enabled });
-    public async Task ResetUsageAsync() => await SaveAsync(store.Current with { UsageResetAt = DateTimeOffset.UtcNow });
+    public async Task ResetUsageAsync()
+    {
+        if (Busy) return;
+        Busy = true; Message = "";
+        try
+        {
+            var cutoff = DateTimeOffset.UtcNow;
+            await store.SaveAsync(store.Current with { UsageResetAt = cutoff });
+            if (usage is not null) await usage.ResetAsync(cutoff);
+        }
+        catch (Exception error) { Message = "Usage reset could not finish. " + error.Message; }
+        finally { Busy = false; OnPropertyChanged(nameof(UsageResetLabel)); }
+    }
     private async Task SaveAsync(Models.Settings.AppPreferences preferences)
     {
         if (Busy) return;
@@ -49,6 +63,7 @@ public sealed class SettingsViewModel(AppSettingsStore store) : ObservableObject
             Busy = false;
             OnPropertyChanged(nameof(StartupIndex)); OnPropertyChanged(nameof(ShowLocalUsage)); OnPropertyChanged(nameof(UsageResetLabel));
             OnPropertyChanged(nameof(ThemeIndex)); OnPropertyChanged(nameof(ConversationTextSize)); OnPropertyChanged(nameof(CodeTextSize)); OnPropertyChanged(nameof(SendKeyIndex));
+            OnPropertyChanged(nameof(TextWeightIndex));
         }
     }
 }

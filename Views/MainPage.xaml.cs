@@ -39,7 +39,7 @@ public sealed partial class MainPage : Page
     }
     private readonly DispatcherTimer sourceControlTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer processesTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private double terminalWidth = 400;
+    private double terminalWidth = 460;
     private readonly Configuration.GitHubOptions githubOptions;
     private readonly CancellationToken githubCancellation;
     private readonly DispatcherTimer githubTimer = new() { Interval = TimeSpan.FromSeconds(15) };
@@ -446,5 +446,4 @@ public sealed partial class MainPage : Page
         args.Handled = true;
     }
 }
-
 

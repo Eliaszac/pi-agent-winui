@@ -48,7 +48,7 @@ public sealed partial class MainPage
                 var count = ViewModel.Projects.Sum(project => project.Conversations.Count);
                 var content = new StackPanel { Spacing = 12 };
                 content.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Text = usage
-                    ? "Start the displayed totals from now. Earlier usage remains in your Pi session files, and your conversations are preserved. This does not reset provider usage or billing."
+                    ? "Delete retained usage statistics and start totals from now. Your conversations are preserved, and their earlier usage will not be imported again. This does not reset provider usage or billing."
                     : $"Delete {count} conversations" + (projects ? $" and remove {ViewModel.Projects.Count} project registrations" : "") + "? This cannot be undone. Project files, shared Pi configuration, provider credentials and research records remain. Associated session screenshots and restore data are cleaned up; unavailable targets may leave cleanup pending." });
                 var confirmation = new TextBox { PlaceholderText = "Type DELETE to confirm" };
                 if (!usage) { Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(confirmation, "Type DELETE to confirm"); content.Children.Add(confirmation); }

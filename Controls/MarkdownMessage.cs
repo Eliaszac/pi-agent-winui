@@ -31,6 +31,7 @@ public sealed class MarkdownMessage : UserControl
     private bool renderQueued;
     private double renderedBodySize;
     private double renderedCodeSize;
+    private int renderedWeight;
     private readonly StackPanel panel = new() { Spacing = 16, MaxWidth = 960, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly List<string> blockSources = [];
     public string Text { get => (string)GetValue(TextProperty); set => SetValue(TextProperty, value); }
@@ -46,7 +47,8 @@ public sealed class MarkdownMessage : UserControl
         Loaded += (_, _) =>
         {
             ReadingPreferences.TypographyChanged += OnReadingChanged;
-            if (renderedBodySize != ReadingPreferences.Body || renderedCodeSize != ReadingPreferences.Code)
+            if (renderedBodySize != ReadingPreferences.Body || renderedCodeSize != ReadingPreferences.Code
+                || renderedWeight != ReadingPreferences.Current.ConversationTextWeight)
                 OnReadingChanged(null, EventArgs.Empty);
             QueueRender();
         };
@@ -105,6 +107,7 @@ public sealed class MarkdownMessage : UserControl
         rendered = source;
         renderedBodySize = ReadingPreferences.Body;
         renderedCodeSize = ReadingPreferences.Code;
+        renderedWeight = ReadingPreferences.Current.ConversationTextWeight;
         ContentRendered?.Invoke(this, EventArgs.Empty);
     }
 }

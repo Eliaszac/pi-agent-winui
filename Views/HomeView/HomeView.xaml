@@ -86,7 +86,7 @@
                 <TextBlock Text="{Binding Coverage}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 <controls:ActionButton Content="About local usage" HorizontalAlignment="Left" FontSize="12" Padding="0" Background="Transparent" BorderThickness="0">
                     <controls:ActionButton.Flyout><Flyout>
-                        <TextBlock MaxWidth="350" TextWrapping="Wrap" Text="Calculated from this app’s saved Pi conversations, including their stored branches. Tokens include input, output, cache reads and cache writes. Responses are individual assistant messages, not prompts. Background research, provider management and other usage outside those messages are not included. This is not account-wide usage or a bill. No analytics database is created or uploaded; deleting a conversation removes its contribution unless its history remains in another saved fork."/>
+                        <TextBlock MaxWidth="350" TextWrapping="Wrap" Text="Calculated from this app’s Pi conversations, including their stored branches. Tokens include input, output, cache reads and cache writes. Responses are individual assistant messages, not prompts. Usage metadata is retained locally after conversations are deleted; message content is not copied into analytics. Shared fork history is counted once. Reset usage totals in Settings to clear retained history. Background research and other usage outside these messages are not included. This is not account-wide usage or a bill. Nothing is uploaded."/>
                     </Flyout></controls:ActionButton.Flyout>
                 </controls:ActionButton>
             </StackPanel>

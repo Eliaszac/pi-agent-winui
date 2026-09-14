@@ -1,6 +1,6 @@
 # Privacy & data
 
-Effective 12 September 2026.
+Effective 14 September 2026.
 
 ## Who publishes this app
 
@@ -21,9 +21,9 @@ Session and settings files are not encrypted by the app. Their protection depend
 
 ## Local usage summaries
 
-Home derives token and model summaries from this app's saved Pi session records. It uses a temporary memory cache, not a separate analytics database or upload service. Counts are not account-wide usage or invoices.
+Home derives token and model summaries from this app's Pi session records. Usage metadata is retained locally in `usage-history.json` under the app data directory, including response identities, project/conversation identifiers, timestamps, provider/model names, effort levels and token counts. It does not copy message content into analytics or upload these records. Counts are not account-wide usage or invoices.
 
-Settings can turn off the Home usage reader. Pi still writes its own session usage metadata. Reset usage totals stores a local cutoff time and omits earlier responses from the display; it does not erase their session records or change a provider's records. Deleting a conversation removes its contribution after refresh, except history retained in another saved fork.
+Settings can hide Home analytics; this does not stop local usage retention. Deleting conversations or projects preserves their usage metadata. Reset usage totals removes retained statistics before the reset time and stores a cutoff to prevent those responses from being imported again. It does not erase session records or change a provider's records. Shared fork history is counted once.
 
 ## What can leave your system
 
@@ -42,7 +42,7 @@ Saved conversations and project registrations remain until you remove them. Sett
 - **Delete all conversations:** removes catalog-owned conversations and schedules deletion of their session files, session screenshots and associated restore data. Project folders and shared Pi configuration remain.
 - **Remove all projects:** also removes project registrations and their conversations. It does not delete the registered workspace directories or their files.
 - **Workspace checkpoints → Manage:** manages snapshot storage separately from conversation history.
-- **Reset usage totals:** changes the display cutoff only.
+- **Reset usage totals:** removes earlier retained usage statistics and prevents their reimport, without deleting conversations.
 
 Active work must finish before bulk conversation deletion. Cleanup can be delayed by active resources, pending restore recovery or an unavailable remote host, and is retried on a later catalog load. The app reports pending cleanup. Separate research records, diagnostic files, preferences, installed extensions and shared provider credentials are not erased by deleting conversations. Uninstalling does not necessarily remove retained app data, Pi data, backups or remote copies.
 
