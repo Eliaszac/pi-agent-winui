@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CheckpointTransport } from "./CheckpointTransport.ts";
 import { CheckpointActivity } from "./CheckpointActivity.ts";
+import { CheckpointResponseScope } from "./CheckpointResponseScope.ts";
 
 const statusKey = "pi-gui-checkpoints-v1";
 type RecordValue = Record<string, unknown>;
@@ -12,6 +13,7 @@ function object(value: unknown): RecordValue {
 
 export default function checkpoints(pi: ExtensionAPI): void {
     let active: string | undefined;
+    let responseScope: CheckpointResponseScope | undefined;
     let transport: CheckpointTransport | undefined;
     let pending = Promise.resolve();
     let enabled = false;
@@ -68,11 +70,13 @@ export default function checkpoints(pi: ExtensionAPI): void {
                 enabled = await configured();
                 if (!enabled || active) return;
                 if (!initialized) await initialize(ctx);
+                const scope = new CheckpointResponseScope(ctx.sessionManager.getBranch());
                 transport ??= new CheckpointTransport(ctx.cwd, ctx.sessionManager.getSessionFile() ?? ctx.sessionManager.getSessionId());
                 activity = new CheckpointActivity(ctx.sessionManager.getSessionFile() ?? ctx.sessionManager.getSessionId());
                 const begin = object(await transport.request({ action: "begin", overlap: await activity.begin() }));
                 if (typeof begin.id !== "string") throw new Error("Checkpoint identity is missing.");
                 active = begin.id;
+                responseScope = scope;
                 emit(ctx, { status: "capturing" });
             } catch (error) { emit(ctx, { status: "error", error: String(error) }); }
         });
@@ -80,12 +84,12 @@ export default function checkpoints(pi: ExtensionAPI): void {
     pi.on("agent_settled", async (_event, ctx) => {
         await serialize(async () => {
             if (!active || !transport) return;
-            const response = [...ctx.sessionManager.getBranch()].reverse().find(entry => entry.type === "message" && entry.message.role === "assistant");
-            const responseId = response?.type === "message" ? `assistant:${response.message.timestamp}` : "";
+            const responseId = responseScope?.settle(ctx.sessionManager.getBranch()) ?? "";
             try {
                 const manifest = await transport.request({ action: "finish", id: active, response: responseId, overlap: await activity?.changed() ?? true });
                 pi.appendEntry("pi-gui-checkpoint", { version: 1, id: active, response: responseId, manifest });
                 active = undefined;
+                responseScope = undefined;
                 emit(ctx, { status: "ready", manifest });
             } catch (error) { emit(ctx, { status: "recovery", recoveryId: active, error: String(error) }); }
         });

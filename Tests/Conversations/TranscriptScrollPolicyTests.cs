@@ -7,6 +7,22 @@ namespace PiAgentGui.Tests.Conversations;
 public sealed class TranscriptScrollPolicyTests
 {
     [TestMethod]
+    public void EstimatedHistoryExtentDoesNotChooseScrollDestination()
+        => Assert.AreEqual(1120d, TranscriptScrollPolicy.TailOffset(1000, 720, 600, 5000));
+
+    [TestMethod]
+    public void GrowingResponseFollowsOnlyItsMeasuredGrowth()
+        => Assert.AreEqual(1080d, TranscriptScrollPolicy.TailOffset(1000, 680, 600, 2000));
+
+    [TestMethod]
+    public void RemovingProcessingRowCorrectsUpwardWithoutJumpingToEstimatedEnd()
+        => Assert.AreEqual(970d, TranscriptScrollPolicy.TailOffset(1000, 570, 600, 2000));
+
+    [TestMethod]
+    public void ShortTranscriptNeverRequestsNegativeOffset()
+        => Assert.AreEqual(0d, TranscriptScrollPolicy.TailOffset(0, 200, 600, 0));
+
+    [TestMethod]
     public void LayoutShrinkingToReaderDoesNotResumeFollowing()
         => Assert.IsFalse(TranscriptScrollPolicy.ShouldResumeFollowing(false, 500, 500, 500));
 

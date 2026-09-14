@@ -44,6 +44,8 @@ Checkpoint bytes live on each target under `$HOME/.pi-desktop-checkpoints`, outs
 
 Checkpoint operations retain one target-wide OS lock. Acquisition waits up to five seconds for contention; Windows uses the explicit lock-violation code and never writes to the locked byte. Access failures remain separate from busy timeouts, and engine errors identify the operation. Initialization errors remain in checkpoint status and a dedicated banner; a later prompt retries initialization before capture.
 
+Checkpoint response attribution snapshots the session branch before capture and selects only a new assistant after that boundary. Runs without a new assistant finish without a response-card association. Finalization retries retain the first association, preventing old checkpoints from moving to later responses.
+
 ## Implemented product surfaces
 
 - Native project/conversation sidebar with rename, settle/restore, delete, target details, resize/collapse, keyboard access, and system light/dark/high-contrast themes.

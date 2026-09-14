@@ -28,6 +28,7 @@ public sealed partial class ConversationView : UserControl
     private ScrollViewer? scroller;
     private bool followTail = true;
     private bool tailScrollPending;
+    private object? realizingTail;
     private bool transcriptScrollInputPending;
     private double previousTranscriptOffset;
     private bool composing;
@@ -95,6 +96,7 @@ public sealed partial class ConversationView : UserControl
         view.Root.DataContext = args.NewValue;
         view.RestoreViewport(args.NewValue as ConversationViewModel);
         view.tailScrollPending = false;
+        view.realizingTail = null;
         view.transcriptScrollInputPending = false;
         view.PromptRail.Reset();
         view.ResetCommands();
@@ -179,7 +181,11 @@ public sealed partial class ConversationView : UserControl
     {
         // Follow coalesced content changes, never local layout changes such as sorting a table.
         if (followTail && sender is FrameworkElement { DataContext: ChatEntryViewModel entry }
-            && ViewModel?.DisplayEntries.LastOrDefault(item => item.IsLeftAligned) == entry) tailScrollPending = true;
+            && ViewModel?.DisplayEntries.LastOrDefault(item => item.IsLeftAligned) == entry)
+        {
+            tailScrollPending = true;
+            Transcript.InvalidateArrange();
+        }
     }
 
     private void OnTranscriptLayoutUpdated(object? sender, object args)
@@ -188,17 +194,26 @@ public sealed partial class ConversationView : UserControl
         if (TryRestoreViewport() || !followTail || ViewModel?.DisplayEntries.Count is not > 0) return;
         if (!tailScrollPending) return;
         // Realize the destination before using the extent: offscreen row heights are estimates.
-        if (ViewModel?.DisplayEntries.LastOrDefault() is { } last && Transcript.ContainerFromItem(last) is null)
+        var last = ViewModel.DisplayEntries.LastOrDefault();
+        if (last is null || scroller is null) return;
+        if (Transcript.ContainerFromItem(last) is not FrameworkElement container)
         {
-            Transcript.ScrollIntoView(last);
+            if (!ReferenceEquals(realizingTail, last))
+            {
+                realizingTail = last;
+                Transcript.ScrollIntoView(last);
+            }
             return;
         }
-        if (scroller is not null)
-        {
-            scroller.ChangeView(null, scroller.ScrollableHeight, null, disableAnimation: true);
-        }
-        tailScrollPending = false;
-        followTail = true;
+        realizingTail = null;
+        if (!container.IsLoaded || container.ActualHeight <= 0) return;
+        // Use the realized row, not the estimated extent of virtualized history.
+        var bottom = container.TransformToVisual(scroller).TransformPoint(new()).Y + container.ActualHeight;
+        var correction = bottom - scroller.ViewportHeight;
+        if (Math.Abs(correction) < 1) { tailScrollPending = false; return; }
+        var offset = Utilities.TranscriptScrollPolicy.TailOffset(scroller.VerticalOffset, bottom, scroller.ViewportHeight, scroller.ScrollableHeight);
+        if (Math.Abs(offset - scroller.VerticalOffset) < 1) { tailScrollPending = false; return; }
+        scroller.ChangeView(null, offset, null, disableAnimation: true);
     }
 
     private void OnTranscriptScrollInput(object sender, PointerRoutedEventArgs args) => BeginTranscriptScrollInput();
@@ -242,6 +257,7 @@ public sealed partial class ConversationView : UserControl
         followTail = false;
         tailScrollPending = false;
         transcriptScrollInputPending = false;
+        realizingTail = null;
     }
 
     private bool IsAtTranscriptTail() => scroller is null || scroller.ScrollableHeight - scroller.VerticalOffset < 48;
