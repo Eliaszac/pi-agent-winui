@@ -62,6 +62,11 @@
                     </StackPanel>
                 </controls:ActionToggleButton>
                 <StackPanel x:Name="ToolDetails" Spacing="8" Margin="24,4,0,8" x:Load="{x:Bind IsExpanded, Mode=OneWay}">
+                    <ItemsControl ItemsSource="{x:Bind Images, Mode=OneWay}" Visibility="{x:Bind HasImages, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate><controls:ScreenshotPreview Image="{Binding}" AutomationProperties.Name="Computer-use observation"/></DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <controls:FileDiffView Patch="{x:Bind DiffPatch, Mode=OneWay}"
                         Visibility="{x:Bind HasDiff, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                     <TextBlock Text="{x:Bind DiffNotice, Mode=OneWay}" TextWrapping="Wrap" FontSize="11"

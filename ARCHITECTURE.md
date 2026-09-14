@@ -89,6 +89,12 @@ Verification: native build and file-reference unit tests pass. UI interaction an
 
 ## Settings and legal information
 
+### Optional computer use
+
+The recommended third-party `@injaneity/pi-computer-use@0.5.1` package is listed in Extensions with a pinned setup command. Installation is the opt-in; no separate toggle is added. Existing remote launch exclusions keep it out of WSL/SSH conversations. Live tool events drive an app-wide activity bar with navigation to the owning conversation and its existing Stop command; returned observation images appear in expanded tool cards and restored history. Installation checks inspect files only and do not assert helper readiness.
+
+Source inspection found Windows native helper commands do not subscribe to abort after submission. Stop requests Pi run cancellation, but an in-flight native batch may finish. It is not an emergency stop. Concurrent conversations are not coordinated by the frontend for desktop control. Native helper setup, permission-mode behavior, RPC compatibility, and live cancellation require explicit future verification; no computer-use actions were run during integration.
+
 Settings and its appearance/input additions are complete and user-approved. Storage overview/cleanup remains separate in [BACKLOG.md](docs/BACKLOG.md).
 
 Settings is a global page available from either sidebar layout and the command palette. Search matches category titles and keywords, expands matching categories temporarily, and restores expansion state after clearing the query. Preferences are saved atomically in `settings.json` under the app data directory. Startup defaults to Home; optionally the most recently used conversation across projects is selected on the first catalog load. Global page navigation preserves conversation runtimes.

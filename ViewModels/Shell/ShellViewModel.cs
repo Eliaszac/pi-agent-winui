@@ -189,6 +189,9 @@ public sealed class ShellViewModel : ObservableObject
     /// <summary>Gets whether a saved draft is selected.</summary>
     public bool HasConversation => selectedConversation is not null;
     public ConversationViewModel? Chat => selectedConversation?.Workspace;
+    public ConversationItemViewModel? ComputerUseConversation => Projects.SelectMany(project => project.Conversations)
+        .FirstOrDefault(conversation => conversation.Workspace?.IsComputerUseActive == true);
+    public bool HasComputerUse => ComputerUseConversation is not null;
     public bool ShowWelcome => HasLoaded && !HasConversation;
 
     /// <summary>Creates the shell without performing disk I/O.</summary>
@@ -199,6 +202,11 @@ public sealed class ShellViewModel : ObservableObject
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         Extensions = extensions ?? new();
         this.workspaces = workspaces;
+        if (workspaces is not null) workspaces.ComputerUseChanged += () =>
+        {
+            OnPropertyChanged(nameof(ComputerUseConversation));
+            OnPropertyChanged(nameof(HasComputerUse));
+        };
         this.sessionPaths = sessionPaths ?? new(new ProjectStorageOptions());
         this.dataCleanup = dataCleanup;
         if (workspaces is not null) workspaces.CopyRequested = DuplicateConversationAsync;

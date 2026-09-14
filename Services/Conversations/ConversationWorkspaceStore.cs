@@ -15,6 +15,7 @@ public sealed class ConversationWorkspaceStore(
     public event Action<Guid, Guid, string>? SessionNameChanged;
     public event Action<Guid, Guid, string>? ExplicitSessionNameChanged;
     public event Action? ViewedRunCompleted;
+    public event Action? ComputerUseChanged;
     public Func<ExecutionTarget, Files.WorkspaceFileLinks>? FileLinkFactory { get; set; }
     public Func<ConversationViewModel, bool, Task>? CopyRequested { get; set; }
     public void InvalidateProviderModels()
@@ -40,6 +41,7 @@ public sealed class ConversationWorkspaceStore(
             workspace.DuplicateConversation = open => CopyRequested?.Invoke(workspace, open)
                 ?? throw new InvalidOperationException("Conversation copying is unavailable.");
             workspaces.Add(key, workspace);
+            workspace.PropertyChanged += OnWorkspacePropertyChanged;
         }
         return workspace;
     }
@@ -50,12 +52,23 @@ public sealed class ConversationWorkspaceStore(
         disposed = true;
         await Task.WhenAll(workspaces.Values.Select(workspace => workspace.DisposeAsync().AsTask()));
         workspaces.Clear();
+        ComputerUseChanged?.Invoke();
     }
 
     public async Task RemoveAsync(Guid projectId, Guid? conversationId = null)
     {
         var removed = workspaces.Where(pair => pair.Key.Project == projectId && (conversationId is null || pair.Key.Conversation == conversationId)).ToArray();
-        foreach (var pair in removed) workspaces.Remove(pair.Key);
+        foreach (var pair in removed)
+        {
+            pair.Value.PropertyChanged -= OnWorkspacePropertyChanged;
+            workspaces.Remove(pair.Key);
+        }
+        ComputerUseChanged?.Invoke();
         await Task.WhenAll(removed.Select(pair => pair.Value.DisposeAsync().AsTask()));
+    }
+
+    private void OnWorkspacePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(ConversationViewModel.IsComputerUseActive)) ComputerUseChanged?.Invoke();
     }
 }

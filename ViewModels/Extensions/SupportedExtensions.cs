@@ -91,5 +91,14 @@ public static class SupportedExtensions
         new("https://github.com/larsderidder/pi-browser"),
         () => PiBrowserSupport.GetInstallationState(), RecommendationOnly: true);
 
-    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Checkpoints, Permissions, AutomaticTitles, Search, Mcp, Lsp, Browser];
+    public static ExtensionDefinition ComputerUse { get; } = new(
+        "Computer use", "injaneity", ComputerUseSupport.Version,
+        "Let Pi inspect and interact with Windows apps. See when computer use is active and stop the run from your conversation.",
+        "An optional third-party plugin for the local Windows desktop. Installation is the opt-in: its tools can observe windows, click, type, scroll, and operate browsers. Requires an unlocked interactive desktop. WSL and SSH conversations do not load it. Stop cancels the agent run, but an already-submitted native Windows action batch may finish; it is not an instant emergency stop and cannot undo delivered actions. Avoid simultaneous desktop tasks across conversations. Live Windows setup and cancellation have not yet been verified in Pi desktop.",
+        ComputerUseSupport.InstallCommand,
+        "Restart Pi desktop after installation. The plugin checks its native helper at startup; errors appear as extension notices. Defaults need no configuration file. Use /computer-use to inspect configuration. Browser access and foreground interaction are allowed by default. For background-only accessibility actions, set headless to true in ~/.pi/agent/extensions/pi-computer-use.json. Uninstall with pi remove npm:@injaneity/pi-computer-use, then restart Pi desktop.",
+        "", new("https://github.com/injaneity/pi-computer-use#readme"), new("https://github.com/injaneity/pi-computer-use"),
+        () => ComputerUseSupport.GetInstallationState(), RecommendationOnly: true);
+
+    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Checkpoints, Permissions, AutomaticTitles, Search, Mcp, Lsp, Browser, ComputerUse];
 }

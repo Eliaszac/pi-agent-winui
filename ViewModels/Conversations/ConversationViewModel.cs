@@ -388,6 +388,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         for (var count = 0; count < 128 && updates.TryDequeue(out var update); count++)
         {
             if (disposed) continue;
+            ObserveComputerUse(update);
             if (update.Checkpoint is { } checkpoint) { ObserveCheckpoint(checkpoint); checkpointSummaries.Clear(); changed = true; }
             if (update.McpStatus is { } mcpStatus) { McpStatus = mcpStatus; OnPropertyChanged(nameof(McpStatus)); }
             if (update.Instructions is { } instructions) { Instructions = instructions; OnPropertyChanged(nameof(Instructions)); }
@@ -574,6 +575,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
 
     private void NotifyState()
     {
+        OnPropertyChanged(nameof(IsComputerUseActive));
+        OnPropertyChanged(nameof(ComputerUseLabel));
         SynchronizeProcessingTime();
         OnPropertyChanged(nameof(IsEmpty));
         NotifyQueue();
