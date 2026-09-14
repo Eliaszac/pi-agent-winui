@@ -1,6 +1,5 @@
 using PiAgentGui.ViewModels.Processes;
 using PiAgentGui.Models.Pi;
-using Microsoft.UI.Xaml.Input;
 
 namespace PiAgentGui.Views;
 
@@ -8,14 +7,6 @@ public sealed partial class ProcessesPanel : UserControl
 {
     public ProcessesPanel() => InitializeComponent();
     private bool confirming;
-    private void OnRowEntered(object sender, PointerRoutedEventArgs args) => ((Grid)sender).Children[1].Opacity = 1;
-    private void OnRowExited(object sender, PointerRoutedEventArgs args)
-    {
-        var button = (Controls.ActionButton)((Grid)sender).Children[1];
-        if (button.FocusState == FocusState.Unfocused) button.Opacity = 0;
-    }
-    private void OnRowFocused(object sender, RoutedEventArgs args) => ((Grid)sender).Children[1].Opacity = 1;
-    private void OnRowUnfocused(object sender, RoutedEventArgs args) => ((Grid)sender).Children[1].Opacity = 0;
 
     private async void OnStop(object sender, RoutedEventArgs args)
     {
@@ -26,8 +17,9 @@ public sealed partial class ProcessesPanel : UserControl
         {
             var dialog = new Controls.ActionContentDialog
             {
-                XamlRoot = XamlRoot, Title = $"Stop {process.Name}?",
-                Content = $"This will terminate PID {process.Identity.Id} and its child processes. An active agent command may report a failure.",
+                XamlRoot = XamlRoot, Title = $"Stop {process.Presentation.Title}?",
+                Content = $"This will forcibly terminate {process.Name} (process ID {process.Identity.Id}) and its child processes. Active work may fail and unsaved output may be lost. This cannot be undone."
+                    + (process.Presentation.IsWindowsHelper ? " Stopping a Windows helper may interrupt the console application using it." : ""),
                 PrimaryButtonText = "Stop", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close
             };
             if (await dialog.ShowAsync() == ContentDialogResult.Primary) await model.StopAsync(process);

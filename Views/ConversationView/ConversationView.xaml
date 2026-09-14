@@ -249,15 +249,18 @@
                             </StackPanel>
                             <StackPanel x:Name="UserRow" HorizontalAlignment="Right" MaxWidth="640" Margin="48,0,0,18" Spacing="4"
                                 x:Load="{x:Bind IsUser, Mode=OneWay}">
-                                <Border Padding="13,9" CornerRadius="13" Background="{ThemeResource ControlFillColorSecondaryBrush}">
-                                    <StackPanel Spacing="8">
-                                    <ItemsControl ItemsSource="{x:Bind Images, Mode=OneWay}" Visibility="{x:Bind HasImages, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate><controls:ScreenshotPreview Image="{Binding}" Margin="0,0,0,6" AutomationProperties.Name="Attached screenshot" /></DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                <ItemsControl ItemsSource="{x:Bind Images, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,0,0,4"
+                                    Visibility="{x:Bind HasImages, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapGrid Orientation="Horizontal" MaximumRowsOrColumns="3" ItemWidth="120" ItemHeight="88" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate><controls:ScreenshotThumbnail Image="{Binding}" Margin="4" /></DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Border Padding="13,9" CornerRadius="13" Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                    Visibility="{x:Bind CanCopyUser, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                     <TextBlock Text="{x:Bind Text, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" controls:ReadingText.Enabled="True" />
-                                    </StackPanel>
                                 </Border>
                                 <controls:CopyFeedbackButton Click="OnCopyMessageClicked" HorizontalAlignment="Right" Style="{StaticResource ShellIconButtonStyle}"
                                     AutomationProperties.Name="Copy prompt" ToolTipService.ToolTip="Copy prompt"

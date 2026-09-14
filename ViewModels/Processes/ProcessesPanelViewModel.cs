@@ -23,13 +23,29 @@ public sealed class ProcessesPanelViewModel(AgentProcessReader reader, AgentProc
     public bool IsOpen { get => open; set { if (SetProperty(ref open, value)) revision++; } }
     public string Message { get => message; private set => SetProperty(ref message, value); }
     public bool ShowMessage => Items.Count == 0;
+    public string Summary
+    {
+        get
+        {
+            if (Items.Count == 0) return "";
+            var helpers = Items.Count(item => item.Presentation.IsWindowsHelper);
+            return helpers == 0 ? $"{Items.Count} running"
+                : $"{Items.Count} running · {helpers} Windows {(helpers == 1 ? "helper" : "helpers")}";
+        }
+    }
+
+    private void NotifyItemsChanged()
+    {
+        OnPropertyChanged(nameof(ShowMessage));
+        OnPropertyChanged(nameof(Summary));
+    }
 
     public void Select(ProcessIdentity? identity)
     {
         if (root == identity) return;
         root = identity; revision++; known.Clear(); Items.Clear(); Error = "";
         Message = identity is null ? "Open a connected conversation to see its processes." : "Checking processes…";
-        OnPropertyChanged(nameof(ShowMessage));
+        NotifyItemsChanged();
     }
 
     public async Task RefreshAsync()
@@ -44,17 +60,20 @@ public sealed class ProcessesPanelViewModel(AgentProcessReader reader, AgentProc
             if (version != revision) return;
             known.Clear(); known.UnionWith(rows.Select(row => row.Identity));
             var existing = Items.ToDictionary(item => item.Identity);
-            var stable = rows.Select(row => existing.TryGetValue(row.Identity, out var old) ? old : row).ToArray();
+            var stable = rows.Select(row => existing.TryGetValue(row.Identity, out var old) ? old : row)
+                .OrderBy(row => row.Presentation.IsWindowsHelper)
+                .ThenBy(row => row.Presentation.Title, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(row => row.Identity.Id).ToArray();
             ObservableCollectionSynchronizer.Synchronize(Items, stable);
             foreach (var row in Items) row.RefreshElapsed();
             Message = "No running subprocesses.";
-            OnPropertyChanged(nameof(ShowMessage));
+            NotifyItemsChanged();
         }
         catch (Exception)
         {
             if (version != revision) return;
             Items.Clear(); Message = "Couldn't read running processes. Retrying…";
-            OnPropertyChanged(nameof(ShowMessage));
+            NotifyItemsChanged();
         }
         finally { refreshing = false; }
     }
