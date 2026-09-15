@@ -8,6 +8,11 @@ namespace PiAgentGui.Services.GitHub;
 
 public sealed class GitHubApi(HttpClient http)
 {
+    public async Task<string> GetLoginAsync(string token, CancellationToken cancellationToken)
+    {
+        using var response = await GetAsync("user", token, cancellationToken);
+        return response.RootElement.GetProperty("login").GetString() ?? throw new IOException("GitHub returned no account name.");
+    }
     public async Task<JsonDocument> PostLoginAsync(string endpoint, Dictionary<string, string> fields, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://github.com/login/" + endpoint);
@@ -45,7 +50,7 @@ public sealed class GitHubApi(HttpClient http)
         return null;
     }
 
-    private async Task<JsonDocument> GetAsync(string path, string token, CancellationToken cancellationToken)
+    internal async Task<JsonDocument> GetAsync(string path, string token, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/" + path);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -57,7 +62,7 @@ public sealed class GitHubApi(HttpClient http)
         if (response.StatusCode == HttpStatusCode.NotFound) throw new IOException("GitHub repository unavailable. Install the GitHub App on this repository and check your access.");
         if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
             throw new IOException("GitHub access is restricted or rate-limited. Check the app's repository permissions or retry later.");
-        if (!response.IsSuccessStatusCode) throw new IOException("Couldn't check pull requests on GitHub. Please try again.");
+        if (!response.IsSuccessStatusCode) throw new IOException("Couldn't read GitHub data. Check your query, repository access and app permissions.");
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
     }
 }

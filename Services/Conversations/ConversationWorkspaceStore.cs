@@ -19,6 +19,7 @@ public sealed class ConversationWorkspaceStore(
     public event Action? ComputerUseChanged;
     public Func<ExecutionTarget, Files.WorkspaceFileLinks>? FileLinkFactory { get; set; }
     public Func<Project, ConversationDraft, ArtifactPanelViewModel>? ArtifactFactory { get; set; }
+    public ViewModels.GitHub.GitHubViewModel? GitHub { get; set; }
     public Func<ConversationViewModel, bool, Task>? CopyRequested { get; set; }
     public void InvalidateProviderModels()
     {
@@ -32,6 +33,7 @@ public sealed class ConversationWorkspaceStore(
         if (!workspaces.TryGetValue(key, out var workspace))
         {
             workspace = new ConversationViewModel(sessionFactory(project, conversation), dispatcher, previewCompacting);
+            workspace.GitHub = GitHub;
             if (modelFavorites is not null) workspace.ModelPicker = new ViewModels.Providers.ModelPickerViewModel(modelFavorites);
             workspace.Target = Utilities.ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id);
             workspace.WorkingDirectory = workspace.Target.Path;

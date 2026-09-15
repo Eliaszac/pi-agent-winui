@@ -31,17 +31,27 @@ public sealed class ShellViewModel : ObservableObject
     private bool showHome = true;
     private bool showSettings;
     private bool showLegal;
+    private bool showIntegrations;
+    public bool ShowIntegrations => showIntegrations;
+    public void OpenIntegrations()
+    {
+        OpenSettings();
+        showSettings = false; showIntegrations = true;
+        OnPropertyChanged(nameof(ShowSettings)); OnPropertyChanged(nameof(ShowIntegrations)); OnPropertyChanged(nameof(ShowWorkspace));
+    }
     public bool ShowSettings => showSettings;
     public bool ShowLegal => showLegal;
     public bool ResumeConversationOnStartup { get; set; }
     public bool HasActiveWork => workspaces?.ActiveRunCount > 0 || workspaces?.HasActiveSnippet == true;
     private void CloseSettingsPages()
     {
-        showSettings = showLegal = false;
+        showSettings = showLegal = showIntegrations = false;
+        OnPropertyChanged(nameof(ShowIntegrations));
         OnPropertyChanged(nameof(ShowSettings)); OnPropertyChanged(nameof(ShowLegal));
     }
     public void OpenSettings(bool legal = false)
     {
+        showIntegrations = false; OnPropertyChanged(nameof(ShowIntegrations));
         showHome = showProviders = showExtensions = false;
         showLegal = legal; showSettings = !legal;
         Chat?.SetViewed(false);
@@ -52,7 +62,7 @@ public sealed class ShellViewModel : ObservableObject
     public bool ShowProviders => showProviders;
     public ViewModels.Providers.ProvidersViewModel? Providers { get; set; }
     public bool ShowExtensions => showExtensions;
-    public bool ShowWorkspace => !showExtensions && !showProviders && !showHome && !showSettings && !showLegal;
+    public bool ShowWorkspace => !showExtensions && !showProviders && !showHome && !showSettings && !showLegal && !showIntegrations;
     public ViewModels.Extensions.ExtensionsViewModel Extensions { get; }
     public void OpenExtensions()
     {
@@ -232,6 +242,7 @@ public sealed class ShellViewModel : ObservableObject
             var keepHome = ShowHome;
             var keepSettings = ShowSettings;
             var keepLegal = ShowLegal;
+            var keepIntegrations = ShowIntegrations;
             var conversationId = selectedConversation?.Conversation.Id;
             var loadedProjects = new ObservableCollection<ProjectItemViewModel>();
             foreach (var project in saved.Reverse())
@@ -253,6 +264,7 @@ public sealed class ShellViewModel : ObservableObject
             }
             SetSelection(selected, conversation);
             if (keepHome) OpenHome();
+            else if (keepIntegrations) OpenIntegrations();
             else if (keepSettings || keepLegal) OpenSettings(keepLegal);
             OnPropertyChanged(nameof(Projects));
             hasLoaded = true;

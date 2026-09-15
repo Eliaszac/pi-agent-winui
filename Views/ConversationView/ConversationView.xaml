@@ -251,6 +251,16 @@
                             </StackPanel>
                             <StackPanel x:Name="UserRow" HorizontalAlignment="Right" MaxWidth="640" Margin="48,0,0,18" Spacing="4"
                                 x:Load="{x:Bind IsUser, Mode=OneWay}">
+                                <ItemsControl ItemsSource="{x:Bind GitHubReferences, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate><DataTemplate>
+                                        <Border Padding="12,8" CornerRadius="8" Margin="0,0,0,6" Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                                            <StackPanel Spacing="3">
+                                                <HyperlinkButton NavigateUri="{Binding Url}" Content="{Binding Label}" Padding="0" HorizontalAlignment="Left"/>
+                                                <TextBlock Text="{Binding Summary}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate></ItemsControl.ItemTemplate>
+                                </ItemsControl>
                                 <ItemsControl ItemsSource="{x:Bind AttachedFiles, Mode=OneWay}" Visibility="{x:Bind HasAttachedFiles, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                     <ItemsControl.ItemTemplate><DataTemplate><controls:ArtifactCard Margin="0,0,0,6"/></DataTemplate></ItemsControl.ItemTemplate>
                                 </ItemsControl>
@@ -423,6 +433,16 @@
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,6" Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibility}}">
                 <ProgressRing IsActive="{Binding IsUploading}" Width="14" Height="14" MinWidth="0" MinHeight="0"/><TextBlock Text="Adding files…" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
+            <TextBlock Text="Fetching GitHub context…" FontSize="12" Visibility="{Binding PreparingReferences, Converter={StaticResource BooleanToVisibility}}"/>
+            <ItemsControl ItemsSource="{Binding PendingGitHub}" Visibility="{Binding HasPendingGitHub, Converter={StaticResource BooleanToVisibility}}">
+                <ItemsControl.ItemTemplate><DataTemplate>
+                    <Grid Padding="10,4" Margin="0,0,0,4" CornerRadius="8" Background="{ThemeResource ControlFillColorSecondaryBrush}" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{Binding Label}"/>
+                        <controls:ActionButton Grid.Column="1" Tag="{Binding}" Click="OnRemoveGitHubReference" MinWidth="24" MinHeight="24" Padding="4" AutomationProperties.Name="Remove GitHub reference" ToolTipService.ToolTip="Remove GitHub reference"><FontIcon Glyph="&#xE711;" FontSize="10"/></controls:ActionButton>
+                    </Grid>
+                </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MaxHeight="76" Visibility="{Binding HasPendingFiles, Converter={StaticResource BooleanToVisibility}}">
                 <ItemsControl ItemsSource="{Binding PendingFiles}">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -440,9 +460,22 @@
             <Border x:Name="FileReferencePanel" Visibility="Collapsed" Padding="4" CornerRadius="8" BorderThickness="1"
                 Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
                 <StackPanel>
-                    <TextBlock Text="Reference a file" FontSize="11" Margin="8,4" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <controls:ActionButton HorizontalAlignment="Left" Margin="4" Padding="8,4" MinHeight="28" Background="Transparent" BorderThickness="0" AutomationProperties.Name="Choose reference source">
+                        <controls:ActionButton.Flyout>
+                            <MenuFlyout>
+                                <controls:ActionMenuFlyoutItem Text="Files" Tag="files" Click="OnReferenceKindChanged"/>
+                                <controls:ActionMenuFlyoutItem Text="Pull requests" Tag="prs" Click="OnReferenceKindChanged"/>
+                                <controls:ActionMenuFlyoutItem Text="Issues" Tag="issues" Click="OnReferenceKindChanged"/>
+                            </MenuFlyout>
+                        </controls:ActionButton.Flyout>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock x:Name="ReferenceSourceLabel" Text="Files" FontSize="12"/>
+                            <FontIcon Glyph="&#xE70D;" FontSize="9"/>
+                        </StackPanel>
+                    </controls:ActionButton>
+                    <TextBlock x:Name="ReferenceHint" Text="Project files" TextWrapping="Wrap" FontSize="11" Margin="8,4" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <controls:CommandListView x:Name="FileReferenceList" MaxHeight="200" IsItemClickEnabled="True"
-                        ItemClick="OnFileReferenceClicked" KeyDown="OnFileReferenceKeyDown" SelectionMode="Single" DisplayMemberPath="Label" AutomationProperties.Name="File references" />
+                        ItemClick="OnFileReferenceClicked" KeyDown="OnFileReferenceKeyDown" SelectionMode="Single" DisplayMemberPath="Label" AutomationProperties.Name="File and GitHub references" />
                     <controls:ActionButton Content="Browse…" Click="OnBrowseReference" HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Choose a file inside or outside the project" />
                 </StackPanel>

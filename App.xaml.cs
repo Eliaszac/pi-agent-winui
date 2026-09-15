@@ -121,6 +121,7 @@ public partial class App : Application
         var githubApi = new Services.GitHub.GitHubApi(githubHttp);
         var github = new ViewModels.GitHub.GitHubViewModel(new Services.GitHub.GitHubAuthentication(githubOptions, githubApi,
             new Services.GitHub.WindowsGitHubCredentialStore(githubOptions.ClientId)), githubApi, new Services.GitHub.GitBranchReader());
+        workspaces.GitHub = github;
         terminals = new(directory => new Services.Terminal.ConPtySession(directory),
             (directory, command) => new Services.Terminal.ConPtySession(directory, command));
         terminals.CreateTargetSession = (target, command) => new Services.Terminal.ConPtySession(target.Path, command, target);

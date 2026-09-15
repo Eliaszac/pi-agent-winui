@@ -52,11 +52,6 @@ public sealed partial class ConversationViewModel
             if (!disposed) AttachArtifact(item);
         }
     }
-    private string ExpandAttachments(string text)
-    {
-        if (PendingFiles.Any(file => !file.Available)) throw new IOException("An attached artifact was deleted. Remove it from this message before sending.");
-        return ArtifactPrompt.Append(FileReferences.Expand(text), PendingFiles.Select(file => file.Record));
-    }
     private async Task ShareMessageArtifactsAsync(string message)
     {
         var ids = ArtifactPrompt.Read(message);

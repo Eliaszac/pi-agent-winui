@@ -71,6 +71,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         OnPropertyChanged(nameof(HasPendingImages));
         OnPropertyChanged(nameof(HasPendingFiles));
+        OnPropertyChanged(nameof(HasPendingGitHub)); OnPropertyChanged(nameof(PreparingReferences));
         OnPropertyChanged(nameof(IsUploading));
         OnPropertyChanged(nameof(CanAttachFiles));
         OnPropertyChanged(nameof(ComposerShowsStop));
@@ -164,9 +165,9 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     public bool IsLoading => preparing || (!connected && !HasError);
     public bool ShowRecovery => !IsLoading && !connected;
     public bool HasInlineError => IsReady && HasError;
-    public bool CanSend => IsReady && !busy && !stopping && !disposed && !uploading && (submittedPreview is null || running) && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages || HasPendingFiles);
+    public bool CanSend => IsReady && !busy && !stopping && !disposed && !uploading && !preparingReferences && (submittedPreview is null || running) && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages || HasPendingFiles || HasPendingGitHub);
     public bool CanStop => connected && running && (!busy || operationInFlight) && !stopping;
-    public bool ComposerShowsStop => running && string.IsNullOrWhiteSpace(Draft) && !HasPendingImages && !HasPendingFiles;
+    public bool ComposerShowsStop => running && string.IsNullOrWhiteSpace(Draft) && !HasPendingImages && !HasPendingFiles && !HasPendingGitHub;
     public bool ShowSeparateStop => running && !ComposerShowsStop;
     public AsyncRelayCommand ComposerActionCommand => ComposerShowsStop ? StopCommand : SendCommand;
     public bool CanUseComposerAction => ComposerShowsStop ? CanStop : CanSend;
@@ -271,11 +272,11 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
 #endif
             var images = PendingImages.ToArray();
             if (await HandlePendingSendAsync(submitted, images)) return;
-            if (images.Length == 0 && !HasPendingFiles && HandleComposerCommand is { } handler && await handler(submitted)) return;
-            if ((images.Length > 0 || HasPendingFiles) && submitted.TrimStart().StartsWith('/'))
+            if (images.Length == 0 && !HasPendingFiles && !HasPendingGitHub && HandleComposerCommand is { } handler && await handler(submitted)) return;
+            if ((images.Length > 0 || HasPendingFiles || HasPendingGitHub) && submitted.TrimStart().StartsWith('/'))
                 throw new InvalidOperationException("Send attachments with a message rather than a slash command.");
             if (TryOpenProviderSetup?.Invoke() == true) return;
-            var expanded = ExpandAttachments(submitted);
+            var expanded = await ExpandAttachmentsAsync(submitted);
             await SendSubmittedAsync(submitted, expanded, images, () => session.SendAsync(expanded, images));
         }, ReportError);
         StopCommand = new AsyncRelayCommand(async _ =>
@@ -478,7 +479,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (update.SteeringQueue is not null) { steeringCount = update.SteeringQueue.Count; OnPropertyChanged(nameof(SteeringLabel)); OnPropertyChanged(nameof(HasSteering)); }
             if (update.RecoveredPrompts is not null)
                 foreach (var recovered in update.RecoveredPrompts)
-                    RecoveredPrompts.Add(recovered with { Text = FileReferences.Restore(ArtifactPrompt.Display(recovered.Message)) });
+                    RecoveredPrompts.Add(recovered with { Text = FileReferences.Restore(GitHubReferencePrompt.Display(recovered.Message)) });
             if (update.IsConnected == false || !string.IsNullOrEmpty(update.Error)) { queueHeld = true; queueReady = false; }
             if (update.IsConnected is bool isConnected)
             {

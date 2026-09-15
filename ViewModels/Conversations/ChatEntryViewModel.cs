@@ -67,7 +67,18 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
     internal string Id => entry.Id;
     internal ChatEntry Source => entry;
     public string Speaker => entry.Speaker;
-    public string Text => entry.IsUser ? PromptFileReferences.Display(ArtifactPrompt.Display(entry.Text)) : entry.Text;
+    private string? referenceSource;
+    private string referenceDisplay = "";
+    private IReadOnlyList<Models.GitHub.GitHubReference> references = [];
+    private void RefreshReferencePresentation()
+    {
+        if (referenceSource == entry.Text) return;
+        referenceSource = entry.Text;
+        references = GitHubReferencePrompt.Read(entry.Text);
+        referenceDisplay = PromptFileReferences.Display(GitHubReferencePrompt.Display(entry.Text));
+    }
+    public string Text { get { if (!entry.IsUser) return entry.Text; RefreshReferencePresentation(); return referenceDisplay; } }
+    public IReadOnlyList<Models.GitHub.GitHubReference> GitHubReferences { get { if (!entry.IsUser) return []; RefreshReferencePresentation(); return references; } }
     private IReadOnlyList<ArtifactItemViewModel> attachedFiles = [];
     public IReadOnlyList<ArtifactItemViewModel> AttachedFiles
     {
@@ -109,6 +120,7 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
         entry = next;
         OnPropertyChanged(nameof(Speaker));
         OnPropertyChanged(nameof(Text));
+        OnPropertyChanged(nameof(GitHubReferences));
         OnPropertyChanged(nameof(Details));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasDetails));

@@ -262,6 +262,7 @@
                                 <controls:ActionMenuFlyoutItem Text="Providers" Click="OnProvidersClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="Extensions" Click="OnExtensionsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xEA86;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                                 <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Integrations" Click="OnIntegrationsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE71B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="General settings" Click="OnSettingsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                             </MenuFlyout>
                         </controls:ActionButton.Flyout>
@@ -306,6 +307,7 @@
                                 <controls:ActionMenuFlyoutItem Text="Providers" Click="OnProvidersClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="Extensions" Click="OnExtensionsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xEA86;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                                 <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Integrations" Click="OnIntegrationsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE71B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="General settings" Click="OnSettingsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                             </MenuFlyout>
                         </controls:ActionButton.Flyout>
@@ -322,6 +324,7 @@
         </SplitView.Pane>
         <Grid Padding="24,16">
         <views:HomeView x:Name="HomePane" Visibility="{x:Bind ViewModel.ShowHome, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
+        <views:IntegrationsView x:Name="IntegrationsPane" Visibility="{x:Bind ViewModel.ShowIntegrations, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
         <views:SettingsView x:Name="SettingsPane" Visibility="{x:Bind ViewModel.ShowSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
         <views:LegalView x:Name="LegalPane" Visibility="{x:Bind ViewModel.ShowLegal, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
         <views:ProvidersView DataContext="{x:Bind ViewModel.Providers}"

@@ -11,6 +11,20 @@ namespace PiAgentGui.Tests.Settings;
 [TestClass]
 public sealed class SettingsTests
 {
+    [TestMethod]
+    public async Task IntegrationsIsExclusiveAndSurvivesCatalogReload()
+    {
+        var shell = new ShellViewModel(new InMemoryProjectRepository());
+        await shell.LoadAsync();
+        shell.OpenIntegrations();
+        Assert.IsTrue(shell.ShowIntegrations);
+        Assert.IsFalse(shell.ShowHome || shell.ShowSettings || shell.ShowWorkspace || shell.ShowProviders || shell.ShowExtensions);
+        await shell.LoadAsync();
+        Assert.IsTrue(shell.ShowIntegrations);
+        shell.OpenSettings(); Assert.IsFalse(shell.ShowIntegrations);
+        shell.OpenIntegrations(); shell.OpenHome(); Assert.IsFalse(shell.ShowIntegrations);
+        shell.OpenIntegrations(); shell.CloseExtensions(); Assert.IsFalse(shell.ShowIntegrations);
+    }
     private readonly string directory = Path.Combine(Path.GetTempPath(), "PiSettingsTests-" + Guid.NewGuid().ToString("N"));
     [TestCleanup]
     public void Cleanup() { if (Directory.Exists(directory)) Directory.Delete(directory, true); }

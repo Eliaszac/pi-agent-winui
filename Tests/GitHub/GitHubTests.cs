@@ -13,6 +13,27 @@ namespace PiAgentGui.Tests.GitHub;
 public sealed class GitHubTests
 {
     [TestMethod]
+    public async Task IntegrationAccountUsesExistingLoginWithoutAProject()
+    {
+        using var http = new HttpClient(new FakeGitHubHandler(request =>
+        {
+            Assert.AreEqual("/user", request.RequestUri!.AbsolutePath);
+            Assert.AreEqual("test-token", request.Headers.Authorization!.Parameter);
+            return Json("{\"login\":\"octocat\"}");
+        }));
+        var api = new GitHubApi(http);
+        var credentials = new FakeGitHubCredentials { Token = new("test-token", DateTimeOffset.UtcNow.AddHours(1)) };
+        var vm = new GitHubViewModel(new(new("id", "slug"), api, credentials), api, new FakeGitBranchReader());
+        vm.Initialize();
+        await vm.RefreshAccountAsync(default);
+        Assert.AreEqual("Connected as @octocat", vm.ConnectionStatus);
+        Assert.IsTrue(vm.CanDisconnect);
+        vm.Disconnect();
+        Assert.AreEqual("Not connected", vm.ConnectionStatus);
+        Assert.IsTrue(vm.CanConnect);
+        Assert.IsNull(credentials.Token);
+    }
+    [TestMethod]
     public async Task ConnectButtonRequiresRepositoryEvenWhenSignedOut()
     {
         using var http = new HttpClient(new FakeGitHubHandler(_ => throw new AssertFailedException("Signed-out checks must stay local.")));

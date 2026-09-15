@@ -1,6 +1,6 @@
 # GitHub connection setup
 
-Pi desktop uses a GitHub App's device flow directly from the Windows app. Users click **Connect to GitHub** in the conversation header, copy the displayed code, open GitHub, and authorize it. No server, `gh`, client secret, private key, or manually pasted user token is needed.
+Pi desktop uses a GitHub App's device flow directly from the Windows app. Users open **Settings → Integrations → Connect to GitHub**, or use **Connect to GitHub** in the conversation header, copy the displayed code, open GitHub, and authorize it. No server, `gh`, client secret, private key, or manually pasted user token is needed.
 
 ## Register the app
 
@@ -9,7 +9,7 @@ Pi desktop uses a GitHub App's device flow directly from the Windows app. Users 
 3. Leave Callback URL and Setup URL blank. Leave **Request user authorization (OAuth) during installation** unchecked; sign-in happens through device flow.
 4. Enable **Device flow**. Keep **Expire user authorization tokens** enabled.
 5. Under Webhook, uncheck **Active**. No webhook URL or secret is needed.
-6. Repository permissions: **Pull requests → Read-only**. **Metadata → Read-only** is included automatically. Leave other repository, account, and organization permissions at No access. No event subscriptions are needed.
+6. Repository permissions: **Pull requests → Read-only** and **Issues → Read-only**. **Metadata → Read-only** is included automatically. Leave other repository, account, and organization permissions at No access. No event subscriptions are needed.
 7. Choose **Any account** if other users will use this integration; **Only on this account** limits installation to your own account.
 8. Create the GitHub App. Copy its **Client ID** (not App ID). Copy its slug from `https://github.com/apps/<slug>`.
 
@@ -57,3 +57,9 @@ Access and rotating refresh tokens are stored in Windows Credential Locker under
 - https://docs.github.com/en/rest/pulls/pulls
 
 Implementation verified with builds and fake HTTP/Git/credential unit tests. Live browser login, Windows Credential Locker and real private-repository access still need testing after app registration.
+
+## Attach PRs and issues
+
+Use `@issues:` or `@prs:` followed by a number or title to choose the search source directly, including multiword titles. `@files:` selects project files; plain `@` retains the source dropdown. Changing the dropdown updates an active prefix. An empty GitHub query shows recent items, and Escape dismisses the picker.
+
+In a conversation, type @ and choose PRs or Issues in the reference picker. Results are restricted to the GitHub origin repository of the conversation target, including Windows, WSL and SSH targets. Search by text or paste an issue/PR URL from that same repository. An empty search lists recent matches across all states. Other repositories and projects without a GitHub origin are not searched. Selected references become removable chips. Sending fetches a bounded snapshot for the agent; the visible message shows only your text and reference cards. Existing app installations must approve Issues read access for issue bodies and comments. No write access is required. Network or permission failures preserve the draft.

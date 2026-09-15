@@ -6,8 +6,21 @@ namespace PiAgentGui.Views;
 public sealed partial class MainPage
 {
     private void OnSettingsClicked(object sender, RoutedEventArgs args) => ViewModel.OpenSettings();
+    private void OnIntegrationsClicked(object sender, RoutedEventArgs args) => ViewModel.OpenIntegrations();
     private void InitializeSettings(SettingsViewModel settings)
     {
+        IntegrationsPane.DataContext = GitHub;
+        IntegrationsPane.ActionRequested += (_, action) =>
+        {
+            if (action == "connect") OnGitHubClicked(this, new());
+            else if (action == "disconnect") OnDisconnectGitHubClicked(this, new());
+            else if (action == "access") OnManageGitHubClicked(this, new());
+        };
+        ViewModel.PropertyChanged += async (_, change) =>
+        {
+            if (change.PropertyName == nameof(ViewModel.ShowIntegrations) && ViewModel.ShowIntegrations)
+                await GitHub.RefreshAccountAsync(githubCancellation);
+        };
         SettingsPane.DataContext = settings;
         SettingsPane.Loaded += async (_, _) => await settings.RefreshStorageAsync();
         SettingsPane.Loaded += async (_, _) => await OpenIn.RefreshEditorsAsync();

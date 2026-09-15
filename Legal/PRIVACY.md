@@ -37,6 +37,8 @@ Each service may retain or process information under its own policies, including
 
 Relevant policies include [OpenAI](https://openai.com/policies/privacy-policy/), [Anthropic](https://www.anthropic.com/legal/privacy), [Google](https://policies.google.com/privacy), [GitHub](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement) and [Microsoft](https://privacy.microsoft.com/privacystatement). Other configured providers and integrations have their own notices.
 
+GitHub reference searches send your query to GitHub. Sending an attached issue or pull request includes a bounded snapshot of its content in the prompt delivered to your selected model provider and saved in the Pi session. The conversation UI shows a compact reference card instead of the fetched content. Disconnecting GitHub does not remove snapshots already saved in conversations.
+
 ## Retention and deletion
 
 Saved conversations and project registrations remain until you remove them. Settling a conversation does not delete it. The app provides separate controls so you can understand what will be removed:

@@ -211,6 +211,7 @@ public sealed partial class MainPage : Page
         catch (Exception) { GitHub.ReportError("Couldn't open GitHub sign-in. Please try again."); }
         finally { dialogOpen = false; }
         await RefreshGitHubAsync(true);
+        await GitHub.RefreshAccountAsync(githubCancellation);
     }
 
     private void OnConversationToolTipOpened(object sender, RoutedEventArgs args)
