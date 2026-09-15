@@ -23,6 +23,7 @@ public sealed class ProcessPiTransport(PiProcessStartInfoFactory startInfoFactor
         ObjectDisposedException.ThrowIf(disposed != 0, this);
         if (process is not null) throw new InvalidOperationException("Pi is already started.");
         var info = startInfoFactory.Create(request);
+        if (ConversationLoadTiming.Current.Value is not null) info.Environment["PI_TIMING"] = "1";
         if (!request.ManageProviders && request.ManageMcpServer is null) Directory.CreateDirectory(Path.GetDirectoryName(request.SessionFile)!);
         try
         {
@@ -76,7 +77,17 @@ public sealed class ProcessPiTransport(PiProcessStartInfoFactory startInfoFactor
     {
         // Drain continuously to prevent pipe deadlocks. Do not persist potentially sensitive diagnostics.
         var buffer = new char[4096];
-        try { int count; while ((count = await reader.ReadAsync(buffer.AsMemory(), lifetime.Token).ConfigureAwait(false)) > 0) exitHint.Append(buffer.AsSpan(0, count)); }
+        var timing = ConversationLoadTiming.Current.Value;
+        var parser = timing is null ? null : new PiStartupTimingParser((stage, milliseconds) => timing.Mark(stage, milliseconds));
+        try
+        {
+            int count;
+            while ((count = await reader.ReadAsync(buffer.AsMemory(), lifetime.Token).ConfigureAwait(false)) > 0)
+            {
+                exitHint.Append(buffer.AsSpan(0, count));
+                parser?.Append(buffer.AsSpan(0, count));
+            }
+        }
         catch (Exception exception) when (exception is OperationCanceledException or IOException or ObjectDisposedException) { }
     }
 

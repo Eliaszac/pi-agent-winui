@@ -20,6 +20,7 @@ public sealed class PiRpcClient(IPiTransport transport, TimeSpan requestTimeout)
 
     public async Task StartAsync(PiLaunchRequest request, CancellationToken cancellationToken = default)
     {
+        using var timing = Utilities.ConversationLoadTiming.Current.Value?.Measure("process.launch");
         if (Interlocked.Exchange(ref started, 1) != 0) throw new InvalidOperationException("The RPC client has already started.");
         await transport.StartAsync(request, cancellationToken).ConfigureAwait(false);
         reader = ReadAsync();
@@ -29,6 +30,7 @@ public sealed class PiRpcClient(IPiTransport transport, TimeSpan requestTimeout)
         Action<JsonElement>? applyResponse = null, TimeSpan? timeout = null)
     {
         ObjectDisposedException.ThrowIf(disposed != 0, this);
+        using var timing = Utilities.ConversationLoadTiming.Current.Value?.Measure("rpc." + command);
         if (failure is not null) throw new IOException("The Pi connection ended. Reconnect before sending another request.", failure);
         var id = Guid.NewGuid().ToString("N");
         var packet = arguments?.DeepClone().AsObject() ?? new JsonObject();
@@ -61,6 +63,8 @@ public sealed class PiRpcClient(IPiTransport transport, TimeSpan requestTimeout)
 
     private async Task ReadAsync()
     {
+        var startupTiming = Utilities.ConversationLoadTiming.Current.Value;
+        var firstResponse = true;
         try
         {
             await foreach (var line in transport.ReadLinesAsync(lifetime.Token).ConfigureAwait(false))
@@ -70,6 +74,7 @@ public sealed class PiRpcClient(IPiTransport transport, TimeSpan requestTimeout)
                 if (packet.ValueKind != JsonValueKind.Object || !packet.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String)
                     throw new InvalidDataException("Pi sent an invalid protocol envelope.");
                 if (type.GetString() != "response") { EventReceived?.Invoke(packet.Clone()); continue; }
+                if (firstResponse) { firstResponse = false; startupTiming?.Mark("pi.first-rpc-response"); }
                 if (!packet.TryGetProperty("id", out var id) || id.ValueKind != JsonValueKind.String || !pending.TryRemove(id.GetString()!, out var request)) continue;
                 if (!packet.TryGetProperty("command", out var command) || command.ValueKind != JsonValueKind.String || command.GetString() != request.Command ||
                     !packet.TryGetProperty("success", out var success) || success.ValueKind is not (JsonValueKind.True or JsonValueKind.False))

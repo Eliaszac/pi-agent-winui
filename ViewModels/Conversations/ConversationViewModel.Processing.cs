@@ -8,7 +8,7 @@ public sealed partial class ConversationViewModel
     private ITimer? processingTimer;
     private long? processingStarted;
     private int processingTickPending;
-    private string ProcessingLabel => (compacting || previewCompacting ? "Compacting context… " : "Processing… ") +
+    private string ProcessingLabel => (compacting || previewCompacting ? "Compacting context… " : checkpointsInitializing ? "Preparing checkpoints… " : "Processing… ") +
         ProcessingDuration.Format(processingStarted is { } started ? processingClock.GetElapsedTime(started) : TimeSpan.Zero);
 
     private void SynchronizeProcessingTime()

@@ -37,6 +37,7 @@ export default function checkpoints(pi: ExtensionAPI): void {
     };
     const initialize = async (ctx: ExtensionContext) => {
         initialized = false;
+        emit(ctx, { status: "initializing" });
         enabled = await configured();
         for (const entry of ctx.sessionManager.getBranch()) {
             if (entry.type === "custom" && entry.customType === "pi-gui-checkpoint") {
@@ -47,22 +48,26 @@ export default function checkpoints(pi: ExtensionAPI): void {
         if (!enabled) { emit(ctx, { status: "disabled" }); return; }
         transport = new CheckpointTransport(ctx.cwd, ctx.sessionManager.getSessionFile() ?? ctx.sessionManager.getSessionId());
         const inventory = object(await transport.request({ action: "list" }));
-        emit(ctx, { status: "ready" });
+        let recoveryId: unknown;
         if (Array.isArray(inventory.records)) {
             for (const value of inventory.records.slice(-100)) {
                 const record = object(value);
                 if (record.state === "active" || record.state === "applying" || record.state === "interrupted") {
-                    emit(ctx, { status: "recovery", recoveryId: record.id });
+                    recoveryId = record.id;
                 } else {
                     emit(ctx, { manifest: await transport.request({ action: "manifest", id: record.id }) });
                 }
             }
         }
         initialized = true;
+        emit(ctx, recoveryId ? { status: "recovery", recoveryId } : { status: "ready" });
     };
-    pi.on("session_start", async (_event, ctx) => {
-        try { await serialize(() => initialize(ctx)); }
-        catch (error) { emit(ctx, { status: "error", error: String(error) }); }
+    pi.on("session_start", (_event, ctx) => {
+        emit(ctx, { status: "initializing" });
+        void serialize(async () => {
+            try { await initialize(ctx); }
+            catch (error) { emit(ctx, { status: "error", error: String(error) }); }
+        });
     });
     pi.on("before_agent_start", async (_event, ctx) => {
         await serialize(async () => {

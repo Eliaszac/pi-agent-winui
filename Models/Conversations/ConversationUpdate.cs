@@ -3,6 +3,7 @@ namespace PiAgentGui.Models.Conversations;
 /// <summary>A typed change delivered from a conversation runtime to its presentation state.</summary>
 public sealed record ConversationUpdate
 {
+    public Utilities.ConversationLoadTiming? LoadTiming { get; init; }
     public System.Text.Json.JsonElement? GitHubWriteRequest { get; init; }
     public System.Text.Json.JsonElement? BrowserRequest { get; init; }
     public System.Text.Json.JsonElement? ArtifactRequest { get; init; }
