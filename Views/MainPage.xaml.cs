@@ -432,18 +432,17 @@ public sealed partial class MainPage : Page
         switch (args.Key)
         {
             case VirtualKey.Left:
-                if (sidebar.ExpandedWidth <= SidebarLayoutState.MinimumWidth) sidebar.IsOpen = false;
+                if (sidebar.ExpandedWidth <= SidebarLayoutState.MinimumWidth) sidebar.SetUserOpen(false);
                 else if (sidebar.IsOpen) sidebar.ResizeTo(sidebar.ExpandedWidth - 20);
                 break;
             case VirtualKey.Right:
-                if (!sidebar.IsOpen) sidebar.IsOpen = true;
+                if (!sidebar.IsOpen) sidebar.SetUserOpen(true);
                 else sidebar.ResizeTo(sidebar.ExpandedWidth + 20);
                 break;
-            case VirtualKey.Home: sidebar.IsOpen = false; break;
-            case VirtualKey.End: sidebar.IsOpen = true; break;
+            case VirtualKey.Home: sidebar.SetUserOpen(false); break;
+            case VirtualKey.End: sidebar.SetUserOpen(true); break;
             default: return;
         }
         args.Handled = true;
     }
 }
-

@@ -4,6 +4,7 @@ namespace PiAgentGui.Models.Conversations;
 public sealed record ConversationUpdate
 {
     public System.Text.Json.JsonElement? BrowserRequest { get; init; }
+    public System.Text.Json.JsonElement? ArtifactRequest { get; init; }
     public System.Text.Json.JsonElement? Checkpoint { get; init; }
     public McpStatusSnapshot? McpStatus { get; init; }
     public InstructionSnapshot? Instructions { get; init; }

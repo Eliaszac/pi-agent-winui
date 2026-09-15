@@ -70,6 +70,7 @@ public sealed partial class MainPage
                 chat.OpenBrowser = uri => OpenBrowserAsync(chat, uri);
             }
             Terminals.ConversationId = id;
+            ArtifactsPane.DataContext = ViewModel.Chat?.Artifacts;
             Terminals.Target = ViewModel.SelectedTarget;
             SidePanelTabs.TabItemsSource = activeSidePanels?.Tabs;
             Files.SelectTarget(ViewModel.SelectedTarget);
@@ -82,7 +83,7 @@ public sealed partial class MainPage
     }
 
     private bool PanelAvailable(string kind) => ViewModel.Chat is not null &&
-        (kind == "docker" ? Docker.Enabled : kind is "browser" or "terminal" or "files" or "source" || ViewModel.SelectedTarget?.IsLocal != false && (kind != "research" || Research.Enabled));
+        (kind == "docker" ? Docker.Enabled : kind is "browser" or "terminal" or "files" or "source" or "artifacts" || ViewModel.SelectedTarget?.IsLocal != false && (kind != "research" || Research.Enabled));
 
     private void OpenSidePanel(string kind)
     {
@@ -121,6 +122,8 @@ public sealed partial class MainPage
             Research.IsOpen = tab?.Kind == "research" && Research.Enabled;
             Docker.IsOpen = tab?.Kind == "docker" && Docker.Enabled;
             BrowserHost.Visibility = tab?.Kind == "browser" ? Visibility.Visible : Visibility.Collapsed;
+            ArtifactsPane.Visibility = tab?.Kind == "artifacts" ? Visibility.Visible : Visibility.Collapsed;
+            if (tab?.Kind == "artifacts" && ViewModel.Chat?.Artifacts is { } artifacts) _ = artifacts.RefreshAsync();
             foreach (var pair in browserSurfaces) pair.Value.Visibility = ReferenceEquals(pair.Key, tab) ? Visibility.Visible : Visibility.Collapsed;
             PanelLauncher.Visibility = activeSidePanels?.Tabs.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             BuildPanelLauncher();
@@ -155,6 +158,8 @@ public sealed partial class MainPage
         if (activeSidePanels is not null) activeSidePanels.IsOpen = false;
         ApplySidePanel();
     }
+
+    private void OnArtifactsClicked(object sender, RoutedEventArgs args) => OpenSidePanel("artifacts");
 
     private Task CloseConversationPanelsAsync(Guid id)
     {

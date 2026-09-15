@@ -13,11 +13,27 @@ public sealed class WorkspaceFileLinks(ExecutionTarget target, Func<ExecutionTar
     private DateTimeOffset expires;
     private string? lookupError;
     public ExecutionTarget Target => target;
+    public Conversations.ArtifactStore? Artifacts { get; set; }
     private static readonly HashSet<string> Excluded = new(StringComparer.OrdinalIgnoreCase) { ".git", "node_modules", "bin", "obj", ".vs", ".idea", ".venv", "__pycache__" };
 
     public async Task<IReadOnlyList<string>> ResolveAsync(FileMention mention, CancellationToken token, bool refresh = false)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, lifetime.Token);
+        if (Artifacts is { } artifacts)
+        {
+            var matches = new List<string>();
+            foreach (var record in await artifacts.ListAsync(linked.Token).ConfigureAwait(false))
+            {
+                if (record.Deleted) continue;
+                var candidate = mention.Path.Replace('\\', '/');
+                string path;
+                try { path = await artifacts.GetPathAsync(record.Id).ConfigureAwait(false); }
+                catch (IOException) { continue; }
+                if (candidate.Equals(record.Name, StringComparison.OrdinalIgnoreCase)
+                    || candidate.Equals(path.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase)) matches.Add(path);
+            }
+            if (matches.Count > 0) return matches;
+        }
         await gate.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
@@ -62,7 +78,7 @@ public sealed class WorkspaceFileLinks(ExecutionTarget target, Func<ExecutionTar
             .Order(StringComparer.Ordinal).ToArray();
     }
 
-    public string FullPath(string relative) => target.IsLocal ? Path.Combine(target.Path, relative.Replace('/', Path.DirectorySeparatorChar)) : target.Path.TrimEnd('/') + "/" + relative;
+    public string FullPath(string relative) => Path.IsPathFullyQualified(relative) ? relative : target.IsLocal ? Path.Combine(target.Path, relative.Replace('/', Path.DirectorySeparatorChar)) : target.Path.TrimEnd('/') + "/" + relative;
 
     public Task OpenExactAsync(string path, CancellationToken token)
     {
@@ -77,6 +93,20 @@ public sealed class WorkspaceFileLinks(ExecutionTarget target, Func<ExecutionTar
 
     public async Task OpenAsync(string relative, FileMention mention, CancellationToken token)
     {
+        if (Artifacts is { } artifacts && Path.IsPathFullyQualified(relative))
+        {
+            foreach (var record in await artifacts.ListAsync(token).ConfigureAwait(false))
+            {
+                if (record.Deleted) continue;
+                string path;
+                try { path = await artifacts.GetPathAsync(record.Id).ConfigureAwait(false); }
+                catch (IOException) { continue; }
+                if (!path.Equals(relative, StringComparison.OrdinalIgnoreCase)) continue;
+                await open(new ExecutionTarget { Id = target.Id, Name = "Conversation artifacts", Path = artifacts.DirectoryPath }, path, mention.Line, mention.Column).ConfigureAwait(false);
+                return;
+            }
+            throw new IOException("This artifact is no longer available.");
+        }
         var full = FullPath(relative);
         if (target.IsLocal)
         {

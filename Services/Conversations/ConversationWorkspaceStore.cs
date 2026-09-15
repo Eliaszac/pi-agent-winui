@@ -18,6 +18,7 @@ public sealed class ConversationWorkspaceStore(
     public event Action? ViewedRunCompleted;
     public event Action? ComputerUseChanged;
     public Func<ExecutionTarget, Files.WorkspaceFileLinks>? FileLinkFactory { get; set; }
+    public Func<Project, ConversationDraft, ArtifactPanelViewModel>? ArtifactFactory { get; set; }
     public Func<ConversationViewModel, bool, Task>? CopyRequested { get; set; }
     public void InvalidateProviderModels()
     {
@@ -35,6 +36,9 @@ public sealed class ConversationWorkspaceStore(
             workspace.Target = Utilities.ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id);
             workspace.WorkingDirectory = workspace.Target.Path;
             workspace.FileLinks = FileLinkFactory?.Invoke(workspace.Target);
+            workspace.Artifacts = ArtifactFactory?.Invoke(project, conversation);
+            if (workspace.FileLinks is { } links) links.Artifacts = workspace.Artifacts?.Store;
+            if (workspace.Artifacts is { } artifacts) artifacts.AttachToMessage = workspace.AttachArtifact;
             workspace.ResearchOwnerId = conversation.Id;
             workspace.ViewedRunCompleted += () => ViewedRunCompleted?.Invoke();
             workspace.SessionNameChanged += name => SessionNameChanged?.Invoke(project.Id, conversation.Id, name);

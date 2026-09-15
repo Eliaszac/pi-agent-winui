@@ -251,6 +251,9 @@
                             </StackPanel>
                             <StackPanel x:Name="UserRow" HorizontalAlignment="Right" MaxWidth="640" Margin="48,0,0,18" Spacing="4"
                                 x:Load="{x:Bind IsUser, Mode=OneWay}">
+                                <ItemsControl ItemsSource="{x:Bind AttachedFiles, Mode=OneWay}" Visibility="{x:Bind HasAttachedFiles, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
+                                    <ItemsControl.ItemTemplate><DataTemplate><controls:ArtifactCard Margin="0,0,0,6"/></DataTemplate></ItemsControl.ItemTemplate>
+                                </ItemsControl>
                                 <ItemsControl ItemsSource="{x:Bind Images, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,0,0,4"
                                     Visibility="{x:Bind HasImages, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                     <ItemsControl.ItemsPanel>
@@ -268,6 +271,10 @@
                                     AutomationProperties.Name="Copy prompt" ToolTipService.ToolTip="Copy prompt"
                                     Visibility="{x:Bind CanCopyUser, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                             </StackPanel>
+                            <Grid x:Name="ArtifactRow" x:Load="{x:Bind IsArtifact, Mode=OneWay}" Margin="0,4,0,14">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="740"/></Grid.ColumnDefinitions>
+                                <controls:ArtifactCard DataContext="{x:Bind Artifact, Mode=OneWay}" HorizontalAlignment="Stretch"/>
+                            </Grid>
                             <StackPanel x:Name="ResponseRow" Spacing="6" HorizontalAlignment="Stretch" Margin="0,0,0,18"
                                 x:Load="{x:Bind IsLeftAligned, Mode=OneWay}">
                             <StackPanel Orientation="Horizontal" Spacing="12"
@@ -413,6 +420,23 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,6" Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibility}}">
+                <ProgressRing IsActive="{Binding IsUploading}" Width="14" Height="14" MinWidth="0" MinHeight="0"/><TextBlock Text="Adding files…" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MaxHeight="76" Visibility="{Binding HasPendingFiles, Converter={StaticResource BooleanToVisibility}}">
+                <ItemsControl ItemsSource="{Binding PendingFiles}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate><DataTemplate>
+                        <Border Padding="10,6,4,6" Margin="0,0,0,6" CornerRadius="10" Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="{Binding Glyph}" FontSize="16" VerticalAlignment="Center"/>
+                                <StackPanel MaxWidth="200" Spacing="2" VerticalAlignment="Center"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Name}" FontSize="12"/><TextBlock Text="{Binding Description}" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></StackPanel>
+                                <controls:ActionButton Tag="{Binding}" Click="OnRemoveFile" Style="{StaticResource ShellIconButtonStyle}" AutomationProperties.Name="Remove file from message" ToolTipService.ToolTip="Remove from message (keep in artifacts)"><FontIcon Glyph="&#xE711;" FontSize="10"/></controls:ActionButton>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
             <Border x:Name="FileReferencePanel" Visibility="Collapsed" Padding="4" CornerRadius="8" BorderThickness="1"
                 Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
                 <StackPanel>
@@ -455,7 +479,7 @@
                 </Border>
             </StackPanel>
             </StackPanel>
-            <Border Grid.Row="1" Grid.RowSpan="2" CornerRadius="20" Padding="8"
+            <Border Grid.Row="1" Grid.RowSpan="2" CornerRadius="20" Padding="8" AllowDrop="True" DragOver="OnFilesDragOver" Drop="OnFilesDrop"
                 Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
             <Grid RowSpacing="8">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -483,6 +507,12 @@
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" Spacing="2">
+                    <controls:ActionButton x:Name="AttachFileButton" Click="OnAttachFiles" IsEnabled="{Binding CanAttachFiles}" Width="32" Height="32" MinWidth="32" MinHeight="32"
+                        Padding="0" CornerRadius="16" Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="Attach files"
+                        AutomationProperties.Name="Attach files">
+                        <FontIcon Glyph="&#xE723;" FontSize="16"/>
+                    </controls:ActionButton>
                     <controls:ActionComboBox x:Name="ApprovalSelector" Style="{StaticResource ComposerSelectorStyle}" Width="132"
                         Loaded="OnApprovalSelectorLoaded" SelectionChanged="OnApprovalSelectionChanged" IsEnabled="{Binding CanChangeApprovalMode}"
                         PlaceholderText="Approval" AutomationProperties.Name="Approval mode" ToolTipService.ToolTip="Approval mode"

@@ -7,6 +7,38 @@ namespace PiAgentGui.Tests.Projects;
 public sealed class SidebarLayoutStateTests
 {
     [TestMethod]
+    public async Task PreferencesSurviveRestartAndTransientNarrowLayout()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "sidebar-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var sidebar = new SidebarLayoutState();
+            sidebar.ResizeTo(410);
+            sidebar.Toggle();
+            var store = new PiAgentGui.Services.Settings.SidebarPreferencesStore(Path.Combine(directory, "sidebar.json"));
+            await store.SaveAsync(new(sidebar.PreferredWidth, sidebar.PreferredOpen));
+            var saved = await new PiAgentGui.Services.Settings.SidebarPreferencesStore(Path.Combine(directory, "sidebar.json")).LoadAsync();
+            var restored = new SidebarLayoutState();
+            restored.Restore(saved.Width, saved.IsOpen);
+            Assert.IsFalse(restored.IsOpen);
+            Assert.AreEqual(410d, restored.ExpandedWidth);
+            var changes = 0;
+            restored.PreferenceChanged += (_, _) => changes++;
+            restored.SetAvailableWidth(350);
+            restored.SetAvailableWidth(1200);
+            Assert.AreEqual(410d, restored.ExpandedWidth);
+            Assert.IsFalse(restored.IsOpen);
+            Assert.AreEqual(0, changes);
+            restored.Toggle();
+            restored.SetAvailableWidth(350);
+            restored.SetAvailableWidth(1200);
+            Assert.IsTrue(restored.IsOpen);
+            Assert.AreEqual(1, changes);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    [TestMethod]
     public void DragCollapseKeepsGripReachableAndCanExpandAgain()
     {
         var sidebar = new SidebarLayoutState();

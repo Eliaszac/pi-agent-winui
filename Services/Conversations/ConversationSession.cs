@@ -518,6 +518,11 @@ public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiR
 
     private void HandleExtension(JsonElement packet)
     {
+        if (PiJson.Text(packet, "method") == "input" && PiJson.Text(packet, "title") == "pi-gui-artifacts-v1")
+        {
+            Publish(new() { ArtifactRequest = packet.Clone() });
+            return;
+        }
         if (PiJson.Text(packet, "method") == "input" && PiJson.Text(packet, "title") == "pi-gui-browser-v1")
         {
             Publish(new() { BrowserRequest = packet.Clone() });

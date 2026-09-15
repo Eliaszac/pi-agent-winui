@@ -20,7 +20,7 @@
                 <controls:ActionToggleButton Command="{x:Bind SelectCommand}" IsChecked="{x:Bind IsSelected, Mode=OneWay}"
                     Visibility="{x:Bind Rename.IsNotEditing, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                    Background="Transparent" BorderThickness="0" Padding="11,7" Margin="0,1" MinHeight="34" FontSize="13.3"
+                    Background="Transparent" BorderThickness="0" Padding="11,4" Margin="0" MinHeight="28" FontSize="13.3"
                     AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}" AutomationProperties.HelpText="{x:Bind HoverDetails, Mode=OneWay}">
                     <ToolTipService.ToolTip>
                         <ToolTip Placement="Right" Padding="20" MaxWidth="392" CornerRadius="8" Tag="{x:Bind}" Opened="OnConversationToolTipOpened">
@@ -80,14 +80,15 @@
                             <controls:ActionMenuFlyoutItem Text="Delete conversation" Click="OnDeleteConversationClicked" Tag="{x:Bind}" />
                         </MenuFlyout>
                     </controls:ActionToggleButton.ContextFlyout>
-                    <Grid ColumnSpacing="8">
+                    <Grid ColumnSpacing="6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="16" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <FontIcon Glyph="{x:Bind TargetGlyph}" FontSize="13.3" />
-                        <StackPanel Grid.Column="1" Spacing="3">
+                        <FontIcon Glyph="{x:Bind TargetGlyph}" FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" Spacing="1">
                             <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="13.3" TextTrimming="CharacterEllipsis" />
                             <StackPanel Orientation="Horizontal" Spacing="5" AutomationProperties.Name="{x:Bind PullRequestLabel, Mode=OneWay}"
                                 Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
@@ -255,14 +256,21 @@
                     </ListView>
                     <StackPanel Grid.Row="2" Margin="12,8,4,12" Spacing="4">
                     <views:GettingStartedCard x:Name="GettingStartedPane"/>
-                    <controls:ActionButton Click="OnProvidersClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE77B;" FontSize="15" /><TextBlock Text="Providers" FontSize="13.3" /></StackPanel>
-                    </controls:ActionButton>
-                    <controls:ActionButton Click="OnExtensionsClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xEA86;" FontSize="15" /><TextBlock Text="Extensions" FontSize="13.3" /></StackPanel>
-                    </controls:ActionButton>
-                    <controls:ActionButton Click="OnSettingsClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE713;" FontSize="15"/><TextBlock Text="Settings" FontSize="13.3"/></StackPanel>
+                    <controls:ActionButton HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="30" Padding="11,6" FontSize="13.3" AutomationProperties.Name="Settings menu">
+                        <controls:ActionButton.Flyout>
+                            <MenuFlyout Placement="Top">
+                                <controls:ActionMenuFlyoutItem Text="Providers" Click="OnProvidersClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Extensions" Click="OnExtensionsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xEA86;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="General settings" Click="OnSettingsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                            </MenuFlyout>
+                        </controls:ActionButton.Flyout>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE713;" FontSize="15"/>
+                            <TextBlock Grid.Column="1" Text="Settings" FontSize="13.3"/>
+                            <FontIcon Grid.Column="2" Glyph="&#xE70E;" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </Grid>
                     </controls:ActionButton>
                     </StackPanel>
                 </Grid>
@@ -292,13 +300,15 @@
                         AutomationProperties.Name="Provider setup" ToolTipService.ToolTip="{x:Bind GettingStarted.ProviderMessage, Mode=OneWay}">
                         <FontIcon Glyph="&#xE946;" FontSize="16"/>
                     </controls:ActionButton>
-                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnProvidersClicked" AutomationProperties.Name="Providers" ToolTipService.ToolTip="Providers">
-                        <FontIcon Glyph="&#xE77B;" FontSize="16" />
-                    </controls:ActionButton>
-                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnExtensionsClicked" AutomationProperties.Name="Extensions" ToolTipService.ToolTip="Extensions">
-                        <FontIcon Glyph="&#xEA86;" FontSize="16" />
-                    </controls:ActionButton>
-                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnSettingsClicked" AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
+                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" AutomationProperties.Name="Settings menu" ToolTipService.ToolTip="Settings">
+                        <controls:ActionButton.Flyout>
+                            <MenuFlyout Placement="Top">
+                                <controls:ActionMenuFlyoutItem Text="Providers" Click="OnProvidersClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Extensions" Click="OnExtensionsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xEA86;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="General settings" Click="OnSettingsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                            </MenuFlyout>
+                        </controls:ActionButton.Flyout>
                         <FontIcon Glyph="&#xE713;" FontSize="16"/>
                     </controls:ActionButton>
                     </StackPanel>
@@ -395,6 +405,7 @@
                                         <FontIcon Glyph="&#xE756;" />
                                     </controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Artifacts" Click="OnArtifactsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="Browser" Click="OnBrowserClicked">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;"/></controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
@@ -529,6 +540,7 @@
                         </TabView.TabItemTemplate>
                     </TabView>
                     <Grid x:Name="BrowserHost" Grid.Row="1" Visibility="Collapsed"/>
+                    <views:ArtifactsPanel x:Name="ArtifactsPane" Grid.Row="1" Visibility="Collapsed"/>
                     <StackPanel x:Name="PanelLauncher" Grid.Row="1" Spacing="8" Margin="24" VerticalAlignment="Center"/>                <views:TerminalPanel x:Name="TerminalPane" Grid.Row="1"
                     Visibility="{x:Bind Terminals.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:ResearchPanel x:Name="ResearchPane" Grid.Row="1"

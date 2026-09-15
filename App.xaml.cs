@@ -114,6 +114,9 @@ public partial class App : Application
         var fileEditor = new Services.Applications.WorkspaceEditorLauncher(new Services.Applications.InstalledApplicationLocator(),
             new Services.Applications.OpenInPreferenceStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "open-in.json")));
         workspaces.FileLinkFactory = target => new Services.Files.WorkspaceFileLinks(target, fileEditor.OpenAsync);
+        workspaces.ArtifactFactory = (project, conversation) => new(
+            new Services.Conversations.ArtifactStore(Services.Conversations.ArtifactStore.ForSession(paths.GetSessionFile(project.Id, conversation.Id))),
+            ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id));
         var githubOptions = GitHubOptions.Load();
         var githubApi = new Services.GitHub.GitHubApi(githubHttp);
         var github = new ViewModels.GitHub.GitHubViewModel(new Services.GitHub.GitHubAuthentication(githubOptions, githubApi,
@@ -141,6 +144,21 @@ public partial class App : Application
         catch (Exception error) { settingsError = "Saved preferences could not be read; defaults are shown. " + error.Message; }
         shell.ResumeConversationOnStartup = settingsStore.Current.ResumeConversation;
         var settings = new ViewModels.Settings.SettingsViewModel(settingsStore, usageReader) { Message = settingsError };
+        var sidebarStore = new Services.Settings.SidebarPreferencesStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "sidebar.json"));
+        try
+        {
+            var savedSidebar = await sidebarStore.LoadAsync();
+            shell.Sidebar.Restore(savedSidebar.Width, savedSidebar.IsOpen);
+        }
+        catch (Exception error) { settings.Message = "Saved sidebar layout could not be read. " + error.Message; }
+        async Task SaveSidebarAsync()
+        {
+            try { await sidebarStore.SaveAsync(new(shell.Sidebar.PreferredWidth, shell.Sidebar.PreferredOpen)); }
+            catch (Exception error) { settings.Message = "Sidebar layout could not be saved. " + error.Message; }
+        }
+        void SidebarPreferenceChanged(object? sender, EventArgs args) => sidebarSaveTask = SaveSidebarAsync();
+        shell.Sidebar.PreferenceChanged += SidebarPreferenceChanged;
+        window.Closed += (_, _) => shell.Sidebar.PreferenceChanged -= SidebarPreferenceChanged;
         if (settingsStore.Current.UsageResetAt is { } usageCutoff)
         {
             try { await usageReader.ResetAsync(usageCutoff); }
@@ -166,6 +184,7 @@ public partial class App : Application
         window.Closed += (_, _) => settingsStore.Changed -= ApplyPreferences;
     }
 
+    private Task sidebarSaveTask = Task.CompletedTask;
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
     {
         if (canClose) return;
@@ -220,6 +239,7 @@ public partial class App : Application
             try { if (await dialog.ShowAsync() != ContentDialogResult.Primary) { closing = false; return; } }
             catch (Exception) { closing = false; return; }
         }
+        await sidebarSaveTask;
         canClose = true;
         window?.Close();
     }

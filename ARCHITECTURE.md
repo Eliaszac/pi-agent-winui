@@ -1,6 +1,6 @@
 # Pi desktop architecture
 
-Current implementation and product decisions, updated 2026-09-13. Start at [README.md](README.md) for setup and the documentation index.
+Current implementation and product decisions, updated 2026-09-15. Start at [README.md](README.md) for setup and the documentation index.
 
 ## Product and runtime ownership
 
@@ -28,6 +28,7 @@ Application data lives under `%LOCALAPPDATA%\PiAgentGui`, separate from source f
 | --- | --- |
 | Project catalog | `projects.json`; stable project/conversation/target IDs and metadata, no transcript copies or secrets |
 | Pi sessions | `sessions/<project-id-N>/<conversation-id-N>.jsonl`; Pi writes transcript content, including submitted images |
+| Conversation artifacts | `<session>.artifacts/`; Windows-owned metadata and deliverable files, independent of the project and execution target |
 | Confirmed selectors | `<session>.settings.json`; approval/model/effort restored on reconnect |
 | Session ownership | `<session>.lock`; the OS lock determines ownership, not file presence |
 | Deferred deletion | `deleted-conversation-data`; retry intents for incomplete conversation cleanup |
@@ -38,7 +39,23 @@ Application data lives under `%LOCALAPPDATA%\PiAgentGui`, separate from source f
 
 The versioned JSON catalog uses an exclusive lock, reread-before-mutation, and adjacent temporary-file replacement. Lock contention waits up to five seconds with cancellation. Invalid catalogs fail visibly without replacement; unknown metadata is preserved. Target paths follow their native OS rules.
 
-Deleting a conversation stops its runtime and removes its session, settings, and unused checkpoint data. Project deletion applies this to its conversations, preserving source folders and independent copies. Deletion intent is saved before the catalog mutation; cleanup only runs once the identity is absent. Offline target cleanup retries on a later catalog load. Pending restore recovery is protected. No broad user-folder/orphan sweep runs. Settling a conversation only organizes the sidebar and preserves its data/runtime.
+Deleting a conversation stops its runtime and removes its session, settings, artifacts, and unused checkpoint data. Project deletion applies this to its conversations, preserving source folders and independent copies. Deletion intent is saved before the catalog mutation; cleanup only runs once the identity is absent. Offline target cleanup retries on a later catalog load. Pending restore recovery is protected. No broad user-folder/orphan sweep runs. Settling a conversation only organizes the sidebar and preserves its data/runtime.
+
+### Conversation artifacts
+
+Artifacts provide one conversation-specific side-panel tab, accessible from the chat menu and tab launcher. The panel and inline deliverable cards share records, so names, updates and deletion remain consistent. Actions offer attaching a file to a message, image/text preview, opening in the Windows default application, saving a copy through a native picker, renaming and deleting. Other formats open through their associated application; the app does not render arbitrary executable HTML. Cards for deleted artifacts remain as tombstones. Files and metadata persist across restarts; panel tab layout remains session-only like other side panels.
+
+The bundled `artifact_save` and `artifact_list` tools use Pi's extension UI request/reply channel. They support direct UTF-8 text or importing an absolute source path from the conversation's Local Windows, WSL or SSH target. Imports use that target's existing connection settings and bounded binary transfer; successful copies live beside the Windows Pi session and remain available offline. Generating complex documents remains the agent's responsibility. Files are limited to 32 MiB and inventories to 2,000 records per conversation. Supplying an artifact ID or the same filename updates the current version. User-chosen source files and downloaded copies are never deleted by artifact cleanup.
+
+Existing conversation screenshots are imported lazily when their history is loaded, with stable source identities to avoid duplicates. Deleting a screenshot artifact removes this managed copy and prevents reimport; the original image in Pi's transcript stays until the conversation is deleted. Session forks/clones copy artifact records and files independently, preserving card IDs. Conversation deletion removes owned artifact storage using the deferred cleanup boundary. Artifact paths reject traversal and linked storage; writes publish versioned payloads through atomic metadata replacement.
+
+V2 adds native multi-file selection from the paperclip button, file drag-and-drop onto the composer, and pasted filesystem files. Up to eight files per message, each at most 32 MiB, are copied into the same artifact store without modifying their originals. Name collisions get numbered filenames instead of replacing another artifact. Removing a pending attachment discards its unsent upload copy unless it is still referenced by queued/recovered work or a send is in flight. Sent artifacts remain available for reattachment from the panel. Unsent uploads persist in the panel as “Not sent,” but pending composer selections are in-memory. Built-in artifact tools omit unsent uploads until a send attempt, including keeping queued follow-ups private until dispatch or steering. This sent state persists with the record.
+
+Pi-owned user messages carry bounded structured attachment IDs and names. The native transcript renders file cards instead of that transport block; queue edits, steering and failed-send recovery preserve the associations. `artifact_read` returns paged Unicode text (normally 16,000 characters, preserving surrogate pairs) or PNG/JPEG/GIF/WebP image content up to the existing 2 MiB model-image limit. Image type is detected from its signature. Other formats and larger images are accessed through `artifact_path` and target-side tools; no PDF/Office parser dependency is added to the GUI.
+
+On Windows, `artifact_path` returns the managed copy. On WSL/SSH it transfers a working copy to `$HOME/.pi-desktop-artifacts/<owner-hash>/<artifact-id>/<version>/<name>`, using existing target authentication, bounded binary stdin, private permissions and atomic replacement. The owner hash derives from the Windows artifact-store path; forks therefore have independent remote copies. A sibling `<session>.artifacts.remote` inventory is written before transfer. Artifact deletion removes corresponding remote copies when reachable; failures retain inventory for retry on later file materialization or deferred conversation deletion. New versions discard obsolete working copies for that artifact. The Windows copy remains authoritative; changes to remote copies must be published through `artifact_save`. Transfers are serialized per conversation and reject stale versions if a file changes or is deleted during transfer.
+
+Storage, prompt/queue recovery, tool protocol, binary transfer, remote command construction and cleanup races have unit coverage, along with the Windows build. V2 live GUI/Pi/WSL/SSH verification remains outstanding.
 
 Checkpoint bytes live on each target under `$HOME/.pi-desktop-checkpoints`, outside the workspace. Keep the latest five completed checkpoints per conversation; active/recovery/Undo data receives protection, with the documented 30-day age limit for completed/reverted records. See [CHECKPOINTS.md](docs/CHECKPOINTS.md).
 
@@ -79,6 +96,8 @@ Usage retains a metadata-only archive in `usage-history.json` beside the project
 
 The side panel defaults to 460 pixels, with existing manual resizing and responsive width limits preserved.
 
+Sidebar width and deliberate expand/collapse choices persist separately in `sidebar.json`. Responsive clamping and automatic overlay dismissal do not overwrite those preferences; returning to a wide window restores them. Pending sidebar writes are awaited during normal shutdown. Response text weight defaults to Semibold for new/missing preferences; explicitly saved weights are preserved.
+
 Summary-card file labels open their exact workspace path through the existing preferred-editor integration, with missing-file errors shown at the clicked label. Renamed files use the destination path; opening does not require a filename search. Appearance settings persist response text weight (Regular, Medium, Semibold), with a matching preview and stronger bold/heading emphasis. Code-block typography is unchanged.
 
 ## Conversation rendering
@@ -100,6 +119,8 @@ Discovery skips linked entries and common dependency/build directories, is limit
 Verification: native build and file-reference unit tests pass. UI interaction and live remote/editor launching have not been verified for file references.
 
 ## Settings and legal information
+
+Both sidebar layouts group Providers, Extensions, and General settings in the Settings button's native menu. Conversation rows use compact padding and spacing while retaining titles, target icons, PR labels, status indicators, and detailed tooltips.
 
 ### Optional computer use
 

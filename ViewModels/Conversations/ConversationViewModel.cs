@@ -70,6 +70,12 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     private void RefreshAttachments()
     {
         OnPropertyChanged(nameof(HasPendingImages));
+        OnPropertyChanged(nameof(HasPendingFiles));
+        OnPropertyChanged(nameof(IsUploading));
+        OnPropertyChanged(nameof(CanAttachFiles));
+        OnPropertyChanged(nameof(ComposerShowsStop));
+        OnPropertyChanged(nameof(ShowSeparateStop));
+        OnPropertyChanged(nameof(HasActiveWork));
         NotifyState();
     }
     public bool ShowBlockedIndicator => !isViewed && Prompts.Count > 0;
@@ -152,15 +158,15 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     public bool HasError => error.Length > 0;
     public bool NeedsAttention => HasError || Prompts.Count > 0;
     public bool IsRunning => running;
-    public bool HasActiveWork => running || operationInFlight || dispatchingQueue || !SendCommand.CanExecute(null) || Prompts.Any(prompt => prompt.IsPending);
+    public bool HasActiveWork => uploading || running || operationInFlight || dispatchingQueue || !SendCommand.CanExecute(null) || Prompts.Any(prompt => prompt.IsPending);
     public bool IsConnected => connected;
     public bool IsReady => connected && !preparing;
     public bool IsLoading => preparing || (!connected && !HasError);
     public bool ShowRecovery => !IsLoading && !connected;
     public bool HasInlineError => IsReady && HasError;
-    public bool CanSend => IsReady && !busy && !stopping && !disposed && (submittedPreview is null || running) && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages);
+    public bool CanSend => IsReady && !busy && !stopping && !disposed && !uploading && (submittedPreview is null || running) && (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages || HasPendingFiles);
     public bool CanStop => connected && running && (!busy || operationInFlight) && !stopping;
-    public bool ComposerShowsStop => running && string.IsNullOrWhiteSpace(Draft) && !HasPendingImages;
+    public bool ComposerShowsStop => running && string.IsNullOrWhiteSpace(Draft) && !HasPendingImages && !HasPendingFiles;
     public bool ShowSeparateStop => running && !ComposerShowsStop;
     public AsyncRelayCommand ComposerActionCommand => ComposerShowsStop ? StopCommand : SendCommand;
     public bool CanUseComposerAction => ComposerShowsStop ? CanStop : CanSend;
@@ -265,11 +271,11 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
 #endif
             var images = PendingImages.ToArray();
             if (await HandlePendingSendAsync(submitted, images)) return;
-            if (images.Length == 0 && HandleComposerCommand is { } handler && await handler(submitted)) return;
-            if (images.Length > 0 && submitted.TrimStart().StartsWith('/'))
-                throw new InvalidOperationException("Send screenshots with a message rather than a slash command.");
+            if (images.Length == 0 && !HasPendingFiles && HandleComposerCommand is { } handler && await handler(submitted)) return;
+            if ((images.Length > 0 || HasPendingFiles) && submitted.TrimStart().StartsWith('/'))
+                throw new InvalidOperationException("Send attachments with a message rather than a slash command.");
             if (TryOpenProviderSetup?.Invoke() == true) return;
-            var expanded = FileReferences.Expand(submitted);
+            var expanded = ExpandAttachments(submitted);
             await SendSubmittedAsync(submitted, expanded, images, () => session.SendAsync(expanded, images));
         }, ReportError);
         StopCommand = new AsyncRelayCommand(async _ =>
@@ -393,6 +399,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         {
             if (disposed) continue;
             if (update.BrowserRequest is { } browserRequest) _ = HandleBrowserRequestAsync(browserRequest);
+            if (update.ArtifactRequest is { } artifactRequest) TrackArtifactOperation(HandleArtifactRequestAsync(artifactRequest));
             ObserveComputerUse(update);
             if (update.Checkpoint is { } checkpoint) { ObserveCheckpoint(checkpoint); checkpointSummaries.Clear(); changed = true; }
             if (update.McpStatus is { } mcpStatus) { McpStatus = mcpStatus; OnPropertyChanged(nameof(McpStatus)); }
@@ -471,7 +478,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (update.SteeringQueue is not null) { steeringCount = update.SteeringQueue.Count; OnPropertyChanged(nameof(SteeringLabel)); OnPropertyChanged(nameof(HasSteering)); }
             if (update.RecoveredPrompts is not null)
                 foreach (var recovered in update.RecoveredPrompts)
-                    RecoveredPrompts.Add(recovered with { Text = FileReferences.Restore(recovered.Message) });
+                    RecoveredPrompts.Add(recovered with { Text = FileReferences.Restore(ArtifactPrompt.Display(recovered.Message)) });
             if (update.IsConnected == false || !string.IsNullOrEmpty(update.Error)) { queueHeld = true; queueReady = false; }
             if (update.IsConnected is bool isConnected)
             {
@@ -521,6 +528,17 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         {
             RefreshTranscript();
         }
+        if (Artifacts is { } artifacts)
+        {
+            if (artifactImages.Count > 0)
+            {
+                var images = artifactImages.ToArray();
+                artifactImages.Clear();
+                TrackArtifactOperation(artifacts.ObserveImagesAsync(images));
+            }
+            else if (refreshArtifacts) TrackArtifactOperation(artifacts.RefreshAsync());
+            refreshArtifacts = false;
+        }
         Interlocked.Exchange(ref drainScheduled, 0);
         if (!updates.IsEmpty && Interlocked.Exchange(ref drainScheduled, 1) == 0) dispatcher.PostBackground(Drain);
     }
@@ -549,6 +567,13 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         else { var item = new ChatEntryViewModel(entry) { ForkCommand = ForkCommand, CloneCommand = CloneCommand,
             FileLinks = FileLinks,
             SnippetFactory = (key, label, code) => GetSnippet(entry.Id + ":" + key + ":" + label + ":" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(code))), label, code) }; entries.Add(entry.Id, item); Entries.Add(item); }
+        BindUserArtifacts(entries[entry.Id]);
+        if (entry.ArtifactId is { } artifactId && Artifacts is { } artifacts)
+        {
+            entries[entry.Id].Artifact = artifacts.Get(artifactId);
+            if (!entries[entry.Id].Artifact!.Available) refreshArtifacts = true;
+        }
+        if (entry.Images?.Count > 0 && Artifacts is not null && entry.Status != "Running") artifactImages.Add(entry);
     }
 
     private void RestoreEarlierSummaries(IReadOnlyList<ChatEntry> history)
@@ -623,6 +648,10 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         if (disposed) return;
         disposed = true;
+        Artifacts?.Cancel();
+        try { await Task.WhenAll(artifactOperations.Keys.ToArray()); }
+        catch (OperationCanceledException) { }
+        catch (Exception) { /* Individual artifact operations report their own failures. */ }
         FileLinks?.Dispose();
         if (Closing is { } closingHandlers)
             await Task.WhenAll(closingHandlers.GetInvocationList().Cast<Func<Task>>().Select(close => close()));

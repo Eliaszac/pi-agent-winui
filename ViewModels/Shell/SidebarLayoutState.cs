@@ -14,6 +14,25 @@ public sealed class SidebarLayoutState : ObservableObject
     private bool isOpen = true;
     private bool isOverlay;
     private double maximumWidth = 420;
+    public double PreferredWidth { get; private set; } = 280;
+    public bool PreferredOpen { get; private set; } = true;
+    public event EventHandler? PreferenceChanged;
+
+    public void Restore(double width, bool open)
+    {
+        PreferredWidth = double.IsFinite(width) ? Math.Clamp(width, MinimumWidth, 420) : 280;
+        PreferredOpen = open;
+        ExpandedWidth = Math.Min(PreferredWidth, maximumWidth);
+        IsOpen = open && !IsOverlay;
+    }
+
+    public void SetUserOpen(bool open)
+    {
+        IsOpen = open;
+        if (PreferredOpen == open) return;
+        PreferredOpen = open;
+        PreferenceChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>Gets the width restored when the sidebar opens.</summary>
     public double ExpandedWidth
@@ -46,19 +65,24 @@ public sealed class SidebarLayoutState : ObservableObject
     {
         var overlay = width < 760;
         if (overlay && !IsOverlay) IsOpen = false;
+        else if (!overlay && IsOverlay) IsOpen = PreferredOpen;
         IsOverlay = overlay;
         maximumWidth = Math.Clamp(width - (overlay ? 48 : 360), MinimumWidth, 420);
-        ExpandedWidth = Math.Min(ExpandedWidth, maximumWidth);
+        ExpandedWidth = Math.Min(PreferredWidth, maximumWidth);
     }
 
     /// <summary>Applies a requested width from dragging or keyboard input.</summary>
     public void ResizeTo(double width)
     {
-        if (width < CollapseThreshold) { IsOpen = false; return; }
+        if (width < CollapseThreshold) { SetUserOpen(false); return; }
         ExpandedWidth = Math.Clamp(width, MinimumWidth, maximumWidth);
         IsOpen = true;
+        if (PreferredWidth == ExpandedWidth && PreferredOpen) return;
+        PreferredWidth = ExpandedWidth;
+        PreferredOpen = true;
+        PreferenceChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Toggles expansion while preserving the last expanded width.</summary>
-    public void Toggle() => IsOpen = !IsOpen;
+    public void Toggle() => SetUserOpen(!IsOpen);
 }

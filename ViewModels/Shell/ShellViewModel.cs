@@ -358,6 +358,8 @@ public sealed class ShellViewModel : ObservableObject
         for (var number = 2; project.Conversations.Any(item => item.Title == title); number++) title = baseTitle + " " + number;
         var saved = new ConversationDraft { Id = Guid.NewGuid(), TargetId = original.Target?.Id ?? original.Conversation.TargetId ?? project.Project.Id, Title = title, CreatedAt = DateTimeOffset.UtcNow, IsTitleManual = true };
         await source.CopySessionAsync(sessionPaths.GetSessionFile(project.Project.Id, saved.Id), saved.Title);
+        if (source.Artifacts is { } artifacts)
+            await artifacts.Store.CopyToAsync(new Services.Conversations.ArtifactStore(Services.Conversations.ArtifactStore.ForSession(sessionPaths.GetSessionFile(project.Project.Id, saved.Id))));
         // Publish to the catalog only after Pi has produced an independent session file.
         // If registration fails, retain that file for recovery instead of risking deletion after an uncertain commit.
         await Task.Run(() => repository.AddConversationCopyAsync(project.Project.Id, original.Conversation.Id, saved));
