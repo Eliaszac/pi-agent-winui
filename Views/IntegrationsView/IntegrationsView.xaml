@@ -6,7 +6,12 @@
         <StackPanel MaxWidth="900" HorizontalAlignment="Stretch" Spacing="16" Margin="8,16,8,32">
             <TextBlock Text="Integrations" FontSize="28" FontWeight="SemiBold"/>
             <TextBlock Text="Connect the services you use alongside your projects." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <Border Padding="20" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid x:Name="IntegrationCards" ColumnSpacing="16" RowSpacing="16" SizeChanged="OnCardsSizeChanged">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="SecondCardColumn" Width="*"/>
+                </Grid.ColumnDefinitions>
+            <Border VerticalAlignment="Top" Padding="20" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
                 <StackPanel Spacing="14">
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="32"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -16,7 +21,7 @@
                             <TextBlock Text="{Binding ConnectionStatus}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
                     </Grid>
-                    <TextBlock Text="Show pull requests for your projects using the same GitHub connection as your conversations." TextWrapping="Wrap" FontSize="13"/>
+                    <TextBlock Text="Attach project issues and pull requests to conversations. The agent can propose issue edits and PR comments for your approval. Writing requires Read and write permissions on the GitHub App installation." TextWrapping="Wrap" FontSize="13"/>
                     <InfoBar IsOpen="{Binding HasError}" Message="{Binding Error}" Severity="Warning" IsClosable="False"/>
                     <StackPanel Spacing="8" HorizontalAlignment="Left">
                         <controls:ActionButton Content="Connect to GitHub" Tag="connect" Click="OnAction" IsEnabled="{Binding CanConnect}" Visibility="{Binding CanConnect, Converter={StaticResource BooleanToVisibility}}"/>
@@ -27,6 +32,7 @@
                     <TextBlock Text="Disconnect removes the saved login from this PC. To revoke access on GitHub, manage your authorized GitHub Apps in GitHub settings." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{Binding IsConnected, Converter={StaticResource BooleanToVisibility}}"/>
                 </StackPanel>
             </Border>
+            </Grid>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

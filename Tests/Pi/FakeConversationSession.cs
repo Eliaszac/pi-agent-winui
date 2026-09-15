@@ -71,6 +71,10 @@ internal sealed class FakeConversationSession : IConversationSession
     }
     public Task StopAsync(CancellationToken cancellationToken = default) { Emit(new() { IsRunning = false, Status = "Stopped" }); return Task.CompletedTask; }
     public Task DisconnectAsync() { Emit(new() { IsConnected = false, IsRunning = false }); return Task.CompletedTask; }
-    public Task ReplyAsync(string requestId, JsonObject response, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public System.Collections.Concurrent.ConcurrentQueue<(string Id, JsonObject Response)> Replies { get; } = new();
+    public Task ReplyAsync(string requestId, JsonObject response, CancellationToken cancellationToken = default)
+    {
+        Replies.Enqueue((requestId, response)); return Task.CompletedTask;
+    }
     public ValueTask DisposeAsync() { Disposed = true; return ValueTask.CompletedTask; }
 }

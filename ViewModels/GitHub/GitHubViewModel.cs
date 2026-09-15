@@ -40,6 +40,15 @@ public sealed class GitHubViewModel(GitHubAuthentication authentication, GitHubA
     private readonly Dictionary<string, GitHubBranch?> branches = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DateTimeOffset> checkedAt = new(StringComparer.OrdinalIgnoreCase);
     public bool IsConnected => token is not null;
+    public async Task<System.Text.Json.Nodes.JsonObject> WriteAsync(GitHubWriteRequest request,
+        Func<CancellationToken, Task<string>> repository, Func<string, CancellationToken, Task<bool>> approve, CancellationToken cancellation)
+    {
+        while (refreshing) await Task.Delay(50, cancellation);
+        await RefreshAsync([], cancellation);
+        var connection = token ?? throw new IOException("Connect GitHub in Settings → Integrations before requesting this action.");
+        return await new GitHubWriter(api).ExecuteAsync(request, connection.AccessToken, repository, approve,
+            () => { if (token != connection) throw new IOException("The GitHub connection changed. Request fresh approval."); }, cancellation);
+    }
     public async Task<IReadOnlyList<GitHubReference>> SearchReferencesAsync(string query, bool pulls, string repository, CancellationToken cancellation)
     {
         while (refreshing) await Task.Delay(50, cancellation);

@@ -284,6 +284,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (!CanStop) return;
             queueHeld = true;
             stopping = true;
+            ClearPrompts();
             NotifyState();
             try { await Task.Run(() => session.StopAsync()); }
             finally { stopping = false; NotifyState(); }
@@ -401,6 +402,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (disposed) continue;
             if (update.BrowserRequest is { } browserRequest) _ = HandleBrowserRequestAsync(browserRequest);
             if (update.ArtifactRequest is { } artifactRequest) TrackArtifactOperation(HandleArtifactRequestAsync(artifactRequest));
+            if (update.GitHubWriteRequest is { } githubRequest) _ = HandleGitHubWriteAsync(githubRequest);
             ObserveComputerUse(update);
             if (update.Checkpoint is { } checkpoint) { ObserveCheckpoint(checkpoint); checkpointSummaries.Clear(); changed = true; }
             if (update.McpStatus is { } mcpStatus) { McpStatus = mcpStatus; OnPropertyChanged(nameof(McpStatus)); }
@@ -602,7 +604,11 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         TryRefreshProviderModels();
     }
 
-    private void ClearPrompts() { foreach (var prompt in Prompts) prompt.Dispose(); Prompts.Clear(); }
+    private void ClearPrompts()
+    {
+        githubWriteLifetime.Cancel(); githubWriteLifetime.Dispose(); githubWriteLifetime = new();
+        foreach (var prompt in Prompts) prompt.Dispose(); Prompts.Clear();
+    }
 
     private void NotifyState()
     {
@@ -649,6 +655,7 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     {
         if (disposed) return;
         disposed = true;
+        githubWriteLifetime.Cancel();
         Artifacts?.Cancel();
         try { await Task.WhenAll(artifactOperations.Keys.ToArray()); }
         catch (OperationCanceledException) { }

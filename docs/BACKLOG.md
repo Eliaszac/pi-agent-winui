@@ -6,8 +6,6 @@ Remaining work and optional ideas. Listing an item does not authorize implementa
 
 - **Native integrations replacing the removed MCP shortcuts.** Plan future integrations for Atlassian (Jira and Confluence), Linear, Notion, and Supabase (projects and database context). These entries have been removed from Quick integrations; Obsidian remains MCP-only. Explore a shared connection for native search/tagging/context attachment and agent tools, with authentication and permissions appropriate to each service. Start with read-only workflows; write actions require a separately agreed scope. Implementation order and detailed scope remain undecided.
 
-- **GitHub write actions.** At minimum, support agent-driven updates to an existing issue and comments on a pull request. Plan the editable issue fields, comment types, and approval behavior before implementation, and request the permissions required by those specific endpoints. The initial integration remains read-only; this records future scope, not authorization to perform writes or expand permissions now.
-
 ## Low priority / nonessential
 
 ### Public-release identity and packaging

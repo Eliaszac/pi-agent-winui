@@ -6,9 +6,11 @@ import registerMcpStatus from "./mcp-status.ts";
 import registerInstructions from "./instructions.ts";
 import registerCheckpoints from "./checkpoints.ts";
 import registerArtifacts from "./artifacts.ts";
+import registerGitHubWrites from "./github-write.ts";
 
 export default function (pi: ExtensionAPI): void {
     registerArtifacts(pi);
+    registerGitHubWrites(pi);
     registerCheckpoints(pi);
     registerSessionCopy(pi);
     registerModelRefresh(pi);
