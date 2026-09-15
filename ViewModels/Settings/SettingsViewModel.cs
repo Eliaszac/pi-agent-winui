@@ -9,6 +9,7 @@ public sealed class SettingsViewModel(AppSettingsStore store, Services.Home.Sess
     private string query = "";
     private string message = "";
     private bool busy;
+    public AppUpdatesViewModel? AppUpdates { get; init; }
     public StorageOverviewService? StorageService { get; init; }
     public Func<Task<int>>? ClearCompletedResearch { get; init; }
     private IReadOnlyList<Models.Settings.StorageUsage> storageItems = [];
@@ -32,7 +33,8 @@ public sealed class SettingsViewModel(AppSettingsStore store, Services.Home.Sess
     public SettingsCategory Usage { get; } = new("Local usage", "analytics tokens models reset clear history privacy");
     public SettingsCategory Data { get; } = new("Data management", "delete conversations projects screenshots restore checkpoints files storage");
     public SettingsCategory About { get; } = new("About", "version legal terms privacy license licences notices contact publisher open source");
-    public IReadOnlyList<SettingsCategory> Categories => [Appearance, Conversation, Terminal, General, Usage, Storage, Data, About];
+    public SettingsCategory Updates { get; } = new("Updates", "version update download install restart automatic release github check");
+    public IReadOnlyList<SettingsCategory> Categories => [Appearance, Conversation, Terminal, General, Usage, Storage, Data, Updates, About];
     public double TerminalTextSize => store.Current.TerminalTextSize;
     public int TerminalScrollback => store.Current.TerminalScrollback;
     public bool CompletionAudio => store.Current.CompletionAudio;

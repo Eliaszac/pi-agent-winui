@@ -22,6 +22,8 @@ See [EXECUTION-TARGETS.md](docs/EXECUTION-TARGETS.md) for prerequisites, authent
 
 ## Persistence and data lifecycle
 
+Settings → Updates uses a dedicated unauthenticated HTTP client against this repository's latest stable GitHub release. Checks default on at startup; automatic downloads default off. Update preferences are stored in `settings.json`. Downloads validate the expected repository URL, bounded size and SHA-256 (plus GitHub's digest when present), and cache installers under `updates`. The sidebar indicator reflects actual release availability. Installation requires a user click, the registered Windows installation, idle app work and no other Pi desktop processes. The app shuts down its owned resources; Inno Setup waits for the parent to exit and relaunches after success. No release publishing, signing or rollback service is included. End-to-end installed-update verification remains outstanding.
+
 Checkpoint history initializes in the background after session startup, allowing conversation history to load without waiting for checkpoint inventory. The existing serialized checkpoint queue keeps pre-run capture and management requests behind initialization. The conversation displays a preparation state and withholds restore actions while loading; initialization errors remain in checkpoint status. This applies to local, WSL, and SSH checkpoint transports.
 
 Application data lives under `%LOCALAPPDATA%\PiAgentGui`, separate from source folders and the installation directory.
@@ -160,7 +162,7 @@ The current refined feature list is complete; no additional feature is approved 
 
 ## Distribution and verification
 
-Display name: Pi desktop. Repository: `pi-agent-winui`. Existing namespaces, executable/resource names, credential keys, `PiAgentGui.Desktop` installer identity, and `%LOCALAPPDATA%\Programs\Pi Agent` install path remain stable for compatibility. Windows x64 distribution uses a self-contained, untrimmed Inno Setup installer. No automatic updater or publishing pipeline is implemented. See [Installer/README.md](Installer/README.md).
+Display name: Pi desktop. Repository: `pi-agent-winui`. Existing namespaces, executable/resource names, credential keys, `PiAgentGui.Desktop` installer identity, and `%LOCALAPPDATA%\Programs\Pi Agent` install path remain stable for compatibility. Windows x64 distribution uses a self-contained, untrimmed Inno Setup installer. Settings supports GitHub release checks and user-triggered installer updates; no publishing pipeline is implemented. See [Installer/README.md](Installer/README.md).
 
 Ordinary builds and unit tests are allowed under [AGENTS.md](AGENTS.md). Live Pi/GUI execution and setup scripts require user authorization; respect prior permission and refusals. Pi 0.85.1 Windows/Ubuntu WSL extension probes have passed without model calls. Builds and focused checkpoint/cleanup tests passed during implementation. These are recorded results, not a fresh verification of every surface.
 
