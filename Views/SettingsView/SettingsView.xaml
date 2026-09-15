@@ -1,7 +1,8 @@
 <UserControl x:Class="PiAgentGui.Views.SettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:PiAgentGui.Controls">
+    xmlns:controls="using:PiAgentGui.Controls"
+    xmlns:views="using:PiAgentGui.Views">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch">
         <StackPanel MaxWidth="900" HorizontalAlignment="Stretch" Spacing="16" Margin="8,16,8,32">
             <TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/>
@@ -123,6 +124,9 @@
                         <controls:ActionButton Content="Manage extensions" Tag="extensions" Click="OnDataAction" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </StackPanel>
+            </Expander>
+            <Expander Header="Updates" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Updates.Expanded, Mode=TwoWay}" Visibility="{Binding Updates.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <views:AppUpdatesView DataContext="{Binding AppUpdates}"/>
             </Expander>
             <Expander IsEnabled="{Binding CanEdit}" Header="About" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding About.Expanded, Mode=TwoWay}" Visibility="{Binding About.Visible, Converter={StaticResource BooleanToVisibility}}">
                 <StackPanel Spacing="12">

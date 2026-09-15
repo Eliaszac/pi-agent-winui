@@ -144,8 +144,30 @@ public partial class App : Application
         try { await settingsStore.LoadAsync(); }
         catch (Exception error) { settingsError = "Saved preferences could not be read; defaults are shown. " + error.Message; }
         shell.ResumeConversationOnStartup = settingsStore.Current.ResumeConversation;
+        var updateHttp = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false, UseCookies = false }) { Timeout = Timeout.InfiniteTimeSpan };
+        var updateInstaller = new Services.Updates.UpdateInstaller();
+        string? UpdateBlockReason() => closing || shell.HasActiveWork || workspaces.ActiveRunCount > 0 || researchPanel.HasActiveTasks || terminals.Tabs.Any(tab => !tab.IsFinished)
+            ? "Finish active conversations and research, and close running terminal tabs before updating."
+            : updateInstaller.BlockReason();
+        var appUpdates = new ViewModels.Settings.AppUpdatesViewModel(new Services.Updates.AppUpdateClient(updateHttp,
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "updates")), settingsStore,
+            UpdateBlockReason, path =>
+            {
+                if (UpdateBlockReason() is { } reason) throw new InvalidOperationException(reason);
+                pendingUpdateInstaller = () => updateInstaller.Launch(path);
+                pendingUpdateCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                var completion = pendingUpdateCompletion.Task;
+                if (window.Content is Control content) content.IsEnabled = false;
+                window.Close();
+                return completion;
+            }, githubLifetime.Token);
+        var updateTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        updateTimer.Tick += (_, _) => appUpdates.RefreshAvailability();
+        updateTimer.Start();
+        window.Closed += (_, _) => { updateTimer.Stop(); updateHttp.Dispose(); };
         var settings = new ViewModels.Settings.SettingsViewModel(settingsStore, usageReader)
         {
+            AppUpdates = appUpdates,
             Message = settingsError,
             StorageService = new Services.Settings.StorageOverviewService(Path.GetDirectoryName(storage.CatalogPath)!,
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".pi-desktop-checkpoints")),
@@ -190,9 +212,19 @@ public partial class App : Application
         settingsStore.Changed += ApplyPreferences;
         ApplyPreferences(null, EventArgs.Empty);
         window.Closed += (_, _) => settingsStore.Changed -= ApplyPreferences;
+        _ = appUpdates.InitializeAsync();
     }
 
     private Task sidebarSaveTask = Task.CompletedTask;
+    private Action? pendingUpdateInstaller;
+    private TaskCompletionSource? pendingUpdateCompletion;
+    private void CancelPendingUpdate(string message)
+    {
+        pendingUpdateInstaller = null;
+        pendingUpdateCompletion?.TrySetException(new InvalidOperationException(message));
+        pendingUpdateCompletion = null;
+        if (window?.Content is Control content) content.IsEnabled = true;
+    }
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
     {
         if (canClose) return;
@@ -205,6 +237,12 @@ public partial class App : Application
             var runCount = workspaces?.ActiveRunCount ?? 0;
             if (runCount > 0 || researchCount > 0)
             {
+                if (pendingUpdateInstaller is not null)
+                {
+                    CancelPendingUpdate("Work started before shutdown. Finish active work and try again.");
+                    closing = false;
+                    return;
+                }
                 var dialog = new Controls.ActionContentDialog
                 {
                     XamlRoot = (window!.Content as FrameworkElement)!.XamlRoot,
@@ -220,6 +258,7 @@ public partial class App : Application
         catch (Exception)
         {
             // Another modal may already own the XamlRoot. Never stop work when confirmation could not be shown.
+            CancelPendingUpdate("The app could not prepare to close. Try again when other dialogs are closed.");
             closing = false;
             return;
         }
@@ -235,6 +274,7 @@ public partial class App : Application
         catch (Exception)
         {
             // Keep the window open so a shutdown failure is visible rather than silently abandoning a process.
+            CancelPendingUpdate("The agent processes did not close cleanly. Restart Pi desktop before updating.");
             var dialog = new Controls.ActionContentDialog
             {
                 XamlRoot = (window!.Content as FrameworkElement)!.XamlRoot,
@@ -248,6 +288,17 @@ public partial class App : Application
             catch (Exception) { closing = false; return; }
         }
         await sidebarSaveTask;
+        if (pendingUpdateInstaller is { } launchUpdate)
+        {
+            try { launchUpdate(); pendingUpdateCompletion?.TrySetResult(); }
+            catch (Exception exception)
+            {
+                pendingUpdateCompletion?.TrySetException(exception);
+                var dialog = new Controls.ActionContentDialog { XamlRoot = (window!.Content as FrameworkElement)!.XamlRoot,
+                    Title = "Couldn't start the update", Content = "Restart Pi desktop and try again. " + exception.Message, CloseButtonText = "Close app" };
+                try { await dialog.ShowAsync(); } catch { }
+            }
+        }
         canClose = true;
         window?.Close();
     }

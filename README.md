@@ -66,7 +66,7 @@ For a local Release installation, install **Inno Setup 6.7.3**, close Pi desktop
 ./Installer/Install-Local.ps1
 ```
 
-This builds the current checkout, installs for the current Windows user and verifies the installed version. It preserves app data and does not launch the app afterward. See [installer instructions](Installer/README.md) for details. Local installers are unsigned; there is no automatic updater.
+This builds the current checkout, installs for the current Windows user and verifies the installed version. It preserves app data and does not launch the app afterward. See [installer instructions](Installer/README.md) for details. Settings → Updates checks GitHub releases, downloads verified updates and offers Update and restart when work is idle. Local installers remain unsigned.
 
 ## Testing and current limits
 
