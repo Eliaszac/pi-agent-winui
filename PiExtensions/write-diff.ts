@@ -7,17 +7,8 @@ import registerInstructions from "./instructions.ts";
 import registerCheckpoints from "./checkpoints.ts";
 import registerArtifacts from "./artifacts.ts";
 import registerGitHubWrites from "./github-write.ts";
-import * as piRuntime from "@earendil-works/pi-coding-agent";
-import { StartupHandlerTiming } from "./StartupHandlerTiming.ts";
 
 export default function (pi: ExtensionAPI): void {
-    if (process.env.PI_TIMING === "1") {
-        // Runtime shape is version-dependent; diagnostics must never prevent loading.
-        try {
-            StartupHandlerTiming.install(piRuntime.ExtensionRunner.prototype as unknown as Parameters<typeof StartupHandlerTiming.install>[0],
-                (label, ms) => process.stderr.write(`PI_GUI_HANDLER ${label} ${ms}\n`));
-        } catch { /* Unsupported runner versions keep normal startup behavior. */ }
-    }
     registerArtifacts(pi);
     registerGitHubWrites(pi);
     registerCheckpoints(pi);

@@ -200,11 +200,6 @@ public sealed partial class ConversationView : UserControl
 
     private void OnTranscriptLayoutUpdated(object? sender, object args)
     {
-        if (ViewModel?.PendingLayoutTiming is { } timing)
-        {
-            ViewModel.PendingLayoutTiming = null;
-            timing.Mark("ui.first-layout-after-history");
-        }
         AttachTranscriptScroller();
         UpdateTranscriptAnchoring();
         if (TryRestoreViewport() || !followTail || ViewModel?.DisplayEntries.Count is not > 0) return;

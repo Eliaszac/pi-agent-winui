@@ -314,13 +314,10 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
 
     public Task InitializeAsync()
     {
-        if (initialized && !disposed) new ConversationLoadTiming().Mark("load.reused-existing-workspace");
         if (initialized || disposed) return Task.CompletedTask;
         initialized = true;
         return RetryCommand.ExecuteAsync();
     }
-
-    internal ConversationLoadTiming? PendingLayoutTiming { get; set; }
 
     public Task RequestDuplicateAsync(bool open)
     {
@@ -331,10 +328,6 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
     private async Task PrepareAsync()
     {
         if (busy || disposed || connected) return;
-        var loadTiming = new ConversationLoadTiming();
-        var previousTiming = ConversationLoadTiming.Current.Value;
-        ConversationLoadTiming.Current.Value = loadTiming;
-        loadTiming.Mark("load.begin");
         preparing = true;
         busy = true;
         SetError("");
@@ -343,14 +336,11 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         catch (Exception exception)
         {
             // Keep failures behind preceding startup events in the same ordered presentation queue.
-            loadTiming.Mark("connect.failed");
             Enqueue(new() { IsConnected = false, Error = exception.Message, ErrorDiagnostics = Utilities.ErrorDiagnostics.Create(exception) });
         }
         finally
         {
             preparing = false;
-            loadTiming.Mark("connect.finished");
-            ConversationLoadTiming.Current.Value = previousTiming;
             busy = false;
             NotifyState();
         }
@@ -405,7 +395,6 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         // count alone can occupy several input frames on a slower or busy machine.
         var batchStarted = System.Diagnostics.Stopwatch.GetTimestamp();
         var changed = false;
-        ConversationLoadTiming? historyTiming = null;
         for (var count = 0; count < 128
             && (count == 0 || System.Diagnostics.Stopwatch.GetElapsedTime(batchStarted).TotalMilliseconds < 4)
             && updates.TryDequeue(out var update); count++)
@@ -423,10 +412,6 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
             if (!string.IsNullOrWhiteSpace(update.SessionName)) SessionNameChanged?.Invoke(update.SessionName);
             if (update.History is not null)
             {
-                historyTiming = update.LoadTiming;
-                PendingLayoutTiming = historyTiming;
-                historyTiming?.Mark("ui.history.begin", count: update.History.Count);
-                using var historyMeasurement = historyTiming?.Measure("ui.history.apply-and-summaries");
                 RunChanges = update.IsRunning == true ? null : RunChangesViewModel.FromHistory(update.History, WorkingDirectory);
                 runEntryIds.Clear();
                 trackingRun = false;
@@ -544,10 +529,8 @@ public sealed partial class ConversationViewModel : ObservableObject, IAsyncDisp
         OnPropertyChanged(nameof(HasRunChanges));
         if (changed)
         {
-            using var projectionMeasurement = historyTiming?.Measure("ui.transcript.projection");
             RefreshTranscript();
         }
-        historyTiming?.Mark("ui.history.projected");
         if (Artifacts is { } artifacts)
         {
             if (artifactImages.Count > 0)

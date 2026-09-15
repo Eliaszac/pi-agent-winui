@@ -24,10 +24,6 @@ See [EXECUTION-TARGETS.md](docs/EXECUTION-TARGETS.md) for prerequisites, authent
 
 Checkpoint history initializes in the background after session startup, allowing conversation history to load without waiting for checkpoint inventory. The existing serialized checkpoint queue keeps pre-run capture and management requests behind initialization. The conversation displays a preparation state and withholds restore actions while loading; initialization errors remain in checkpoint status. This applies to local, WSL, and SSH checkpoint transports.
 
-Temporary conversation-loading diagnostics are enabled in Release builds and written asynchronously to `%LOCALAPPDATA%\PiAgentGui\diagnostics\conversation-loading.jsonl`. A random load ID groups elapsed/duration measurements for process launch, first RPC response, startup RPC calls, settings/default history, transcript parsing, UI history/summary processing, projection, and the first subsequent layout pass. The layout marker is not proof that every image or markdown control has finished rendering. Reopening a retained workspace records a reuse marker instead of another startup. No prompt/response contents, credentials, or project paths are recorded. Files rotate at 2 MiB with one `.previous` file; a bounded queue drops excess diagnostics instead of blocking the UI. Compare a cold existing conversation, a new conversation, and a warm switch after restarting the app to investigate startup latency.
-
-Startup diagnostics also enable Pi's built-in `PI_TIMING` tables and temporarily wrap `ExtensionRunner.emit` for `session_start`. Per-handler measurements retain only extension filenames and indexes. Dispatch and error handling remain owned by Pi, and handler references are restored afterward. This diagnostic hook depends on the runner's internal handler collection and should be removed after the investigation; unsupported runner versions retain normal startup. It does not measure background work that handlers do not await.
-
 Application data lives under `%LOCALAPPDATA%\PiAgentGui`, separate from source folders and the installation directory.
 
 | Data | Location / ownership |

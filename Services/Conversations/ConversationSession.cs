@@ -169,8 +169,6 @@ public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiR
         await connectionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var loadTiming = ConversationLoadTiming.Current.Value;
-            loadTiming?.Mark("connection.gate-acquired");
             ObjectDisposedException.ThrowIf(disposed, this);
             if (connected) return;
             await ReleaseClientAsync().ConfigureAwait(false);
@@ -181,7 +179,6 @@ public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiR
             next.EventReceived += OnEvent;
             next.Faulted += OnFault;
             await next.StartAsync(launch with { SessionName = manualName }, cancellationToken).ConfigureAwait(false);
-            loadTiming?.Mark("process.started");
             if (launch.Target is { IsLocal: false })
             {
                 targetVerified = false;
@@ -196,11 +193,9 @@ public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiR
                 if (!targetVerified) throw new IOException("The execution target could not be verified. Check WSL or SSH connectivity and the workspace folder.");
             }
             var savedSettings = await settingsStore.ReadAsync(cancellationToken).ConfigureAwait(false);
-            loadTiming?.Mark("settings.read");
             confirmedSettings = savedSettings ?? new();
             IReadOnlyList<Models.Home.UsageSample> defaultHistory = isNewSession && savedSettings is null && ReadDefaultHistory is not null
                 ? await ReadDefaultHistory(cancellationToken).ConfigureAwait(false) : [];
-            loadTiming?.Mark("defaults.history-read");
             IReadOnlyList<PiModel> availableModels = [];
             thinking = new(Publish);
             await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
@@ -246,14 +241,11 @@ public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiR
             if (defaultHistory.Count > 0) await settingsStore.SaveAsync(confirmedSettings, cancellationToken).ConfigureAwait(false);
             await next.RequestAsync("get_messages", cancellationToken: cancellationToken, applyResponse: packet =>
             {
-                loadTiming?.Mark("history.response-received");
-                using var parseTiming = loadTiming?.Measure("history.parse-and-publish");
                 lock (stateGate)
                 {
                     var history = transcript.Load(PiJson.Field(PiJson.Field(packet, "data"), "messages"));
                     connected = true;
-                    loadTiming?.Mark("history.queued", count: history.Count);
-                    Publish(new() { LoadTiming = loadTiming, History = history, Status = running ? "Working" : "Ready", IsRunning = running, IsConnected = true, Error = "" });
+                    Publish(new() { History = history, Status = running ? "Working" : "Ready", IsRunning = running, IsConnected = true, Error = "" });
                 }
             }).ConfigureAwait(false);
         }
