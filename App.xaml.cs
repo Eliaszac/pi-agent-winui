@@ -143,7 +143,13 @@ public partial class App : Application
         try { await settingsStore.LoadAsync(); }
         catch (Exception error) { settingsError = "Saved preferences could not be read; defaults are shown. " + error.Message; }
         shell.ResumeConversationOnStartup = settingsStore.Current.ResumeConversation;
-        var settings = new ViewModels.Settings.SettingsViewModel(settingsStore, usageReader) { Message = settingsError };
+        var settings = new ViewModels.Settings.SettingsViewModel(settingsStore, usageReader)
+        {
+            Message = settingsError,
+            StorageService = new Services.Settings.StorageOverviewService(Path.GetDirectoryName(storage.CatalogPath)!,
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".pi-desktop-checkpoints")),
+            ClearCompletedResearch = research.ClearCompletedAsync
+        };
         var sidebarStore = new Services.Settings.SidebarPreferencesStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "sidebar.json"));
         try
         {

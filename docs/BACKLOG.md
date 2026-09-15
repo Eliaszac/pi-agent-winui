@@ -6,17 +6,18 @@ Remaining work and optional ideas. Listing an item does not authorize implementa
 
 Focus on making the conversation UI excellent for everyday use. The user considers most of the app well tested; the conversation UI is now the main factor limiting their use of it. Prioritize responsiveness, stable and smooth scrolling, readability, and interaction polish over adding more features. Assess improvements in real conversations and preserve the resolved input responsiveness and scroll stability.
 
-## Remaining work
-
-1. **Storage overview and targeted cleanup.** Show session, research, checkpoint and diagnostic storage separately. Add Open app data folder, Clear diagnostics, Clear completed research, and pending-cleanup retry. Scan off the UI thread, protect active work and recovery data, and respect Windows/WSL/SSH ownership. Do not delete project files, shared Pi credentials or unrelated data.
-2. **Public-release identity and packaging.** Confirm the publisher identity and whether to retain “Pi desktop” or choose an independent product name. Check upgrade cleanup for removed artwork; a fresh build excludes it, but ordinary installer replacement can leave old files behind. See [branding](BRANDING.md) and [installer guidance](../Installer/README.md).
-
 ## Ideas to explore
 
 - **Tag projects and Git work in conversations.** Consider searchable mentions/tags for projects, Git repositories, pull requests across all states (open, draft, closed, merged), and Git issues across open/closed and other supported states. Selecting an item should attach useful context and a link so the agent can review it or work on it without the user manually copying everything. Explore discovery, state filters, permissions, and how referenced context stays current. This is an idea, not an approved implementation.
 - **Full integrations with work-management tools.** Consider native Jira, Notion, Linear, and similar integrations beyond the current MCP setup shortcuts. Let users find and tag their issues, tasks, pages, and other relevant records in conversations for review and implementation work. Explore authentication, browsing/search, linked context, and any explicitly requested write-back actions as part of a complete workflow. Scope and supported services remain undecided.
 
-## Optional Settings ideas
+## Low priority / nonessential
+
+### Public-release identity and packaging
+
+Confirm the publisher identity and whether to retain “Pi desktop” or choose an independent product name. Check upgrade cleanup for removed artwork; a fresh build excludes it, but ordinary installer replacement can leave old files behind. See [branding](BRANDING.md) and [installer guidance](../Installer/README.md). This is nonessential and not a current priority.
+
+### Optional Settings improvements
 
 These are suggestions from the completed review, not an agreed implementation scope:
 

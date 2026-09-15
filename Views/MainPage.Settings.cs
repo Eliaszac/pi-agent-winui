@@ -9,6 +9,7 @@ public sealed partial class MainPage
     private void InitializeSettings(SettingsViewModel settings)
     {
         SettingsPane.DataContext = settings;
+        SettingsPane.Loaded += async (_, _) => await settings.RefreshStorageAsync();
         SettingsPane.Loaded += async (_, _) => await OpenIn.RefreshEditorsAsync();
         OpenIn.PropertyChanged += (_, change) =>
         {
@@ -21,6 +22,7 @@ public sealed partial class MainPage
             if (action == "legal") { ViewModel.OpenSettings(legal: true); return; }
             if (action == "extensions") { ViewModel.OpenExtensions(); return; }
             if (dialogOpen || settings.Busy) return;
+            if (action.StartsWith("storage-", StringComparison.Ordinal)) { await HandleStorageActionAsync(settings, action); return; }
             if (action is "palette" or "editors" || action.StartsWith("editor:", StringComparison.Ordinal))
             {
                 settings.Busy = true;

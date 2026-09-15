@@ -18,6 +18,12 @@ public sealed class ResearchStore(string directory)
         }
     }
     public string PreferencePath => Path.Combine(directory, "research-enabled.json");
+    public Task DeleteSessionAsync(Guid id) => Task.Run(() =>
+    {
+        var path = Path.Combine(directory, id + ".jsonl");
+        Settings.StorageOverviewService.ValidatePath(path);
+        if (File.Exists(path)) File.Delete(path);
+    });
     public bool Enabled => File.Exists(PreferencePath) && JsonSerializer.Deserialize<bool>(File.ReadAllText(PreferencePath));
     public async Task SetEnabledAsync(bool enabled)
     {

@@ -9,13 +9,29 @@ public sealed class SettingsViewModel(AppSettingsStore store, Services.Home.Sess
     private string query = "";
     private string message = "";
     private bool busy;
+    public StorageOverviewService? StorageService { get; init; }
+    public Func<Task<int>>? ClearCompletedResearch { get; init; }
+    private IReadOnlyList<Models.Settings.StorageUsage> storageItems = [];
+    public IReadOnlyList<Models.Settings.StorageUsage> StorageItems { get => storageItems; private set => SetProperty(ref storageItems, value); }
+    private bool scanning;
+    public bool Scanning { get => scanning; private set { if (SetProperty(ref scanning, value)) OnPropertyChanged(nameof(CanRefreshStorage)); } }
+    public bool CanRefreshStorage => !Scanning && !Busy;
+    public async Task RefreshStorageAsync()
+    {
+        if (Scanning || StorageService is null) return;
+        Scanning = true;
+        try { StorageItems = await StorageService.ReadAsync(); }
+        catch (Exception error) { Message = "Could not measure storage. " + error.Message; }
+        finally { Scanning = false; }
+    }
+    public SettingsCategory Storage { get; } = new("Storage", "disk space size artifacts sessions research checkpoints diagnostics logs cleanup folder retry");
     public SettingsCategory Appearance { get; } = new("Appearance", "theme system light dark font text code size weight thickness regular medium semibold readability reset");
     public SettingsCategory Conversation { get; } = new("Conversation", "send enter ctrl control shortcut keyboard newline");
     public SettingsCategory General { get; } = new("General", "startup home resume last conversation launch editor open in preferred system default command palette ranking reset usage");
     public SettingsCategory Usage { get; } = new("Local usage", "analytics tokens models reset clear history privacy");
     public SettingsCategory Data { get; } = new("Data management", "delete conversations projects screenshots restore checkpoints files storage");
     public SettingsCategory About { get; } = new("About", "version legal terms privacy license licences notices contact publisher open source");
-    public IReadOnlyList<SettingsCategory> Categories => [Appearance, Conversation, General, Usage, Data, About];
+    public IReadOnlyList<SettingsCategory> Categories => [Appearance, Conversation, General, Usage, Storage, Data, About];
     public int ThemeIndex => store.Current.Theme;
     public double ConversationTextSize => store.Current.ConversationTextSize;
     public double CodeTextSize => store.Current.CodeTextSize;
@@ -28,7 +44,7 @@ public sealed class SettingsViewModel(AppSettingsStore store, Services.Home.Sess
     public Task SetSendKeyAsync(int index) => SaveAsync(store.Current with { ControlEnterToSend = index == 1 });
     public string Query { get => query; set { if (!SetProperty(ref query, value)) return; foreach (var category in Categories) category.Filter(value); OnPropertyChanged(nameof(NoResults)); } }
     public bool NoResults => Categories.All(category => !category.Visible);
-    public bool Busy { get => busy; set { if (SetProperty(ref busy, value)) OnPropertyChanged(nameof(CanEdit)); } }
+    public bool Busy { get => busy; set { if (SetProperty(ref busy, value)) { OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanRefreshStorage)); } } }
     public bool CanEdit => !Busy;
     public string Message { get => message; set { if (SetProperty(ref message, value)) OnPropertyChanged(nameof(HasMessage)); } }
     public bool HasMessage => Message.Length > 0;

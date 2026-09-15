@@ -57,6 +57,42 @@
                     <controls:ActionButton Content="Reset usage totals…" Click="OnResetUsage" HorizontalAlignment="Left"/>
                 </StackPanel>
             </Expander>
+            <Expander IsEnabled="{Binding CanEdit}" Header="Storage" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Storage.Expanded, Mode=TwoWay}" Visibility="{Binding Storage.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Stored on this PC" FontWeight="SemiBold"/>
+                    <TextBlock Text="File sizes for conversations, artifacts, research, checkpoints and diagnostics. Remote WSL/SSH copies, browser data and other app files are not included. Sizes may change while work is running." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <ProgressBar IsIndeterminate="True" Visibility="{Binding Scanning, Converter={StaticResource BooleanToVisibility}}"/>
+                    <ItemsControl ItemsSource="{Binding StorageItems}" HorizontalContentAlignment="Stretch">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Grid Padding="0,5" ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Name}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Size}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </Grid>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="‘At least’ means some files could not be measured. Conversations include screenshots stored in message history; Artifacts counts separate managed copies." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <controls:ActionButton HorizontalAlignment="Left" AutomationProperties.Name="Storage actions">
+                        <controls:ActionButton.Flyout>
+                            <MenuFlyout>
+                                <controls:ActionMenuFlyoutItem Text="Refresh sizes" Tag="storage-refresh" Click="OnDataAction" IsEnabled="{Binding CanRefreshStorage}"><controls:ActionMenuFlyoutItem.Icon><SymbolIcon Symbol="Refresh"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Open app data folder" Tag="storage-folder" Click="OnDataAction"><controls:ActionMenuFlyoutItem.Icon><SymbolIcon Symbol="Folder"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Manage checkpoint storage" Tag="extensions" Click="OnDataAction" ToolTipService.ToolTip="Open Workspace checkpoints → Manage in Extensions to choose a Windows, WSL or SSH target."/>
+                                <controls:ActionMenuFlyoutItem Text="Retry pending cleanup" Tag="storage-retry" Click="OnDataAction" ToolTipService.ToolTip="Retry cleanup for deleted conversations. Unavailable targets and protected restores may remain pending."/>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Clear diagnostics…" Tag="storage-diagnostics" Click="OnDataAction"/>
+                                <controls:ActionMenuFlyoutItem Text="Clear completed research…" Tag="storage-research" Click="OnDataAction"/>
+                            </MenuFlyout>
+                        </controls:ActionButton.Flyout>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Storage actions"/>
+                            <FontIcon Glyph="&#xE70D;" FontSize="10"/>
+                        </StackPanel>
+                    </controls:ActionButton>
+                    <TextBlock Text="Manage individual files in each conversation’s Artifacts panel. Cleanup preserves project files and Pi credentials." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Expander>
             <Expander IsEnabled="{Binding CanEdit}" Header="Data management" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Data.Expanded, Mode=TwoWay}" Visibility="{Binding Data.Visible, Converter={StaticResource BooleanToVisibility}}">
                 <StackPanel Spacing="16">
                     <StackPanel Spacing="6">

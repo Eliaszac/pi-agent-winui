@@ -485,6 +485,12 @@ public sealed class ShellViewModel : ObservableObject
     });
 
     private Task? cleanupTask;
+    public async Task<string> RetryCleanupAsync()
+    {
+        ErrorMessage = "";
+        await CleanupDeletedDataAsync();
+        return HasError ? ErrorMessage : "Pending conversation cleanup finished.";
+    }
     private Task CleanupDeletedDataAsync() => cleanupTask is { IsCompleted: false } ? cleanupTask : cleanupTask = RunDataCleanupAsync();
     private async Task RunDataCleanupAsync()
     {
