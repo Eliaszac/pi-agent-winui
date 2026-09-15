@@ -44,6 +44,25 @@ public sealed partial class SettingsView : UserControl
         if (Model is { CanEdit: true } model) await model.ResetTextSizesAsync();
     }
     private bool updatingEditors;
+    private async void OnTerminalSizeChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (IsLoaded && Model is { CanEdit: true } model && double.IsFinite(args.NewValue) && args.NewValue != model.TerminalTextSize)
+            await model.SetTerminalSizeAsync(args.NewValue);
+    }
+    private async void OnTerminalScrollbackChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (IsLoaded && Model is { CanEdit: true } model && double.IsFinite(args.NewValue) && args.NewValue != model.TerminalScrollback)
+            await model.SetTerminalScrollbackAsync((int)Math.Clamp(args.NewValue, 0, 50000));
+    }
+    private async void OnCompletionAudioChanged(object sender, RoutedEventArgs args)
+    {
+        if (IsLoaded && Model is { CanEdit: true } model && sender is ToggleSwitch toggle && toggle.IsOn != model.CompletionAudio)
+            await model.SetCompletionAudioAsync(toggle.IsOn);
+    }
+    private async void OnResetTerminal(object sender, RoutedEventArgs args)
+    {
+        if (Model is { CanEdit: true } model) await model.ResetTerminalAsync();
+    }
     internal void SetEditors(IReadOnlyList<Models.Applications.EditorPreferenceOption> options, string? preferred)
     {
         updatingEditors = true;

@@ -78,7 +78,7 @@ public partial class App : Application
             new DispatcherQueueUiDispatcher(window.DispatcherQueue), modelFavorites: new ModelFavoritesStore(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "model-favorites.json")));
         var projectService = new ProjectService(repository);
-        workspaces.ViewedRunCompleted += () => { if (!closing && !windowClosed) CompletionSound.Play(); };
+        workspaces.ViewedRunCompleted += () => { if (!closing && !windowClosed && Controls.ReadingPreferences.Current.CompletionAudio) CompletionSound.Play(); };
         var checkpointData = new CheckpointDataService(repository);
         var dockerClient = new Services.Docker.DockerCliClient();
         var docker = new ViewModels.Docker.DockerPanelViewModel(
@@ -177,6 +177,7 @@ public partial class App : Application
         void ApplyPreferences(object? sender, EventArgs args)
         {
             Controls.ReadingPreferences.Apply(settingsStore.Current);
+            Controls.TerminalPreferences.Apply(settingsStore.Current);
             if (window.Content is FrameworkElement root) root.RequestedTheme = (ElementTheme)settingsStore.Current.Theme;
             window.AppWindow.TitleBar.PreferredTheme = settingsStore.Current.Theme switch
             {

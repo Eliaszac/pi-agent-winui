@@ -30,6 +30,16 @@
                         <ComboBoxItem Content="Enter"/><ComboBoxItem Content="Ctrl + Enter"/>
                     </ComboBox>
                     <TextBlock Text="The other shortcut inserts a new line. Enter still selects suggestions when a picker is open." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <ToggleSwitch Header="Completion sound" IsOn="{Binding CompletionAudio, Mode=OneWay}" Toggled="OnCompletionAudioChanged"/>
+                    <TextBlock Text="Play the existing audio cue when a viewed agent run finishes." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Expander>
+            <Expander IsEnabled="{Binding CanEdit}" Header="Terminal" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Terminal.Expanded, Mode=TwoWay}" Visibility="{Binding Terminal.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="10">
+                    <NumberBox Header="Terminal text size" Value="{Binding TerminalTextSize, Mode=OneWay}" Minimum="10" Maximum="24" SmallChange="1" SpinButtonPlacementMode="Compact" ValueChanged="OnTerminalSizeChanged" Width="220" HorizontalAlignment="Left" AutomationProperties.Name="Terminal text size"/>
+                    <NumberBox Header="Scrollback lines" Value="{Binding TerminalScrollback, Mode=OneWay}" Minimum="0" Maximum="50000" SmallChange="1000" SpinButtonPlacementMode="Compact" ValueChanged="OnTerminalScrollbackChanged" Width="220" HorizontalAlignment="Left" AutomationProperties.Name="Scrollback lines"/>
+                    <TextBlock Text="Applies to open and new terminals on Windows, WSL, and SSH. Reducing scrollback discards the oldest terminal history; 0 keeps only the visible screen." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <controls:ActionButton Content="Reset terminal settings" Click="OnResetTerminal" HorizontalAlignment="Left"/>
                 </StackPanel>
             </Expander>
             <Expander IsEnabled="{Binding CanEdit}" Header="General" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding General.Expanded, Mode=TwoWay}" Visibility="{Binding General.Visible, Converter={StaticResource BooleanToVisibility}}">

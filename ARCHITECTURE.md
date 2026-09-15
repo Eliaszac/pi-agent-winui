@@ -120,6 +120,8 @@ Verification: native build and file-reference unit tests pass. UI interaction an
 
 ## Settings and legal information
 
+Terminal settings control font size (10–24, default 12) and scrollback (0–50,000 lines, default 5,000), applied to open and new terminal renderers across Windows, WSL, and SSH. Reducing scrollback discards older terminal history; the settings page explains this and offers a terminal-only reset. Conversation settings can mute the existing completion audio cue, enabled by default. Desktop notifications are not wanted and are not implemented.
+
 Both sidebar layouts group Providers, Extensions, Integrations, and General settings in the Settings button's native menu. Integrations is a global page, also available through the command palette, with a GitHub card using the existing shared device-flow connection. It shows connection/account status, Connect, Disconnect, and repository-access management; conversation PR shortcuts remain available. Other native integrations remain future work. Conversation rows use compact padding and spacing while retaining titles, target icons, PR labels, status indicators, and detailed tooltips.
 
 ### Optional computer use

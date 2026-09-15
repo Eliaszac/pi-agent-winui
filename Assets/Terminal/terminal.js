@@ -35,6 +35,10 @@ host.addEventListener("message", event => {
     terminal.write(message.data, () => host.postMessage({ type: "ack" }));
   } else if (message.type === "paste" && typeof message.data === "string") {
     terminal.paste(message.data);
+  } else if (message.type === "preferences") {
+    if (Number.isFinite(message.fontSize)) terminal.options.fontSize = Math.min(24, Math.max(10, message.fontSize));
+    if (Number.isInteger(message.scrollback)) terminal.options.scrollback = Math.min(50000, Math.max(0, message.scrollback));
+    if (document.body.clientWidth > 20 && document.body.clientHeight > 20) fit.fit();
   } else if (message.type === "theme") {
     const background = message.dark ? "#191919" : "#fafafa";
     const foreground = message.dark ? "#ededed" : "#202020";

@@ -26,12 +26,20 @@ public sealed class SettingsViewModel(AppSettingsStore store, Services.Home.Sess
     }
     public SettingsCategory Storage { get; } = new("Storage", "disk space size artifacts sessions research checkpoints diagnostics logs cleanup folder retry");
     public SettingsCategory Appearance { get; } = new("Appearance", "theme system light dark font text code size weight thickness regular medium semibold readability reset");
-    public SettingsCategory Conversation { get; } = new("Conversation", "send enter ctrl control shortcut keyboard newline");
+    public SettingsCategory Conversation { get; } = new("Conversation", "send enter ctrl control shortcut keyboard newline completion audio sound notification mute");
+    public SettingsCategory Terminal { get; } = new("Terminal", "font text size scrollback lines history buffer reset");
     public SettingsCategory General { get; } = new("General", "startup home resume last conversation launch editor open in preferred system default command palette ranking reset usage");
     public SettingsCategory Usage { get; } = new("Local usage", "analytics tokens models reset clear history privacy");
     public SettingsCategory Data { get; } = new("Data management", "delete conversations projects screenshots restore checkpoints files storage");
     public SettingsCategory About { get; } = new("About", "version legal terms privacy license licences notices contact publisher open source");
-    public IReadOnlyList<SettingsCategory> Categories => [Appearance, Conversation, General, Usage, Storage, Data, About];
+    public IReadOnlyList<SettingsCategory> Categories => [Appearance, Conversation, Terminal, General, Usage, Storage, Data, About];
+    public double TerminalTextSize => store.Current.TerminalTextSize;
+    public int TerminalScrollback => store.Current.TerminalScrollback;
+    public bool CompletionAudio => store.Current.CompletionAudio;
+    public Task SetTerminalSizeAsync(double size) => SaveAsync(store.Current with { TerminalTextSize = size });
+    public Task SetTerminalScrollbackAsync(int lines) => SaveAsync(store.Current with { TerminalScrollback = lines });
+    public Task SetCompletionAudioAsync(bool enabled) => SaveAsync(store.Current with { CompletionAudio = enabled });
+    public Task ResetTerminalAsync() => SaveAsync(store.Current with { TerminalTextSize = 12, TerminalScrollback = 5000 });
     public int ThemeIndex => store.Current.Theme;
     public double ConversationTextSize => store.Current.ConversationTextSize;
     public double CodeTextSize => store.Current.CodeTextSize;
@@ -80,6 +88,7 @@ public sealed class SettingsViewModel(AppSettingsStore store, Services.Home.Sess
             OnPropertyChanged(nameof(StartupIndex)); OnPropertyChanged(nameof(ShowLocalUsage)); OnPropertyChanged(nameof(UsageResetLabel));
             OnPropertyChanged(nameof(ThemeIndex)); OnPropertyChanged(nameof(ConversationTextSize)); OnPropertyChanged(nameof(CodeTextSize)); OnPropertyChanged(nameof(SendKeyIndex));
             OnPropertyChanged(nameof(TextWeightIndex));
+            OnPropertyChanged(nameof(TerminalTextSize)); OnPropertyChanged(nameof(TerminalScrollback)); OnPropertyChanged(nameof(CompletionAudio));
         }
     }
 }

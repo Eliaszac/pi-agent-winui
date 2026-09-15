@@ -36,6 +36,7 @@ public sealed class TerminalSurface : UserControl, IDisposable
         ActualThemeChanged += (_, _) => Send(new { type = "theme", dark = ActualTheme == ElementTheme.Dark });
         session.Output += OnOutput;
         session.Exited += OnExited;
+        Controls.TerminalPreferences.Changed += OnPreferencesChanged;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs args)
@@ -90,6 +91,7 @@ public sealed class TerminalSurface : UserControl, IDisposable
                     started = true;
                     feedback.Text = "Starting shell…";
                     Send(new { type = "theme", dark = ActualTheme == ElementTheme.Dark });
+                    OnPreferencesChanged(null, EventArgs.Empty);
                     await session.StartAsync(root.GetProperty("columns").GetInt32(), root.GetProperty("rows").GetInt32());
                     if (!rendered) feedback.Text = "Waiting for shell output…";
                     FocusTerminal();
@@ -145,6 +147,12 @@ public sealed class TerminalSurface : UserControl, IDisposable
         feedback.Visibility = Visibility.Collapsed;
         Send(new { type = "exit" });
     });
+    private void OnPreferencesChanged(object? sender, EventArgs args)
+    {
+        if (!started || disposed) return;
+        var preferences = Controls.TerminalPreferences.Current;
+        Send(new { type = "preferences", fontSize = preferences.TerminalTextSize, scrollback = preferences.TerminalScrollback });
+    }
     private async Task WatchStartupAsync()
     {
         try
@@ -182,6 +190,7 @@ public sealed class TerminalSurface : UserControl, IDisposable
         lifetime.Cancel();
         session.Output -= OnOutput;
         session.Exited -= OnExited;
+        Controls.TerminalPreferences.Changed -= OnPreferencesChanged;
         browser.Close();
     }
 }
