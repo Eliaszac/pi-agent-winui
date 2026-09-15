@@ -10,7 +10,7 @@ namespace PiAgentGui.Controls;
 /// <summary>A selectable native table with a ten-data-row viewport and scrolling on both axes.</summary>
 internal sealed class MarkdownTableView : UserControl
 {
-    internal MarkdownTableView(Table table)
+    internal MarkdownTableView(Table table, Services.Files.WorkspaceFileLinks? files = null)
     {
         var data = new MarkdownTableData(table);
         var headings = new List<(ActionButton Button, TextBlock Arrow, int Column)>();
@@ -37,7 +37,7 @@ internal sealed class MarkdownTableView : UserControl
                 var content = new StackPanel { Spacing = 8, MinWidth = 120, MaxWidth = 320 };
                 foreach (var block in cell)
                 {
-                    var element = MarkdownRenderer.RenderBlock(block);
+                    var element = MarkdownRenderer.RenderBlock(block, prose: false, files: files);
                     if (element is RichTextBlock text)
                     {
                         text.FontSize = 14 * ReadingPreferences.Scale; text.LineHeight = 22 * ReadingPreferences.Scale;

@@ -21,6 +21,33 @@ public sealed class ResearchTests
     private ResearchTask NewTask() => new(Guid.NewGuid(), Guid.NewGuid(), root, "Research", "Explain this", "test", "fake", "low", "Queued", "", DateTimeOffset.UtcNow);
 
     [TestMethod]
+    public async Task ClearCompletedPreservesActiveAndRecoveryRecords()
+    {
+        var store = new ResearchStore(root);
+        var completed = NewTask() with { Status = "Completed", Result = "Answer" };
+        var interrupted = NewTask() with { Status = "Interrupted" };
+        await store.SaveAsync([completed, interrupted]);
+        await File.WriteAllTextAsync(Path.Combine(root, completed.Id + ".jsonl"), "transcript");
+        await File.WriteAllTextAsync(Path.Combine(root, interrupted.Id + ".jsonl"), "recovery");
+        var runner = new FakeResearchRunner();
+        await using var coordinator = new ResearchCoordinator(store, runner);
+        await coordinator.InitializeAsync();
+        await coordinator.SetEnabledAsync(true);
+        var active = NewTask();
+        await coordinator.DispatchAsync(active);
+        await WaitUntil(() => runner.Started.ContainsKey(active.Id));
+        Assert.AreEqual(1, await coordinator.ClearCompletedAsync());
+        Assert.IsFalse(File.Exists(Path.Combine(root, completed.Id + ".jsonl")));
+        Assert.IsTrue(File.Exists(Path.Combine(root, interrupted.Id + ".jsonl")));
+        var records = await store.LoadAsync();
+        Assert.IsTrue(records.Any(task => task.Id == active.Id));
+        Assert.IsTrue(records.Any(task => task.Id == interrupted.Id));
+        Assert.IsFalse(records.Any(task => task.Id == completed.Id));
+        Assert.IsTrue(store.Enabled);
+        Assert.AreEqual(0, await coordinator.ClearCompletedAsync());
+    }
+
+    [TestMethod]
     public async Task SecondCoordinatorCannotRecoverOverwriteOrCancelOwnersTasks()
     {
         var store = new ResearchStore(root);

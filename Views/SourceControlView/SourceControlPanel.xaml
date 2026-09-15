@@ -36,9 +36,21 @@
     </UserControl.Resources>
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="12,0,0,0" RowSpacing="8">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-        <Grid Height="36">
+        <Grid Height="36" ColumnSpacing="4">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBlock Text="Source Control" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <controls:ActionButton HorizontalAlignment="Right" Click="OnClose" Padding="6" MinWidth="28" MinHeight="28" Background="Transparent" BorderThickness="0"
+            <controls:ActionButton Grid.Column="1" Padding="6" MinWidth="28" MinHeight="28" Background="Transparent" BorderThickness="0"
+                ToolTipService.ToolTip="Source control actions" AutomationProperties.Name="Source control actions">
+                <FontIcon Glyph="&#xE712;" FontSize="14"/>
+                <controls:ActionButton.Flyout>
+                    <MenuFlyout>
+                        <controls:ActionMenuFlyoutItem Text="Refresh" Click="OnRefresh"/>
+                        <controls:ActionMenuFlyoutItem Text="Fetch all remotes" Click="OnFetch" IsEnabled="{Binding CanAct}"/>
+                        <controls:ActionMenuFlyoutItem Text="Pull (fast-forward only)" Click="OnPull" IsEnabled="{Binding CanAct}"/>
+                    </MenuFlyout>
+                </controls:ActionButton.Flyout>
+            </controls:ActionButton>
+            <controls:ActionButton Grid.Column="2" Click="OnClose" Padding="6" MinWidth="28" MinHeight="28" Background="Transparent" BorderThickness="0"
                 ToolTipService.ToolTip="Close source control" AutomationProperties.Name="Close source control"><FontIcon Glyph="&#xE711;" FontSize="11"/></controls:ActionButton>
         </Grid>
         <StackPanel Grid.Row="1" Spacing="6">
@@ -66,14 +78,6 @@
                     <StackPanel><controls:ActionButton Content="Stage all" Click="OnStageAll" IsEnabled="{Binding CanStageAll}" FontSize="11" Padding="6,3"/>
                     <ItemsControl ItemsSource="{Binding Changes}" ItemTemplate="{StaticResource ChangeRow}"/></StackPanel>
                 </controls:ActionExpander>
-                <controls:ActionExpander Header="More actions" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                    <StackPanel Spacing="8">
-                        <ComboBox Header="Remote for first push" ItemsSource="{Binding Remotes}" SelectedItem="{Binding SelectedRemote, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
-                        <controls:ActionButton Content="Refresh" Click="OnRefresh" HorizontalAlignment="Stretch"/>
-                        <controls:ActionButton Content="Fetch all remotes" Click="OnFetch" HorizontalAlignment="Stretch"/>
-                        <controls:ActionButton Content="Pull (fast-forward only)" Click="OnPull" HorizontalAlignment="Stretch"/>
-                    </StackPanel>
-                </controls:ActionExpander>
             </StackPanel>
         </ScrollViewer>
         <TextBlock Grid.Row="2" Text="{Binding EmptyMessage}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -81,6 +85,7 @@
         <StackPanel Grid.Row="3" Spacing="8" Padding="0,8,0,0" Visibility="{Binding HasRepository, Converter={StaticResource BooleanToVisibility}}">
             <TextBox Text="{Binding CommitMessage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Commit message" AutomationProperties.Name="Commit message"
                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="120" MaxLength="8192" IsEnabled="{Binding CanAct}" FontSize="12"/>
+            <ComboBox Header="Push remote" ItemsSource="{Binding Remotes}" SelectedItem="{Binding SelectedRemote, Mode=TwoWay}" HorizontalAlignment="Stretch" IsEnabled="{Binding CanAct}"/>
             <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <controls:ActionButton Content="Commit" Click="OnCommit" IsEnabled="{Binding CanCommit}" HorizontalAlignment="Stretch"/>
                 <controls:ActionButton Grid.Column="1" Content="Push" Click="OnPush" IsEnabled="{Binding CanPush}" HorizontalAlignment="Stretch"/>

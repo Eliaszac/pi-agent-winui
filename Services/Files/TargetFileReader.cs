@@ -26,6 +26,13 @@ public sealed class TargetFileReader(ExecutionTarget target, TargetCommandRunner
         return rows.OrderByDescending(row => row.IsDirectory).ThenBy(row => row.Name, StringComparer.Ordinal).ToArray();
     }
 
+    public async Task EnsureFileAsync(string file, CancellationToken token)
+    {
+        Validate(file);
+        var result = await runner.RunAsync(target, LinkGuard(file) + $"test -f {PosixShell.Quote(file)}", token, trackChanges: false);
+        if (result.ExitCode != 0) throw new IOException("The target file is unavailable or is a linked file.");
+    }
+
     public async Task<string> ReadAsync(string file, CancellationToken token)
     {
         Validate(file);

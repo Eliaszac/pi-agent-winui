@@ -13,6 +13,27 @@ namespace PiAgentGui.Tests.GitHub;
 public sealed class GitHubTests
 {
     [TestMethod]
+    public async Task IntegrationAccountUsesExistingLoginWithoutAProject()
+    {
+        using var http = new HttpClient(new FakeGitHubHandler(request =>
+        {
+            Assert.AreEqual("/user", request.RequestUri!.AbsolutePath);
+            Assert.AreEqual("test-token", request.Headers.Authorization!.Parameter);
+            return Json("{\"login\":\"octocat\"}");
+        }));
+        var api = new GitHubApi(http);
+        var credentials = new FakeGitHubCredentials { Token = new("test-token", DateTimeOffset.UtcNow.AddHours(1)) };
+        var vm = new GitHubViewModel(new(new("id", "slug"), api, credentials), api, new FakeGitBranchReader());
+        vm.Initialize();
+        await vm.RefreshAccountAsync(default);
+        Assert.AreEqual("Connected as @octocat", vm.ConnectionStatus);
+        Assert.IsTrue(vm.CanDisconnect);
+        vm.Disconnect();
+        Assert.AreEqual("Not connected", vm.ConnectionStatus);
+        Assert.IsTrue(vm.CanConnect);
+        Assert.IsNull(credentials.Token);
+    }
+    [TestMethod]
     public async Task ConnectButtonRequiresRepositoryEvenWhenSignedOut()
     {
         using var http = new HttpClient(new FakeGitHubHandler(_ => throw new AssertFailedException("Signed-out checks must stay local.")));
@@ -58,11 +79,15 @@ public sealed class GitHubTests
             StringAssert.Contains(request.RequestUri.Query, "state=open");
             return Json("""
                 [{"number":1,"title":"Wrong fork","head":{"ref":"feature","repo":{"full_name":"other/repo"}}},
-                 {"number":42,"title":"Correct","html_url":"https://evil.example/","head":{"ref":"feature","repo":{"full_name":"owner/repo"}}}]
+                 {"number":42,"title":"Correct","user":{"login":"octocat"},"draft":true,"created_at":"2026-09-10T12:00:00Z","updated_at":"2026-09-12T09:00:00Z","html_url":"https://evil.example/","head":{"ref":"feature","repo":{"full_name":"owner/repo"}}}]
                 """);
         }));
         var pull = await new GitHubApi(http).FindPullRequestAsync(new("owner", "repo", "feature"), "test-token", default);
         Assert.AreEqual(42, pull!.Number);
+        Assert.AreEqual("octocat", pull.Author);
+        Assert.AreEqual(true, pull.IsDraft);
+        Assert.AreEqual(DateTimeOffset.Parse("2026-09-10T12:00:00Z"), pull.CreatedAt);
+        Assert.AreEqual(DateTimeOffset.Parse("2026-09-12T09:00:00Z"), pull.UpdatedAt);
         Assert.AreEqual("https://github.com/owner/repo/pull/42", pull.Url.AbsoluteUri);
     }
 
@@ -74,6 +99,9 @@ public sealed class GitHubTests
             : Json("""{"parent":{"full_name":"upstream/repo"}}""")));
         var pull = await new GitHubApi(http).FindPullRequestAsync(new("owner", "repo", "feature"), "token", default);
         Assert.AreEqual("https://github.com/upstream/repo/pull/8", pull!.Url.AbsoluteUri);
+        Assert.IsNull(pull.Author);
+        Assert.IsNull(pull.CreatedAt);
+        Assert.IsNull(pull.UpdatedAt);
     }
 
     [TestMethod]

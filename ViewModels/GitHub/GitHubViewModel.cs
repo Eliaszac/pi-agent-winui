@@ -13,10 +13,60 @@ public sealed class GitHubViewModel(GitHubAuthentication authentication, GitHubA
     private bool selectedIsRepository;
     private int selectionRevision;
     private string error = "";
+    private string account = "";
+    private bool loadingAccount;
+    public string ConnectionStatus => connecting ? "Connecting…" : IsConnected ? account.Length > 0 ? "Connected as @" + account : "Connected · account details unavailable" : "Not connected";
+    public bool CanConnect => !IsConnected && !connecting;
+    public bool CanDisconnect => IsConnected && !connecting;
+    public async Task RefreshAccountAsync(CancellationToken cancellationToken)
+    {
+        if (loadingAccount || !IsConnected) return;
+        loadingAccount = true;
+        try
+        {
+            await RefreshAsync([], cancellationToken);
+            var session = token;
+            if (session is null) return;
+            var login = await api.GetLoginAsync(session.AccessToken, cancellationToken);
+            if (token != session) return;
+            account = login;
+            Notify();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception) { Error = "Couldn't load GitHub account details. Try opening Integrations again."; }
+        finally { loadingAccount = false; }
+    }
     private readonly Dictionary<string, GitHubPullRequest?> pulls = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, GitHubBranch?> branches = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DateTimeOffset> checkedAt = new(StringComparer.OrdinalIgnoreCase);
     public bool IsConnected => token is not null;
+    public async Task<System.Text.Json.Nodes.JsonObject> WriteAsync(GitHubWriteRequest request,
+        Func<CancellationToken, Task<string>> repository, Func<string, CancellationToken, Task<bool>> approve, CancellationToken cancellation)
+    {
+        while (refreshing) await Task.Delay(50, cancellation);
+        await RefreshAsync([], cancellation);
+        var connection = token ?? throw new IOException("Connect GitHub in Settings → Integrations before requesting this action.");
+        return await new GitHubWriter(api).ExecuteAsync(request, connection.AccessToken, repository, approve,
+            () => { if (token != connection) throw new IOException("The GitHub connection changed. Request fresh approval."); }, cancellation);
+    }
+    public async Task<IReadOnlyList<GitHubReference>> SearchReferencesAsync(string query, bool pulls, string repository, CancellationToken cancellation)
+    {
+        while (refreshing) await Task.Delay(50, cancellation);
+        await RefreshAsync([], cancellation);
+        var session = token ?? throw new IOException("Connect GitHub in Settings → Integrations to search PRs and issues.");
+        var results = await new GitHubReferenceReader(api).SearchAsync(query, pulls, repository, session.AccessToken, cancellation);
+        if (token != session) throw new IOException("The GitHub connection changed. Search again.");
+        return results;
+    }
+    public async Task<GitHubReference> FetchReferenceAsync(GitHubReference reference, CancellationToken cancellation)
+    {
+        while (refreshing) await Task.Delay(50, cancellation);
+        await RefreshAsync([], cancellation);
+        var session = token ?? throw new IOException("Connect GitHub in Settings → Integrations before sending this reference.");
+        var result = await new GitHubReferenceReader(api).FetchAsync(reference, session.AccessToken, cancellation);
+        if (token != session) throw new IOException("The GitHub connection changed. Your draft has been kept; try again.");
+        return result;
+    }
     public bool IsConnecting => connecting;
     public GitHubPullRequest? SelectedPullRequest => selectedPath is not null ? pulls.GetValueOrDefault(selectedPath) : null;
     public string HeaderLabel => connecting ? "Connecting…" : IsConnected ? "Open PR" : "Connect to GitHub";
@@ -49,6 +99,8 @@ public sealed class GitHubViewModel(GitHubAuthentication authentication, GitHubA
     {
         authentication.Disconnect();
         token = null;
+        account = "";
+        Error = "";
         Clear();
         Notify();
     }
@@ -147,6 +199,7 @@ public sealed class GitHubViewModel(GitHubAuthentication authentication, GitHubA
     }
     private void Notify()
     {
+        OnPropertyChanged(nameof(ConnectionStatus)); OnPropertyChanged(nameof(CanConnect)); OnPropertyChanged(nameof(CanDisconnect));
         OnPropertyChanged(nameof(IsConnected));
         OnPropertyChanged(nameof(IsConnecting));
         OnPropertyChanged(nameof(HeaderLabel));

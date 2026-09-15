@@ -1,6 +1,6 @@
 # Privacy & data
 
-Effective 12 September 2026.
+Effective 14 September 2026.
 
 ## Who publishes this app
 
@@ -12,6 +12,8 @@ There is no publisher-operated account, telemetry collector or automatic convers
 
 - **App records:** normally under `%LOCALAPPDATA%\PiAgentGui`. These include project registrations and paths, saved Pi sessions, preferences, local diagnostics, extension state and management records. Conversation sessions can contain prompts, model responses, tool output, file contents, screenshots and other attachments.
 - **Research:** app-managed background research has separate task records, results and worker sessions. It uses the configured model and tools when enabled.
+- **Conversation artifacts:** files and metadata are stored next to the conversation session in a `.artifacts` directory on Windows, including copies imported from WSL/SSH and conversation screenshots. Copies remain available when a remote target is offline. The agent can create or import artifacts and list their names and identifiers; those tool inputs/results can be included in the model context. Artifacts are not automatically uploaded to a separate storage service.
+- **Uploaded files:** selecting, dropping or pasting files saves local artifact copies. The built-in artifact tools make uploads available after a message submission attempt; reads may send file text or image content to the configured model provider. For WSL/SSH, requesting a target file path transfers a working copy under `$HOME/.pi-desktop-artifacts` on that target, using its configured connection. Removing an attachment from the composer keeps the artifact copy; use Artifacts → Delete or delete the conversation to remove it. Unsent uploads also remain in the artifact panel until deleted.
 - **Restore snapshots:** Workspace checkpoints stores data on the relevant execution target, normally under that user's `~/.pi-desktop-checkpoints`. Snapshots can contain copies of workspace files. Retention and clearing are managed by that extension; deleting a conversation schedules its associated snapshot cleanup.
 - **Shared Pi data:** Pi configuration, installed packages and provider authentication normally live in `~/.pi/agent`, or the directory configured through `PI_CODING_AGENT_DIR`. These can also be used by Pi outside this frontend.
 - **Credentials:** SSH and GitHub credentials use Windows credential facilities where implemented. Pi and integrations manage their own authentication storage; do not assume every configuration file is encrypted.
@@ -21,9 +23,9 @@ Session and settings files are not encrypted by the app. Their protection depend
 
 ## Local usage summaries
 
-Home derives token and model summaries from this app's saved Pi session records. It uses a temporary memory cache, not a separate analytics database or upload service. Counts are not account-wide usage or invoices.
+Home derives token and model summaries from this app's Pi session records. Usage metadata is retained locally in `usage-history.json` under the app data directory, including response identities, project/conversation identifiers, timestamps, provider/model names, effort levels and token counts. It does not copy message content into analytics or upload these records. Counts are not account-wide usage or invoices.
 
-Settings can turn off the Home usage reader. Pi still writes its own session usage metadata. Reset usage totals stores a local cutoff time and omits earlier responses from the display; it does not erase their session records or change a provider's records. Deleting a conversation removes its contribution after refresh, except history retained in another saved fork.
+Settings can hide Home analytics; this does not stop local usage retention. Deleting conversations or projects preserves their usage metadata. Reset usage totals removes retained statistics before the reset time and stores a cutoff to prevent those responses from being imported again. It does not erase session records or change a provider's records. Shared fork history is counted once.
 
 ## What can leave your system
 
@@ -35,14 +37,17 @@ Each service may retain or process information under its own policies, including
 
 Relevant policies include [OpenAI](https://openai.com/policies/privacy-policy/), [Anthropic](https://www.anthropic.com/legal/privacy), [Google](https://policies.google.com/privacy), [GitHub](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement) and [Microsoft](https://privacy.microsoft.com/privacystatement). Other configured providers and integrations have their own notices.
 
+GitHub reference searches send your query to GitHub. Sending an attached issue or pull request includes a bounded snapshot of its content in the prompt delivered to your selected model provider and saved in the Pi session. The conversation UI shows a compact reference card instead of the fetched content. Disconnecting GitHub does not remove snapshots already saved in conversations.
+
 ## Retention and deletion
 
 Saved conversations and project registrations remain until you remove them. Settling a conversation does not delete it. The app provides separate controls so you can understand what will be removed:
 
-- **Delete all conversations:** removes catalog-owned conversations and schedules deletion of their session files, session screenshots and associated restore data. Project folders and shared Pi configuration remain.
+- **Delete all conversations:** removes catalog-owned conversations and schedules deletion of their session files, session screenshots, artifact storage and associated restore data. Project folders and shared Pi configuration remain.
+- **Artifacts → Delete:** removes the managed artifact copy and attempts to remove app-managed remote working copies. Offline remote cleanup remains pending for later artifact file access or conversation cleanup. Downloaded copies and original source files remain. A deleted screenshot's original image remains in Pi's transcript until that conversation is deleted. Conversation copies own independent artifact files.
 - **Remove all projects:** also removes project registrations and their conversations. It does not delete the registered workspace directories or their files.
 - **Workspace checkpoints → Manage:** manages snapshot storage separately from conversation history.
-- **Reset usage totals:** changes the display cutoff only.
+- **Reset usage totals:** removes earlier retained usage statistics and prevents their reimport, without deleting conversations.
 
 Active work must finish before bulk conversation deletion. Cleanup can be delayed by active resources, pending restore recovery or an unavailable remote host, and is retried on a later catalog load. The app reports pending cleanup. Separate research records, diagnostic files, preferences, installed extensions and shared provider credentials are not erased by deleting conversations. Uninstalling does not necessarily remove retained app data, Pi data, backups or remote copies.
 

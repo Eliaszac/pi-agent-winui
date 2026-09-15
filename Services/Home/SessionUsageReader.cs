@@ -6,18 +6,35 @@ using PiAgentGui.Utilities;
 
 namespace PiAgentGui.Services.Home;
 
-/// <summary>Reads only catalog-owned session files. Cache is memory-only and invalidated by file metadata.</summary>
+/// <summary>Reads catalog-owned sessions and preserves deduplicated usage metadata outside session storage.</summary>
 public sealed class SessionUsageReader(PiSessionPaths paths)
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly Dictionary<string, (long Length, DateTime Written, UsageInventory Data)> cache = [];
+    private readonly LocalUsageStore archive = new(paths.UsageArchiveFile);
 
-    public async Task<UsageInventory> ReadAsync(IReadOnlyList<Project> projects, CancellationToken cancellationToken = default)
+    public async Task<UsageInventory> ReadAsync(IReadOnlyList<Project> projects, CancellationToken cancellationToken = default, DateTimeOffset? resetAt = null)
     {
         await gate.WaitAsync(cancellationToken);
-        try { return await Task.Run(() => Read(projects, cancellationToken), cancellationToken); }
+        try { return await Task.Run(() =>
+        {
+            var current = Read(projects, cancellationToken);
+            return current with { Samples = archive.Merge(current.Samples, resetAt, cancellationToken) };
+        }, cancellationToken); }
         finally { gate.Release(); }
     }
+
+    public Task ResetAsync(DateTimeOffset cutoff) => Task.Run(() => archive.Merge([], cutoff, CancellationToken.None));
+
+    public Task PreserveAsync(Guid project, Guid conversation) => Task.Run(() =>
+    {
+        var file = paths.GetSessionFile(project, conversation);
+        if (!File.Exists(file)) return;
+        if (new FileInfo(file).Length > 64 * 1024 * 1024)
+            throw new IOException("Session is too large to preserve usage safely. Cleanup will retry.");
+        var inventory = ReadFile(file, project, conversation, CancellationToken.None);
+        archive.Merge(inventory.Samples, null, CancellationToken.None);
+    });
 
     private UsageInventory Read(IReadOnlyList<Project> projects, CancellationToken cancellationToken)
     {
@@ -70,6 +87,7 @@ public sealed class SessionUsageReader(PiSessionPaths paths)
         var rows = new List<UsageSample>();
         var skipped = 0;
         var lineNumber = 0;
+        var efforts = new SessionEffortTracker();
         foreach (var line in BoundedJsonLines.Read(reader, cancellationToken))
         {
             lineNumber++;
@@ -77,7 +95,10 @@ public sealed class SessionUsageReader(PiSessionPaths paths)
             if (string.IsNullOrWhiteSpace(line)) continue;
             try
             {
-                if (SessionUsageParser.Parse(line, projectId, conversationId, lineNumber) is { } sample) rows.Add(sample);
+                using var document = JsonDocument.Parse(line);
+                var effort = efforts.Read(document.RootElement);
+                if (SessionUsageParser.Parse(document.RootElement, projectId, conversationId, lineNumber) is { } sample)
+                    rows.Add(sample with { Effort = effort });
                 if (rows.Count >= 100_000) { skipped++; break; }
             }
             catch (Exception error) when (error is JsonException or FormatException or ArgumentOutOfRangeException) { skipped++; }

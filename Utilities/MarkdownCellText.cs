@@ -25,6 +25,13 @@ public static class MarkdownCellText
         return string.Join("\n", parts).Trim();
     }
 
+    public static string ReadInline(ContainerInline source)
+    {
+        var text = new StringBuilder();
+        Append(text, source);
+        return text.ToString();
+    }
+
     private static void Append(StringBuilder text, ContainerInline source)
     {
         foreach (var inline in source)

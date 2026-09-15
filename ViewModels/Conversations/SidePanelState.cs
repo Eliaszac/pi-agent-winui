@@ -11,7 +11,7 @@ public sealed class SidePanelState
     public bool IsOpen { get; set; }
     public SidePanelTab Open(string kind, string title, TerminalTabViewModel? terminal = null)
     {
-        var tab = Tabs.FirstOrDefault(item => kind == "terminal" ? terminal is not null && item.Terminal == terminal : item.Kind == kind);
+        var tab = Tabs.FirstOrDefault(item => kind == "browser" ? false : kind == "terminal" ? terminal is not null && item.Terminal == terminal : item.Kind == kind);
         if (tab is null) { tab = new(kind, title, terminal); Tabs.Add(tab); }
         Selected = tab; IsOpen = true;
         return tab;

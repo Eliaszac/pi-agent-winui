@@ -51,9 +51,31 @@ public sealed class RunChangesViewModel : ObservableObject
 
     public RunChangesViewModel(IEnumerable<FileChange> changes, IReadOnlyList<string>? verificationLabels = null, string? diagnosticsLabel = null, bool caseSensitive = false)
     {
-        Files = changes.GroupBy(change => change.Path.Replace('\\', '/'), caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase)
+        var comparer = caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+        Files = GroupMoves(changes, comparer)
+            .GroupBy(change => change.Kind == "moved" ? change.Path : change.Path.Replace('\\', '/'), comparer)
             .Select(group => new ChangedFileViewModel(group.ToArray())).ToArray();
         VerificationLabels = Files.Count > 0 ? verificationLabels ?? [] : [];
         DiagnosticsLabel = Files.Count > 0 ? diagnosticsLabel : null;
+    }
+
+    private static IReadOnlyList<FileChange> GroupMoves(IEnumerable<FileChange> changes, StringComparer comparer)
+    {
+        var remaining = changes.ToList();
+        var result = new List<FileChange>();
+        foreach (var deleted in remaining.Where(change => change.Kind == "deleted" && change.BeforeHash is not null).ToArray())
+        {
+            var deletedName = System.IO.Path.GetFileName(deleted.Path.Replace('\\', '/'));
+            var created = remaining.FirstOrDefault(change => change.Kind == "created" && change.AfterHash == deleted.BeforeHash
+                && comparer.Equals(System.IO.Path.GetFileName(change.Path.Replace('\\', '/')), deletedName));
+            if (created is null) continue;
+            remaining.Remove(deleted);
+            remaining.Remove(created);
+            var from = deleted.Path.Replace('\\', '/');
+            var to = created.Path.Replace('\\', '/');
+            result.Add(new FileChange($"{from} -> {to}", null, 0, 0, null, "moved", MovedFromPath: from, MovedToPath: to));
+        }
+        result.AddRange(remaining);
+        return result;
     }
 }

@@ -108,4 +108,19 @@ public sealed class RunChangesTests
         Assert.AreEqual(4, summary.VisibleFiles.Count);
         Assert.AreEqual("first\nsecond", summary.Files[0].Patch);
     }
+
+    [TestMethod]
+    public void CreatedAndDeletedFilesWithSameNameAndHashAreShownAsMoved()
+    {
+        const string hash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        var summary = new RunChangesViewModel([
+            new("old/Widget.cs", "deleted", 0, 8, null, "deleted", BeforeHash: hash),
+            new("new/Widget.cs", "created", 8, 0, null, "created", AfterHash: hash),
+            new("other.cs", "patch", 1, 0, null)]);
+        Assert.AreEqual(2, summary.Files.Count);
+        Assert.AreEqual("Moved", summary.Files[0].Kind);
+        Assert.AreEqual("Moved · old/Widget.cs → new/Widget.cs", summary.Files[0].Label);
+        Assert.AreEqual("+1", summary.Added);
+        Assert.AreEqual("−0", summary.Removed);
+    }
 }

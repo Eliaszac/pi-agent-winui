@@ -82,14 +82,23 @@ public static class SupportedExtensions
 
     public static ExtensionDefinition Browser { get; } = new(
         "Pi Browser", "larsderidder", "0.1.0",
-        "Let Pi browse pages, interact with forms, capture screenshots and inspect browser errors. Connect an external Chromium browser; this extension does not add an embedded browser panel.",
-        "A third-party extension maintained by larsderidder, not developed by Pi desktop. Uses Playwright directly to control a Chromium-based browser through its debugging connection. Pi desktop recommends the extension and checks global installation files only; browser connectivity and embedded WebView2 compatibility are not verified.",
+        "Browse and test websites together with Pi in conversation-specific browser tabs. Supports page inspection, screenshots, forms, and browser errors.",
+        "A third-party extension maintained by larsderidder, not developed by Pi desktop. Uses Playwright directly to control a Chromium-based browser through its debugging connection. Pi desktop adds native browser tabs and bundled integration code using the installed extension. Each tab has an isolated browser profile. Installation is checked on Windows, where Pi runs for every target. Live WebView2 integration remains unverified.",
         "pi install git:github.com/larsderidder/pi-browser",
-        "Requires Git and npm. This installs the current upstream Git revision; the displayed version is a reference, not a pinned release. Restart Pi desktop after installation. To connect an external Chromium-based browser, start it with a separate user-data directory and --remote-debugging-port=9222, then send /browser connect 9222 in the conversation. Use /browser status to inspect the connection and /browser disconnect to detach. Use separate ports and profiles for independent conversations. Follow the upstream documentation for browser setup. Installing this extension does not add a browser panel or automatically connect a browser.",
+        "Requires Git and npm. This installs the current upstream Git revision; the displayed version is a reference, not a pinned release. Restart Pi desktop after installation. To connect an external Chromium-based browser, start it with a separate user-data directory and --remote-debugging-port=9222, then send /browser connect 9222 in the conversation. Use /browser status to inspect the connection and /browser disconnect to detach. Use separate ports and profiles for independent conversations. Follow the upstream documentation for browser setup. The Browser item in the side-panel menu opens embedded tabs; embedded_browser tools connect automatically. Remote localhost previews are forwarded to the selected SSH or WSL target. WSL forwarding requires Python 3. File-upload and storage-file tools are unavailable for remote conversations.",
         "",
         new("https://github.com/larsderidder/pi-browser#readme"),
         new("https://github.com/larsderidder/pi-browser"),
         () => PiBrowserSupport.GetInstallationState(), RecommendationOnly: true);
 
-    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Checkpoints, Permissions, AutomaticTitles, Search, Mcp, Lsp, Browser];
+    public static ExtensionDefinition ComputerUse { get; } = new(
+        "Computer use", "injaneity", ComputerUseSupport.Version,
+        "Let Pi inspect and interact with Windows apps. See when computer use is active and stop the run from your conversation.",
+        "An optional third-party plugin for the local Windows desktop. Installation is the opt-in: its tools can observe windows, click, type, scroll, and operate browsers. Requires an unlocked interactive desktop. WSL and SSH conversations do not load it. Stop cancels the agent run, but an already-submitted native Windows action batch may finish; it is not an instant emergency stop and cannot undo delivered actions. Avoid simultaneous desktop tasks across conversations. Live Windows setup and cancellation have not yet been verified in Pi desktop.",
+        ComputerUseSupport.InstallCommand,
+        "Restart Pi desktop after installation. The plugin checks its native helper at startup; errors appear as extension notices. Defaults need no configuration file. Use /computer-use to inspect configuration. Browser access and foreground interaction are allowed by default. For background-only accessibility actions, set headless to true in ~/.pi/agent/extensions/pi-computer-use.json. Uninstall with pi remove npm:@injaneity/pi-computer-use, then restart Pi desktop.",
+        "", new("https://github.com/injaneity/pi-computer-use#readme"), new("https://github.com/injaneity/pi-computer-use"),
+        () => ComputerUseSupport.GetInstallationState(), RecommendationOnly: true);
+
+    public static IReadOnlyList<ExtensionDefinition> All { get; } = [Checkpoints, Permissions, AutomaticTitles, Search, Mcp, Lsp, Browser, ComputerUse];
 }

@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import subprocess
 import unittest
+import threading
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('checkpoint_engine', Path(__file__).parents[2] / 'PiExtensions' / 'checkpoint_engine.py')
@@ -24,6 +25,59 @@ class CheckpointTests(unittest.TestCase):
 
     def begin(self):
         return self.engine.run({'action': 'begin'})['id']
+
+    def test_lock_contention_times_out_without_modifying_lock_file(self):
+        with self.engine.lock():
+            before = (self.store / 'operation.lock').stat().st_size
+            with self.assertRaisesRegex(TimeoutError, 'busy in another chat'):
+                with self.engine.lock(timeout=0.05):
+                    self.fail('Concurrent lock acquired')
+            self.assertEqual(before, (self.store / 'operation.lock').stat().st_size)
+
+    def test_lock_waits_until_holder_releases(self):
+        acquired = threading.Event()
+        release = threading.Event()
+        def holder():
+            with self.engine.lock():
+                acquired.set()
+                release.wait(2)
+        thread = threading.Thread(target=holder)
+        thread.start()
+        try:
+            self.assertTrue(acquired.wait(2))
+            timer = threading.Timer(0.1, release.set)
+            timer.start()
+            with self.engine.lock(timeout=1):
+                self.assertTrue(release.is_set())
+            timer.join()
+        finally:
+            release.set()
+            thread.join()
+
+    def test_lock_releases_after_exception(self):
+        with self.assertRaisesRegex(ValueError, 'operation failed'):
+            with self.engine.lock():
+                raise ValueError('operation failed')
+        with self.engine.lock(timeout=0):
+            pass
+
+    def test_lock_open_permission_failure_is_not_retried(self):
+        with patch.object(Path, 'open', side_effect=PermissionError(13, 'denied')) as opened:
+            with self.assertRaises(PermissionError):
+                with self.engine.lock():
+                    pass
+            self.assertEqual(opened.call_count, 1)
+
+    @unittest.skipUnless(module.os.name == 'nt', 'Windows lock error mapping')
+    def test_windows_lock_access_denied_is_not_contention(self):
+        with patch('ctypes.WinDLL') as library, patch('ctypes.get_last_error', return_value=5):
+            kernel = library.return_value
+            kernel.LockFile.return_value = False
+            with self.assertRaises(PermissionError):
+                with self.engine.lock():
+                    pass
+            self.assertEqual(kernel.LockFile.call_count, 1)
+            kernel.UnlockFile.assert_not_called()
 
     def finish(self, ident):
         return self.engine.run({'action': 'finish', 'id': ident, 'response': 'assistant:123'})

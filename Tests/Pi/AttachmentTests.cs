@@ -71,6 +71,36 @@ public sealed class AttachmentTests
     }
 
     [TestMethod]
+    [DataRow("@issues:", "issues", "")]
+    [DataRow("@issues:42", "issues", "42")]
+    [DataRow("@prs:fix login", "prs", "fix login")]
+    [DataRow("@files:My Folder", "files", "My Folder")]
+    [DataRow("@ISSUES: login", "issues", "login")]
+    public void ScopedReferencesSelectSourceAndAllowSpaces(string input, string kind, string query)
+    {
+        var text = "Review " + input;
+        var token = FileReferenceToken.Find(text, text.Length)!;
+        Assert.AreEqual(kind, token.Kind);
+        Assert.AreEqual(query, token.Query);
+        Assert.AreEqual("Review ", text.Remove(token.Start, token.Length));
+    }
+
+    [TestMethod]
+    public void ScopedReferencesRespectLineAndReferenceBoundaries()
+    {
+        const string multiline = "@issues:bug\ntext";
+        Assert.IsNull(FileReferenceToken.Find(multiline, multiline.Length));
+        var text = "@issues:bug @src";
+        var token = FileReferenceToken.Find(text, text.Length)!;
+        Assert.IsNull(token.Kind);
+        Assert.AreEqual("src", token.Query);
+        Assert.IsNull(FileReferenceToken.Find("@prs:login", 10, 1));
+        const string middle = "Review @prs:fix login later";
+        var scoped = FileReferenceToken.Find(middle, middle.IndexOf("login") + 2)!;
+        Assert.AreEqual("Review  later", middle.Remove(scoped.Start, scoped.Length));
+    }
+
+    [TestMethod]
     public void AttachmentLimitsRejectOversizedAndExcessImages()
     {
         Assert.ThrowsException<ArgumentException>(() => PiImageContent.Serialize(Enumerable.Repeat(new ChatImage("AQID"), 5).ToArray()));

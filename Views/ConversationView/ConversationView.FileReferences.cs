@@ -13,12 +13,41 @@ public sealed partial class ConversationView
     private CancellationTokenSource? fileSearchLifetime;
     private FileReferenceToken? fileToken;
     private string? dismissedFileToken;
+    private string referenceKind = "files";
+    private void OnReferenceKindChanged(object sender, RoutedEventArgs args)
+    {
+        if (sender is not FrameworkElement { Tag: string kind }) return;
+        referenceKind = kind;
+        ReferenceSourceLabel.Text = kind == "files" ? "Files" : kind == "prs" ? "Pull requests" : "Issues";
+        if (fileToken is { Kind: not null } scoped)
+        {
+            var caret = Composer.SelectionStart;
+            var colon = Composer.Text.IndexOf(':', scoped.Start);
+            var prefix = "@" + kind + ":";
+            Composer.Text = Composer.Text.Remove(scoped.Start, colon - scoped.Start + 1).Insert(scoped.Start, prefix);
+            Composer.Select(caret + prefix.Length - (colon - scoped.Start + 1), 0);
+        }
+        fileToken = null; dismissedFileToken = null; UpdateFileReferences();
+        Composer.Focus(FocusState.Programmatic);
+    }
 
     private async void UpdateFileReferences()
     {
         if (FileReferencePanel is null) return;
         if (composing) return;
         var nextToken = FileReferenceToken.Find(Composer.Text, Composer.SelectionStart, Composer.SelectionLength);
+        if (nextToken?.Kind is { } kind)
+        {
+            referenceKind = kind;
+            ReferenceSourceLabel.Text = kind == "files" ? "Files" : kind == "prs" ? "Pull requests" : "Issues";
+        }
+        if (nextToken is null && Composer.SelectionLength == 0)
+        {
+            var start = Composer.SelectionStart;
+            while (start > 0 && !char.IsWhiteSpace(Composer.Text[start - 1])) start--;
+            var word = Composer.Text[start..Composer.SelectionStart];
+            if (Models.GitHub.GitHubReference.FromUrl(word) is not null) nextToken = new(start, word.Length, word);
+        }
         if (nextToken == fileToken && (nextToken is null || FileReferencePanel.Visibility == Visibility.Visible)) return;
         fileSearchLifetime?.Cancel();
         fileToken = nextToken;
@@ -33,11 +62,23 @@ public sealed partial class ConversationView
         if (dismissedFileToken == $"{token.Start}:{token.Query}") return;
         FileReferencePanel.Visibility = Visibility.Visible;
         FileReferenceList.ItemsSource = null;
+        ReferenceHint.Text = referenceKind == "files" ? "Project files" : "Searching this project's GitHub repository…";
         var request = new CancellationTokenSource();
         fileSearchLifetime = request;
         try
         {
-            await Task.Delay(120, request.Token);
+            await Task.Delay(referenceKind == "files" ? 120 : 400, request.Token);
+            if (referenceKind != "files" || Models.GitHub.GitHubReference.FromUrl(token.Query) is not null)
+            {
+                if (owner.GitHub is null) throw new IOException("Connect GitHub from Settings → Integrations.");
+                var repository = await owner.GetGitHubRepositoryAsync(request.Token);
+                var references = await owner.GitHub.SearchReferencesAsync(token.Query, referenceKind == "prs", repository, request.Token);
+                if (request.IsCancellationRequested || !ReferenceEquals(owner, ViewModel)) return;
+                FileReferenceList.ItemsSource = references;
+                FileReferenceList.SelectedIndex = references.Count > 0 ? 0 : -1;
+                ReferenceHint.Text = repository + (references.Count == 0 ? " · No matching PRs or issues." : " · Up to 20 matches · All states");
+                return;
+            }
             var matches = owner.Target is { IsLocal: false } target
                 ? await new Services.Files.TargetFileReader(target, new Services.Projects.TargetCommandRunner()).FindAsync(token.Query, request.Token)
                 : await fileSearch.FindAsync(owner.WorkingDirectory, token.Query, request.Token);
@@ -46,7 +87,17 @@ public sealed partial class ConversationView
             FileReferenceList.SelectedIndex = matches.Count > 0 ? 0 : -1;
         }
         catch (OperationCanceledException) { }
-        catch (Exception) { if (ReferenceEquals(owner, ViewModel)) owner.ReportAttachmentError("Couldn't search project files. Use Browse to choose a file."); }
+        catch (Exception error)
+        {
+            if (!request.IsCancellationRequested && ReferenceEquals(owner, ViewModel))
+                ReferenceHint.Text = error switch
+                {
+                    IOException or UnauthorizedAccessException => error.Message,
+                    System.ComponentModel.Win32Exception => "Couldn't start Git or the execution target. Check its installation and connection.",
+                    System.Net.Http.HttpRequestException => "Couldn't reach GitHub. Check your connection and try again.",
+                    _ => "Reference lookup failed (" + error.GetType().Name + "). Try again."
+                };
+        }
         finally { if (ReferenceEquals(fileSearchLifetime, request)) fileSearchLifetime = null; request.Dispose(); }
     }
 
@@ -79,6 +130,7 @@ public sealed partial class ConversationView
     private void OnFileReferenceClicked(object sender, ItemClickEventArgs args)
     {
         if (args.ClickedItem is FileReference file) InsertFileReference(file.Path);
+        else if (args.ClickedItem is Models.GitHub.GitHubReference reference) InsertGitHubReference(reference);
     }
     private void OnFileReferenceKeyDown(object sender, KeyRoutedEventArgs args)
     {
@@ -88,6 +140,24 @@ public sealed partial class ConversationView
     private void AcceptFileReference()
     {
         if (FileReferenceList.SelectedItem is FileReference file) InsertFileReference(file.Path);
+        else if (FileReferenceList.SelectedItem is Models.GitHub.GitHubReference reference) InsertGitHubReference(reference);
+    }
+    private void InsertGitHubReference(Models.GitHub.GitHubReference reference)
+    {
+        if (fileToken is not { } token || ViewModel is not { } owner) return;
+        try
+        {
+            owner.AttachGitHub(reference);
+            DismissFileReferences();
+            Composer.Text = Composer.Text.Remove(token.Start, token.Length);
+            Composer.Select(token.Start, 0);
+            Composer.Focus(FocusState.Programmatic);
+        }
+        catch (Exception error) { owner.ReportAttachmentError(error.Message); }
+    }
+    private void OnRemoveGitHubReference(object sender, RoutedEventArgs args)
+    {
+        if (sender is FrameworkElement { Tag: Models.GitHub.GitHubReference reference }) ViewModel?.RemoveGitHub(reference);
     }
     private void InsertFileReference(string path, int? selectionStart = null, int selectionLength = 0)
     {

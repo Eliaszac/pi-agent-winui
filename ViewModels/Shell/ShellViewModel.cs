@@ -31,17 +31,27 @@ public sealed class ShellViewModel : ObservableObject
     private bool showHome = true;
     private bool showSettings;
     private bool showLegal;
+    private bool showIntegrations;
+    public bool ShowIntegrations => showIntegrations;
+    public void OpenIntegrations()
+    {
+        OpenSettings();
+        showSettings = false; showIntegrations = true;
+        OnPropertyChanged(nameof(ShowSettings)); OnPropertyChanged(nameof(ShowIntegrations)); OnPropertyChanged(nameof(ShowWorkspace));
+    }
     public bool ShowSettings => showSettings;
     public bool ShowLegal => showLegal;
     public bool ResumeConversationOnStartup { get; set; }
     public bool HasActiveWork => workspaces?.ActiveRunCount > 0 || workspaces?.HasActiveSnippet == true;
     private void CloseSettingsPages()
     {
-        showSettings = showLegal = false;
+        showSettings = showLegal = showIntegrations = false;
+        OnPropertyChanged(nameof(ShowIntegrations));
         OnPropertyChanged(nameof(ShowSettings)); OnPropertyChanged(nameof(ShowLegal));
     }
     public void OpenSettings(bool legal = false)
     {
+        showIntegrations = false; OnPropertyChanged(nameof(ShowIntegrations));
         showHome = showProviders = showExtensions = false;
         showLegal = legal; showSettings = !legal;
         Chat?.SetViewed(false);
@@ -52,7 +62,7 @@ public sealed class ShellViewModel : ObservableObject
     public bool ShowProviders => showProviders;
     public ViewModels.Providers.ProvidersViewModel? Providers { get; set; }
     public bool ShowExtensions => showExtensions;
-    public bool ShowWorkspace => !showExtensions && !showProviders && !showHome && !showSettings && !showLegal;
+    public bool ShowWorkspace => !showExtensions && !showProviders && !showHome && !showSettings && !showLegal && !showIntegrations;
     public ViewModels.Extensions.ExtensionsViewModel Extensions { get; }
     public void OpenExtensions()
     {
@@ -189,6 +199,9 @@ public sealed class ShellViewModel : ObservableObject
     /// <summary>Gets whether a saved draft is selected.</summary>
     public bool HasConversation => selectedConversation is not null;
     public ConversationViewModel? Chat => selectedConversation?.Workspace;
+    public ConversationItemViewModel? ComputerUseConversation => Projects.SelectMany(project => project.Conversations)
+        .FirstOrDefault(conversation => conversation.Workspace?.IsComputerUseActive == true);
+    public bool HasComputerUse => ComputerUseConversation is not null;
     public bool ShowWelcome => HasLoaded && !HasConversation;
 
     /// <summary>Creates the shell without performing disk I/O.</summary>
@@ -199,6 +212,11 @@ public sealed class ShellViewModel : ObservableObject
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         Extensions = extensions ?? new();
         this.workspaces = workspaces;
+        if (workspaces is not null) workspaces.ComputerUseChanged += () =>
+        {
+            OnPropertyChanged(nameof(ComputerUseConversation));
+            OnPropertyChanged(nameof(HasComputerUse));
+        };
         this.sessionPaths = sessionPaths ?? new(new ProjectStorageOptions());
         this.dataCleanup = dataCleanup;
         if (workspaces is not null) workspaces.CopyRequested = DuplicateConversationAsync;
@@ -224,6 +242,7 @@ public sealed class ShellViewModel : ObservableObject
             var keepHome = ShowHome;
             var keepSettings = ShowSettings;
             var keepLegal = ShowLegal;
+            var keepIntegrations = ShowIntegrations;
             var conversationId = selectedConversation?.Conversation.Id;
             var loadedProjects = new ObservableCollection<ProjectItemViewModel>();
             foreach (var project in saved.Reverse())
@@ -245,6 +264,7 @@ public sealed class ShellViewModel : ObservableObject
             }
             SetSelection(selected, conversation);
             if (keepHome) OpenHome();
+            else if (keepIntegrations) OpenIntegrations();
             else if (keepSettings || keepLegal) OpenSettings(keepLegal);
             OnPropertyChanged(nameof(Projects));
             hasLoaded = true;
@@ -350,6 +370,8 @@ public sealed class ShellViewModel : ObservableObject
         for (var number = 2; project.Conversations.Any(item => item.Title == title); number++) title = baseTitle + " " + number;
         var saved = new ConversationDraft { Id = Guid.NewGuid(), TargetId = original.Target?.Id ?? original.Conversation.TargetId ?? project.Project.Id, Title = title, CreatedAt = DateTimeOffset.UtcNow, IsTitleManual = true };
         await source.CopySessionAsync(sessionPaths.GetSessionFile(project.Project.Id, saved.Id), saved.Title);
+        if (source.Artifacts is { } artifacts)
+            await artifacts.Store.CopyToAsync(new Services.Conversations.ArtifactStore(Services.Conversations.ArtifactStore.ForSession(sessionPaths.GetSessionFile(project.Project.Id, saved.Id))));
         // Publish to the catalog only after Pi has produced an independent session file.
         // If registration fails, retain that file for recovery instead of risking deletion after an uncertain commit.
         await Task.Run(() => repository.AddConversationCopyAsync(project.Project.Id, original.Conversation.Id, saved));
@@ -475,6 +497,12 @@ public sealed class ShellViewModel : ObservableObject
     });
 
     private Task? cleanupTask;
+    public async Task<string> RetryCleanupAsync()
+    {
+        ErrorMessage = "";
+        await CleanupDeletedDataAsync();
+        return HasError ? ErrorMessage : "Pending conversation cleanup finished.";
+    }
     private Task CleanupDeletedDataAsync() => cleanupTask is { IsCompleted: false } ? cleanupTask : cleanupTask = RunDataCleanupAsync();
     private async Task RunDataCleanupAsync()
     {

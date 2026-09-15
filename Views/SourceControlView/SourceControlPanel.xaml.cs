@@ -14,7 +14,40 @@ public sealed partial class SourceControlPanel : UserControl
     private async void OnStageAll(object sender, RoutedEventArgs args) { if (Model is { } model) await model.StageAsync(null); }
     private async void OnUnstageAll(object sender, RoutedEventArgs args) { if (Model is { } model) await model.UnstageAsync(null); }
     private async void OnCommit(object sender, RoutedEventArgs args) { if (Model is { } model && model.CanCommit) await model.CommitAsync(); }
-    private async void OnPush(object sender, RoutedEventArgs args) { if (Model is { } model && model.CanPush) await model.PushAsync(); }
+    private async void OnPush(object sender, RoutedEventArgs args)
+    {
+        if (dialogOpen || Model is not { CanPush: true } model) return;
+        dialogOpen = true;
+        try
+        {
+            var remote = string.IsNullOrWhiteSpace(model.SelectedRemote) ? "the selected remote" : model.SelectedRemote;
+            var content = new StackPanel { Spacing = 10, MaxWidth = 440 };
+            content.Children.Add(new TextBlock
+            {
+                Text = $"Push branch '{model.BranchName}' to {remote}?",
+                TextWrapping = TextWrapping.Wrap,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            });
+            content.Children.Add(new TextBlock
+            {
+                Text = "This sends committed changes from this repository to the remote. It does not commit unstaged or staged local changes.",
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+            });
+            var dialog = new Controls.ActionContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = "Push changes",
+                Content = content,
+                PrimaryButtonText = "Push",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close
+            };
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary && IsLoaded) await model.PushAsync();
+        }
+        catch (Exception) { model.ReportError("Couldn't open the push confirmation. Close any other dialog and try again."); }
+        finally { dialogOpen = false; }
+    }
     private async void OnFetch(object sender, RoutedEventArgs args) { if (Model is { } model) await model.FetchAsync(); }
     private async void OnPull(object sender, RoutedEventArgs args) { if (Model is { } model) await model.PullAsync(); }
     private async void OnChangeAction(object sender, RoutedEventArgs args)

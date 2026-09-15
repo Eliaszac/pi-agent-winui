@@ -7,7 +7,8 @@ using PiAgentGui.Utilities;
 namespace PiAgentGui.Services.Conversations;
 
 /// <summary>Records deletion intent and retries unavailable target cleanup on the next catalog load.</summary>
-public sealed class ConversationDataCleanup(PiSessionPaths paths, IProjectRepository projects, Func<ExecutionTarget, string, Task<int>> forget)
+public sealed class ConversationDataCleanup(PiSessionPaths paths, IProjectRepository projects, Func<ExecutionTarget, string, Task<int>> forget,
+    Home.SessionUsageReader? usage = null)
 {
     public async Task ScheduleAsync(Guid project, Guid conversation, ExecutionTarget target)
     {
@@ -42,10 +43,15 @@ public sealed class ConversationDataCleanup(PiSessionPaths paths, IProjectReposi
                 {
                     if (WorkspaceActivityLease.PendingRecovery(session) is not null)
                         throw new IOException("Inspect pending checkpoint recovery before deleting its session data.");
+                    if (usage is not null) await usage.PreserveAsync(request.ProjectId, request.ConversationId);
+                    await new ArtifactStore(ArtifactStore.ForSession(session)).DeleteAllAsync();
                     DeleteSessionFile(session);
                     DeleteSessionFile(session + ".settings.json");
                 }
                 await forget(request.Target, session);
+                var artifactStore = new ArtifactStore(ArtifactStore.ForSession(session));
+                await new ArtifactTargetStorage(artifactStore, request.Target).DeleteAsync(null, CancellationToken.None);
+                DeleteSessionFile(artifactStore.DirectoryPath + ".remote");
                 File.Delete(file);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or System.ComponentModel.Win32Exception)

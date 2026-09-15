@@ -8,6 +8,33 @@ namespace PiAgentGui.Services.GitHub;
 
 public sealed class GitHubApi(HttpClient http)
 {
+    internal async Task<JsonDocument> WriteAsync(HttpMethod method, string path, System.Text.Json.Nodes.JsonObject payload, string token, CancellationToken cancellation)
+    {
+        using var request = new HttpRequestMessage(method, "https://api.github.com/" + path);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.UserAgent.ParseAdd("PiAgentGui/1.0");
+        request.Headers.Accept.ParseAdd("application/vnd.github+json");
+        request.Headers.Add("X-GitHub-Api-Version", "2026-03-10");
+        request.Content = new StringContent(payload.ToJsonString(), System.Text.Encoding.UTF8, "application/json");
+        try
+        {
+            using var response = await http.SendAsync(request, cancellation);
+            if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)
+                throw new IOException("GitHub refused this write. Check your login and approve Read and write repository permissions for Issues and Pull requests in the GitHub App installation.");
+            if ((int)response.StatusCode >= 500) throw new IOException("GitHub could not confirm the write. Check the item on GitHub before requesting another attempt; it may already have succeeded.");
+            if (!response.IsSuccessStatusCode) throw new IOException($"GitHub rejected the write (HTTP {(int)response.StatusCode}). Check repository access and the proposed content before requesting approval again.");
+            return JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellation));
+        }
+        catch (Exception error) when (error is HttpRequestException or OperationCanceledException or JsonException)
+        {
+            throw new IOException("GitHub write outcome is unknown. Check the item on GitHub before trying again; the write may already have succeeded. No automatic retry was made.", error);
+        }
+    }
+    public async Task<string> GetLoginAsync(string token, CancellationToken cancellationToken)
+    {
+        using var response = await GetAsync("user", token, cancellationToken);
+        return response.RootElement.GetProperty("login").GetString() ?? throw new IOException("GitHub returned no account name.");
+    }
     public async Task<JsonDocument> PostLoginAsync(string endpoint, Dictionary<string, string> fields, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://github.com/login/" + endpoint);
@@ -34,13 +61,18 @@ public sealed class GitHubApi(HttpClient http)
                 if (head.GetProperty("ref").GetString() != branch.Branch ||
                     !string.Equals(head.GetProperty("repo").GetProperty("full_name").GetString(), branch.FullName, StringComparison.OrdinalIgnoreCase)) continue;
                 var number = pull.GetProperty("number").GetInt32();
-                if (number > 0) return new(number, pull.GetProperty("title").GetString() ?? "Pull request", new Uri($"https://github.com/{target}/pull/{number}"));
+                if (number > 0) return new(number, pull.GetProperty("title").GetString() ?? "Pull request", new Uri($"https://github.com/{target}/pull/{number}"),
+                    pull.TryGetProperty("user", out var user) && user.ValueKind == JsonValueKind.Object
+                        && user.TryGetProperty("login", out var login) && login.ValueKind == JsonValueKind.String ? login.GetString() : null,
+                    pull.TryGetProperty("draft", out var draft) && draft.ValueKind is JsonValueKind.True or JsonValueKind.False ? draft.GetBoolean() : null,
+                    pull.TryGetProperty("created_at", out var created) && created.ValueKind == JsonValueKind.String && created.TryGetDateTimeOffset(out var createdAt) ? createdAt : null,
+                    pull.TryGetProperty("updated_at", out var updated) && updated.ValueKind == JsonValueKind.String && updated.TryGetDateTimeOffset(out var updatedAt) ? updatedAt : null);
             }
         }
         return null;
     }
 
-    private async Task<JsonDocument> GetAsync(string path, string token, CancellationToken cancellationToken)
+    internal async Task<JsonDocument> GetAsync(string path, string token, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/" + path);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -52,7 +84,7 @@ public sealed class GitHubApi(HttpClient http)
         if (response.StatusCode == HttpStatusCode.NotFound) throw new IOException("GitHub repository unavailable. Install the GitHub App on this repository and check your access.");
         if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
             throw new IOException("GitHub access is restricted or rate-limited. Check the app's repository permissions or retry later.");
-        if (!response.IsSuccessStatusCode) throw new IOException("Couldn't check pull requests on GitHub. Please try again.");
+        if (!response.IsSuccessStatusCode) throw new IOException("Couldn't read GitHub data. Check your query, repository access and app permissions.");
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
     }
 }

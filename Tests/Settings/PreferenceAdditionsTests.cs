@@ -23,10 +23,35 @@ public sealed class PreferenceAdditionsTests
         var store = new AppSettingsStore(path);
         await store.LoadAsync();
         Assert.AreEqual(new AppPreferences(ResumeConversation: true), store.Current);
-        var expected = store.Current with { Theme = 2, ConversationTextSize = 19, CodeTextSize = 16, ControlEnterToSend = true };
+        var expected = store.Current with { Theme = 2, ConversationTextSize = 19, CodeTextSize = 16, ControlEnterToSend = true,
+            TerminalTextSize = 18, TerminalScrollback = 10000, CompletionAudio = false };
         await store.SaveAsync(expected);
         var reload = new AppSettingsStore(path); await reload.LoadAsync();
         Assert.AreEqual(expected, reload.Current);
+    }
+
+    [TestMethod]
+    public async Task TerminalSettingsAreBoundedAndResetWithoutChangingAudio()
+    {
+        var store = new AppSettingsStore(Path.Combine(directory, "settings.json"));
+        var model = new PiAgentGui.ViewModels.Settings.SettingsViewModel(store);
+        await model.SetCompletionAudioAsync(false);
+        await model.SetTerminalSizeAsync(double.NaN);
+        Assert.AreEqual(12d, model.TerminalTextSize);
+        await model.SetTerminalSizeAsync(100);
+        Assert.AreEqual(24d, model.TerminalTextSize);
+        await model.SetTerminalScrollbackAsync(-1);
+        Assert.AreEqual(0, model.TerminalScrollback);
+        await model.SetTerminalScrollbackAsync(int.MaxValue);
+        Assert.AreEqual(50000, model.TerminalScrollback);
+        await model.ResetTerminalAsync();
+        Assert.AreEqual(12d, model.TerminalTextSize);
+        Assert.AreEqual(5000, model.TerminalScrollback);
+        Assert.IsFalse(model.CompletionAudio);
+        model.Query = "scrollback";
+        Assert.IsTrue(model.Terminal.Visible);
+        model.Query = "sound";
+        Assert.IsTrue(model.Conversation.Visible);
     }
 
     [TestMethod]

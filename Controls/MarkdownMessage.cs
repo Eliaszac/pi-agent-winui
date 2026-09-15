@@ -7,6 +7,11 @@ namespace PiAgentGui.Controls;
 /// <summary>Coalesces streamed Markdown updates into native text controls.</summary>
 public sealed class MarkdownMessage : UserControl
 {
+    public static readonly DependencyProperty FileLinksProperty = DependencyProperty.Register(nameof(FileLinks), typeof(Services.Files.WorkspaceFileLinks),
+        typeof(MarkdownMessage), new PropertyMetadata(null, (sender, _) => ((MarkdownMessage)sender).ResetActions()));
+    public Services.Files.WorkspaceFileLinks? FileLinks
+    { get => (Services.Files.WorkspaceFileLinks?)GetValue(FileLinksProperty); set => SetValue(FileLinksProperty, value); }
+
     public static readonly DependencyProperty SnippetFactoryProperty = DependencyProperty.Register(nameof(SnippetFactory), typeof(Func<string, string, string, ViewModels.Conversations.SnippetViewModel>),
         typeof(MarkdownMessage), new PropertyMetadata(null, (sender, _) => ((MarkdownMessage)sender).ResetActions()));
     public Func<string, string, string, ViewModels.Conversations.SnippetViewModel>? SnippetFactory
@@ -23,6 +28,10 @@ public sealed class MarkdownMessage : UserControl
     public bool ResponsiveWidth { get => (bool)GetValue(ResponsiveWidthProperty); set => SetValue(ResponsiveWidthProperty, value); }
     private readonly DispatcherQueueTimer timer;
     private string? rendered;
+    private bool renderQueued;
+    private double renderedBodySize;
+    private double renderedCodeSize;
+    private int renderedWeight;
     private readonly StackPanel panel = new() { Spacing = 16, MaxWidth = 960, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly List<string> blockSources = [];
     public string Text { get => (string)GetValue(TextProperty); set => SetValue(TextProperty, value); }
@@ -34,8 +43,15 @@ public sealed class MarkdownMessage : UserControl
         timer = DispatcherQueue.CreateTimer();
         timer.Interval = TimeSpan.FromMilliseconds(100);
         timer.IsRepeating = false;
-        timer.Tick += (_, _) => Render();
-        Loaded += (_, _) => { ReadingPreferences.TypographyChanged += OnReadingChanged; OnReadingChanged(null, EventArgs.Empty); Render(); };
+        timer.Tick += (_, _) => QueueRender();
+        Loaded += (_, _) =>
+        {
+            ReadingPreferences.TypographyChanged += OnReadingChanged;
+            if (renderedBodySize != ReadingPreferences.Body || renderedCodeSize != ReadingPreferences.Code
+                || renderedWeight != ReadingPreferences.Current.ConversationTextWeight)
+                OnReadingChanged(null, EventArgs.Empty);
+            QueueRender();
+        };
         Unloaded += (_, _) => { timer.Stop(); ReadingPreferences.TypographyChanged -= OnReadingChanged; };
         ActualThemeChanged += (_, _) => { rendered = null; blockSources.Clear(); panel.Children.Clear(); Render(); };
     }
@@ -43,6 +59,17 @@ public sealed class MarkdownMessage : UserControl
     private void OnReadingChanged(object? sender, EventArgs args) => ResetActions();
 
     private void Schedule() { if (IsLoaded && !timer.IsRunning) timer.Start(); }
+
+    private void QueueRender()
+    {
+        if (renderQueued || !IsLoaded) return;
+        renderQueued = true;
+        if (!DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+        {
+            renderQueued = false;
+            Render();
+        })) renderQueued = false;
+    }
 
     protected override Windows.Foundation.Size MeasureOverride(Windows.Foundation.Size availableSize)
     {
@@ -68,7 +95,7 @@ public sealed class MarkdownMessage : UserControl
                 blockSources[index] = signature;
                 continue;
             }
-            var element = MarkdownRenderer.RenderBlock(block, SnippetsEnabled ? SnippetFactory : null);
+            var element = MarkdownRenderer.RenderBlock(block, SnippetsEnabled ? SnippetFactory : null, files: FileLinks);
             if (index < panel.Children.Count) { panel.Children[index] = element; blockSources[index] = signature; }
             else { panel.Children.Add(element); blockSources.Add(signature); }
         }
@@ -78,6 +105,9 @@ public sealed class MarkdownMessage : UserControl
             blockSources.RemoveAt(blockSources.Count - 1);
         }
         rendered = source;
+        renderedBodySize = ReadingPreferences.Body;
+        renderedCodeSize = ReadingPreferences.Code;
+        renderedWeight = ReadingPreferences.Current.ConversationTextWeight;
         ContentRendered?.Invoke(this, EventArgs.Empty);
     }
 }

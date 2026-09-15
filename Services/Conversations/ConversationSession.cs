@@ -11,6 +11,7 @@ namespace PiAgentGui.Services.Conversations;
 public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiRpcClient> clientFactory, Func<bool>? permissionConfigured = null) : IConversationSession
 {
     private volatile bool targetVerified;
+    public Func<CancellationToken, Task<IReadOnlyList<Models.Home.UsageSample>>>? ReadDefaultHistory { get; init; }
     public Func<JsonElement, Task>? ResearchRequested { get; init; }
     private async Task HandleResearchAsync(PiRpcClient current, JsonElement packet)
     {
@@ -193,10 +194,16 @@ public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiR
             }
             var savedSettings = await settingsStore.ReadAsync(cancellationToken).ConfigureAwait(false);
             confirmedSettings = savedSettings ?? new();
+            IReadOnlyList<Models.Home.UsageSample> defaultHistory = isNewSession && savedSettings is null && ReadDefaultHistory is not null
+                ? await ReadDefaultHistory(cancellationToken).ConfigureAwait(false) : [];
+            IReadOnlyList<PiModel> availableModels = [];
             thinking = new(Publish);
             await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
             await next.RequestAsync("get_available_models", cancellationToken: cancellationToken, applyResponse: packet =>
-                Publish(new() { AvailableModels = PiModelParser.ParseList(PiJson.Field(PiJson.Field(packet, "data"), "models")) })).ConfigureAwait(false);
+            {
+                availableModels = PiModelParser.ParseList(PiJson.Field(PiJson.Field(packet, "data"), "models"));
+                Publish(new() { AvailableModels = availableModels });
+            }).ConfigureAwait(false);
             permissions = new(Publish, permissionConfigured);
             await permissions.DiscoverAsync(next, cancellationToken).ConfigureAwait(false);
             if (permissions.DefaultApplied)
@@ -207,18 +214,31 @@ public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiR
             // Approval profiles can change both model and effort. Restore explicit choices last.
             if (savedSettings is { Provider: { Length: > 0 } provider, Model: { Length: > 0 } model })
                 await next.RequestAsync("set_model", new JsonObject { ["provider"] = provider, ["modelId"] = model }, cancellationToken).ConfigureAwait(false);
-            if (savedSettings is not null)
+            else if (MostUsedSelectors.Model(defaultHistory, availableModels) is { } preferred)
+            {
+                try { await next.RequestAsync("set_model", new JsonObject { ["provider"] = preferred.Provider, ["modelId"] = preferred.Id }, cancellationToken).ConfigureAwait(false); }
+                catch (PiCommandException) { /* A removed or rejected automatic default must not block startup. */ }
+                await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
+            }
+            if (savedSettings is not null || defaultHistory.Count > 0)
                 await thinking.RefreshAsync(next, cancellationToken).ConfigureAwait(false);
+            var preferredEffort = MostUsedSelectors.Effort(defaultHistory, confirmedSettings.Provider, confirmedSettings.Model, thinking.Levels);
             if (savedSettings?.Effort is { } effort && thinking.Levels.Contains(effort))
                 await thinking.SetAsync(next, effort, cancellationToken).ConfigureAwait(false);
+            else if (preferredEffort is not null)
+            {
+                try { await thinking.SetAsync(next, preferredEffort, cancellationToken).ConfigureAwait(false); }
+                catch (PiCommandException) { /* Keep Pi's effort when its capabilities changed during startup. */ }
+            }
             else if (isNewSession && savedSettings is null && thinking.Levels.Contains("low"))
             {
                 await thinking.SetAsync(next, "low", cancellationToken).ConfigureAwait(false);
                 await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
             }
             thinkingInitialized = true;
-            if (savedSettings is not null)
+            if (savedSettings is not null || defaultHistory.Count > 0)
                 await next.RequestAsync("get_state", cancellationToken: cancellationToken, applyResponse: ApplyState).ConfigureAwait(false);
+            if (defaultHistory.Count > 0) await settingsStore.SaveAsync(confirmedSettings, cancellationToken).ConfigureAwait(false);
             await next.RequestAsync("get_messages", cancellationToken: cancellationToken, applyResponse: packet =>
             {
                 lock (stateGate)
@@ -498,6 +518,21 @@ public sealed partial class ConversationSession(PiLaunchRequest launch, Func<PiR
 
     private void HandleExtension(JsonElement packet)
     {
+        if (PiJson.Text(packet, "method") == "input" && PiJson.Text(packet, "title") == "pi-gui-github-write-v1")
+        {
+            Publish(new() { GitHubWriteRequest = packet.Clone() });
+            return;
+        }
+        if (PiJson.Text(packet, "method") == "input" && PiJson.Text(packet, "title") == "pi-gui-artifacts-v1")
+        {
+            Publish(new() { ArtifactRequest = packet.Clone() });
+            return;
+        }
+        if (PiJson.Text(packet, "method") == "input" && PiJson.Text(packet, "title") == "pi-gui-browser-v1")
+        {
+            Publish(new() { BrowserRequest = packet.Clone() });
+            return;
+        }
         if (PiJson.Text(packet, "method") == "setStatus" && PiJson.Text(packet, "statusKey") == "pi-gui-checkpoints-v1")
         {
             HandleCheckpointPacket(PiJson.Text(packet, "statusText"));

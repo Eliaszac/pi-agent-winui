@@ -39,7 +39,7 @@ public sealed partial class MainPage : Page
     }
     private readonly DispatcherTimer sourceControlTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer processesTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private double terminalWidth = 400;
+    private double terminalWidth = 460;
     private readonly Configuration.GitHubOptions githubOptions;
     private readonly CancellationToken githubCancellation;
     private readonly DispatcherTimer githubTimer = new() { Interval = TimeSpan.FromSeconds(15) };
@@ -211,6 +211,13 @@ public sealed partial class MainPage : Page
         catch (Exception) { GitHub.ReportError("Couldn't open GitHub sign-in. Please try again."); }
         finally { dialogOpen = false; }
         await RefreshGitHubAsync(true);
+        await GitHub.RefreshAccountAsync(githubCancellation);
+    }
+
+    private void OnConversationToolTipOpened(object sender, RoutedEventArgs args)
+    {
+        if (sender is ToolTip { Tag: ConversationItemViewModel conversation })
+            conversation.RefreshPullRequestDetails();
     }
 
     private async void OnOpenPullRequestClicked(object sender, RoutedEventArgs args)
@@ -267,6 +274,10 @@ public sealed partial class MainPage : Page
     public void CloseTerminalDisplays()
     {
         closingSidePanels = true;
+        foreach (var surface in browserSurfaces.Values) surface.Dispose();
+        browserSurfaces.Clear(); BrowserHost.Children.Clear();
+        foreach (var tunnel in browserTunnels.Values) tunnel.Dispose();
+        browserTunnels.Clear();
         sourceControlTimer.Stop(); SourceControl.Dispose();
         processesTimer.Stop(); Processes.IsOpen = false;
         dockerTimer.Stop(); Docker.Dispose();
@@ -422,20 +433,17 @@ public sealed partial class MainPage : Page
         switch (args.Key)
         {
             case VirtualKey.Left:
-                if (sidebar.ExpandedWidth <= SidebarLayoutState.MinimumWidth) sidebar.IsOpen = false;
+                if (sidebar.ExpandedWidth <= SidebarLayoutState.MinimumWidth) sidebar.SetUserOpen(false);
                 else if (sidebar.IsOpen) sidebar.ResizeTo(sidebar.ExpandedWidth - 20);
                 break;
             case VirtualKey.Right:
-                if (!sidebar.IsOpen) sidebar.IsOpen = true;
+                if (!sidebar.IsOpen) sidebar.SetUserOpen(true);
                 else sidebar.ResizeTo(sidebar.ExpandedWidth + 20);
                 break;
-            case VirtualKey.Home: sidebar.IsOpen = false; break;
-            case VirtualKey.End: sidebar.IsOpen = true; break;
+            case VirtualKey.Home: sidebar.SetUserOpen(false); break;
+            case VirtualKey.End: sidebar.SetUserOpen(true); break;
             default: return;
         }
         args.Handled = true;
     }
 }
-
-
-

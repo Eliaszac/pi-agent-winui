@@ -64,7 +64,7 @@ public sealed class InstalledExtensionDiscovery
             using var document = JsonDocument.Parse(File.ReadAllText(manifest));
             var metadata = document.RootElement;
             var name = PiJson.Text(metadata, "name");
-            if (name is "@georgedong32/permission-modes" or "pi-auto-session-name" or "pi-mcp-adapter" or "@heyhuynhgiabuu/pi-search" or "lsp-pi" or "pi-browser") return;
+            if (name is "@georgedong32/permission-modes" or "pi-auto-session-name" or "pi-mcp-adapter" or "@heyhuynhgiabuu/pi-search" or "lsp-pi" or "pi-browser" or ComputerUseSupport.Package) return;
             var declared = PiJson.Field(PiJson.Field(metadata, "pi"), "extensions");
             if (!(declared.ValueKind == JsonValueKind.Array && declared.GetArrayLength() > 0) && !hasFolder && !(direct && hasEntry)) return;
             var description = PiJson.Text(metadata, "description");

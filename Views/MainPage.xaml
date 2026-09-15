@@ -20,10 +20,10 @@
                 <controls:ActionToggleButton Command="{x:Bind SelectCommand}" IsChecked="{x:Bind IsSelected, Mode=OneWay}"
                     Visibility="{x:Bind Rename.IsNotEditing, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                    Background="Transparent" BorderThickness="0" Padding="11,7" Margin="0,1" MinHeight="34" FontSize="13.3"
+                    Background="Transparent" BorderThickness="0" Padding="11,4" Margin="0" MinHeight="28" FontSize="13.3"
                     AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}" AutomationProperties.HelpText="{x:Bind HoverDetails, Mode=OneWay}">
                     <ToolTipService.ToolTip>
-                        <ToolTip Placement="Right" Padding="20" MaxWidth="392" CornerRadius="8">
+                        <ToolTip Placement="Right" Padding="20" MaxWidth="392" CornerRadius="8" Tag="{x:Bind}" Opened="OnConversationToolTipOpened">
                             <StackPanel Width="328" Spacing="16">
                                 <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                                 <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -42,8 +42,12 @@
                                 <StackPanel Spacing="12" Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
                                     <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                     <StackPanel Spacing="4">
-                                        <TextBlock Text="{x:Bind PullRequestLabel, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="{x:Bind PullRequestHeading, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         <TextBlock Text="{x:Bind PullRequestTitle, Mode=OneWay}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind PullRequestOpened, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                                            Visibility="{x:Bind HasPullRequestOpened, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
+                                        <TextBlock Text="{x:Bind PullRequestUpdated, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                                            Visibility="{x:Bind HasPullRequestUpdated, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
@@ -76,14 +80,15 @@
                             <controls:ActionMenuFlyoutItem Text="Delete conversation" Click="OnDeleteConversationClicked" Tag="{x:Bind}" />
                         </MenuFlyout>
                     </controls:ActionToggleButton.ContextFlyout>
-                    <Grid ColumnSpacing="8">
+                    <Grid ColumnSpacing="6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="16" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <FontIcon Glyph="{x:Bind TargetGlyph}" FontSize="13.3" />
-                        <StackPanel Grid.Column="1" Spacing="3">
+                        <FontIcon Glyph="{x:Bind TargetGlyph}" FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" Spacing="1">
                             <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="13.3" TextTrimming="CharacterEllipsis" />
                             <StackPanel Orientation="Horizontal" Spacing="5" AutomationProperties.Name="{x:Bind PullRequestLabel, Mode=OneWay}"
                                 Visibility="{x:Bind HasPullRequest, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}">
@@ -158,7 +163,34 @@
         </DataTemplate>
         <DataTemplate x:Key="SidebarEmptyTemplate"><TextBlock Text="No conversations yet" Margin="31,8,4,8" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></DataTemplate>
         <controls:SidebarTemplateSelector x:Key="SidebarTemplates" ProjectTemplate="{StaticResource SidebarProjectTemplate}" ConversationTemplate="{StaticResource ConversationTemplate}" SettledTemplate="{StaticResource SidebarSettledTemplate}" EmptyTemplate="{StaticResource SidebarEmptyTemplate}"/>    </Page.Resources>
-    <SplitView x:Name="WorkspaceSplit"
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Padding="16,8" Background="{ThemeResource LayerFillColorDefaultBrush}"
+            Visibility="{x:Bind ViewModel.HasComputerUse, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemFillColorCautionBrush}"/>
+                    <TextBlock Text="{x:Bind ViewModel.ComputerUseConversation.Workspace.ComputerUseLabel, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="1" HorizontalAlignment="Left" Background="Transparent" BorderThickness="0" Padding="8,4" MinWidth="0"
+                    Command="{x:Bind ViewModel.ComputerUseConversation.SelectCommand, Mode=OneWay}"
+                    ToolTipService.ToolTip="Go to the conversation using your computer" AutomationProperties.Name="Open computer-use conversation">
+                    <TextBlock Text="{x:Bind ViewModel.ComputerUseConversation.Title, Mode=OneWay}" FontSize="12" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </Button>
+                <Button Grid.Column="2" Padding="12,4" MinHeight="30" ToolTipService.ToolTip="Cancel the run. An in-flight Windows action batch may finish."
+                    Command="{x:Bind ViewModel.ComputerUseConversation.Workspace.StopCommand, Mode=OneWay}"
+                    IsEnabled="{x:Bind ViewModel.ComputerUseConversation.Workspace.CanStop, Mode=OneWay}"
+                    AutomationProperties.Name="Stop computer use">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <FontIcon Glyph="&#xE71A;" FontSize="11"/>
+                        <TextBlock Text="Stop" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+    <SplitView x:Name="WorkspaceSplit" Grid.Row="1"
         IsPaneOpen="{x:Bind ViewModel.Sidebar.IsOpen, Mode=TwoWay}"
         OpenPaneLength="{x:Bind ViewModel.Sidebar.ExpandedWidth, Mode=OneWay}"
         CompactPaneLength="48" DisplayMode="CompactInline"
@@ -224,14 +256,22 @@
                     </ListView>
                     <StackPanel Grid.Row="2" Margin="12,8,4,12" Spacing="4">
                     <views:GettingStartedCard x:Name="GettingStartedPane"/>
-                    <controls:ActionButton Click="OnProvidersClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE77B;" FontSize="15" /><TextBlock Text="Providers" FontSize="13.3" /></StackPanel>
-                    </controls:ActionButton>
-                    <controls:ActionButton Click="OnExtensionsClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xEA86;" FontSize="15" /><TextBlock Text="Extensions" FontSize="13.3" /></StackPanel>
-                    </controls:ActionButton>
-                    <controls:ActionButton Click="OnSettingsClicked" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="30" Padding="11,6" FontSize="13.3">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE713;" FontSize="15"/><TextBlock Text="Settings" FontSize="13.3"/></StackPanel>
+                    <controls:ActionButton HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="30" Padding="11,6" FontSize="13.3" AutomationProperties.Name="Settings menu">
+                        <controls:ActionButton.Flyout>
+                            <MenuFlyout Placement="Top">
+                                <controls:ActionMenuFlyoutItem Text="Providers" Click="OnProvidersClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Extensions" Click="OnExtensionsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xEA86;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Integrations" Click="OnIntegrationsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE71B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="General settings" Click="OnSettingsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                            </MenuFlyout>
+                        </controls:ActionButton.Flyout>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE713;" FontSize="15"/>
+                            <TextBlock Grid.Column="1" Text="Settings" FontSize="13.3"/>
+                            <FontIcon Grid.Column="2" Glyph="&#xE70E;" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </Grid>
                     </controls:ActionButton>
                     </StackPanel>
                 </Grid>
@@ -261,13 +301,16 @@
                         AutomationProperties.Name="Provider setup" ToolTipService.ToolTip="{x:Bind GettingStarted.ProviderMessage, Mode=OneWay}">
                         <FontIcon Glyph="&#xE946;" FontSize="16"/>
                     </controls:ActionButton>
-                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnProvidersClicked" AutomationProperties.Name="Providers" ToolTipService.ToolTip="Providers">
-                        <FontIcon Glyph="&#xE77B;" FontSize="16" />
-                    </controls:ActionButton>
-                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnExtensionsClicked" AutomationProperties.Name="Extensions" ToolTipService.ToolTip="Extensions">
-                        <FontIcon Glyph="&#xEA86;" FontSize="16" />
-                    </controls:ActionButton>
-                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" Click="OnSettingsClicked" AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
+                    <controls:ActionButton Style="{StaticResource CompactSidebarIconStyle}" HorizontalAlignment="Center" AutomationProperties.Name="Settings menu" ToolTipService.ToolTip="Settings">
+                        <controls:ActionButton.Flyout>
+                            <MenuFlyout Placement="Top">
+                                <controls:ActionMenuFlyoutItem Text="Providers" Click="OnProvidersClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Extensions" Click="OnExtensionsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xEA86;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Integrations" Click="OnIntegrationsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE71B;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="General settings" Click="OnSettingsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                            </MenuFlyout>
+                        </controls:ActionButton.Flyout>
                         <FontIcon Glyph="&#xE713;" FontSize="16"/>
                     </controls:ActionButton>
                     </StackPanel>
@@ -281,6 +324,7 @@
         </SplitView.Pane>
         <Grid Padding="24,16">
         <views:HomeView x:Name="HomePane" Visibility="{x:Bind ViewModel.ShowHome, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
+        <views:IntegrationsView x:Name="IntegrationsPane" Visibility="{x:Bind ViewModel.ShowIntegrations, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
         <views:SettingsView x:Name="SettingsPane" Visibility="{x:Bind ViewModel.ShowSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
         <views:LegalView x:Name="LegalPane" Visibility="{x:Bind ViewModel.ShowLegal, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"/>
         <views:ProvidersView DataContext="{x:Bind ViewModel.Providers}"
@@ -363,6 +407,10 @@
                                     <controls:ActionMenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xE756;" />
                                     </controls:ActionMenuFlyoutItem.Icon>
+                                </controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Artifacts" Click="OnArtifactsClicked"><controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Browser" Click="OnBrowserClicked">
+                                    <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;"/></controls:ActionMenuFlyoutItem.Icon>
                                 </controls:ActionMenuFlyoutItem>
                                 <controls:ActionMenuFlyoutItem Text="File Explorer" Click="OnFilesClicked">
                                     <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B7;"/></controls:ActionMenuFlyoutItem.Icon>
@@ -494,6 +542,8 @@
                             </DataTemplate>
                         </TabView.TabItemTemplate>
                     </TabView>
+                    <Grid x:Name="BrowserHost" Grid.Row="1" Visibility="Collapsed"/>
+                    <views:ArtifactsPanel x:Name="ArtifactsPane" Grid.Row="1" Visibility="Collapsed"/>
                     <StackPanel x:Name="PanelLauncher" Grid.Row="1" Spacing="8" Margin="24" VerticalAlignment="Center"/>                <views:TerminalPanel x:Name="TerminalPane" Grid.Row="1"
                     Visibility="{x:Bind Terminals.IsOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}" />
                 <views:ResearchPanel x:Name="ResearchPane" Grid.Row="1"
@@ -512,4 +562,5 @@
         </Grid>
         </Grid>
     </SplitView>
+    </Grid>
 </Page>

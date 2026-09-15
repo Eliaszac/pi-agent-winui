@@ -8,8 +8,8 @@
     <Grid x:Name="Body" RowSpacing="16">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <StackPanel Spacing="6">
-            <TextBlock Text="Connect your tools to Pi." FontSize="14" TextWrapping="Wrap"/>
-            <TextBlock Text="Choose an integration to review its configuration. Authentication may be required after adding it."
+            <TextBlock Text="Connect your Obsidian vault to Pi." FontSize="14" TextWrapping="Wrap"/>
+            <TextBlock Text="Choose a vault folder to set up the local MCP server. No sign-in or API key required."
                 FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">

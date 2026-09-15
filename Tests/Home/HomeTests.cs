@@ -35,6 +35,22 @@ public sealed class HomeTests
     public void Cleanup() { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
 
     [TestMethod]
+    public async Task UsageReaderCarriesEffortMetadataAndRefreshesAfterNewResponses()
+    {
+        var conversation = Conversation("Default learning"); var project = Project(conversation);
+        var prefix = """{"type":"thinking_level_change","id":"effort","parentId":null,"thinkingLevel":"high"}""";
+        var data = prefix + "\n" + Entry();
+        await WriteAsync(project, conversation, data);
+        var reader = new SessionUsageReader(Paths);
+        var history = await reader.ReadAsync([project]);
+        Assert.AreEqual("high", history.Samples.Single().Effort);
+        await WriteAsync(project, conversation, data + "\n" + """{"type":"thinking_level_change","id":"effort2","thinkingLevel":"low"}""" + "\n" + Entry("new"));
+        history = await reader.ReadAsync([project]);
+        Assert.AreEqual(2, history.Samples.Count);
+        Assert.AreEqual("low", history.Samples.Last().Effort);
+    }
+
+    [TestMethod]
     public async Task StartsOnHomeAndPreservesConversationWhenReturningHome()
     {
         var draft = Conversation("Existing"); var project = Project(draft);
@@ -101,7 +117,7 @@ public sealed class HomeTests
     }
 
     [TestMethod]
-    public async Task SharedForkHistoryIsCountedOnceAndDeletionDropsUnreferencedUsage()
+    public async Task SharedForkHistoryIsCountedOnceAndSurvivesDeletionAndRestart()
     {
         var original = Conversation("Original", -2); var fork = Conversation("Fork", -1); var project = Project(original, fork);
         var shared = Entry();
@@ -113,7 +129,82 @@ public sealed class HomeTests
         Assert.AreEqual(original.Id, inventory.Samples.First().ConversationId);
         var remaining = await reader.ReadAsync([project with { Conversations = [fork] }]);
         Assert.AreEqual(2, remaining.Samples.Count);
-        var empty = await reader.ReadAsync([]); Assert.AreEqual(0, empty.Samples.Count);
+        var empty = await new SessionUsageReader(Paths).ReadAsync([]); Assert.AreEqual(2, empty.Samples.Count);
+        Assert.AreEqual(original.Id, empty.Samples.First().ConversationId);
+        Assert.IsFalse((await File.ReadAllTextAsync(Paths.UsageArchiveFile)).Contains("This content must not enter analytics"));
+    }
+
+    [TestMethod]
+    public async Task ResetPhysicallyRemovesOldUsageAndDoesNotReimportIt()
+    {
+        var conversation = Conversation("Reset"); var project = Project(conversation);
+        await WriteAsync(project, conversation, Entry());
+        var reader = new SessionUsageReader(Paths);
+        await reader.ReadAsync([project]);
+        var settings = new Services.Settings.AppSettingsStore(Path.Combine(directory, "settings.json"));
+        var model = new ViewModels.Settings.SettingsViewModel(settings, reader);
+        await model.ResetUsageAsync();
+        Assert.IsFalse(model.HasMessage);
+        var archive = JsonSerializer.Deserialize<UsageArchive>(await File.ReadAllTextAsync(Paths.UsageArchiveFile))!;
+        Assert.AreEqual(0, archive.Samples.Count);
+        Assert.IsNotNull(archive.ResetAt);
+        Assert.AreEqual(0, (await new SessionUsageReader(Paths).ReadAsync([project])).Samples.Count);
+        Assert.IsTrue(File.Exists(Paths.GetSessionFile(project.Id, conversation.Id)));
+    }
+
+    [TestMethod]
+    public async Task CleanupPreservesUsageWithoutAnyPriorHomeVisit()
+    {
+        var conversation = Conversation("Delete"); var project = Project(conversation);
+        await WriteAsync(project, conversation, Entry());
+        var repository = new InMemoryProjectRepository(project);
+        var cleanup = new Services.Conversations.ConversationDataCleanup(Paths, repository, (_, _) => Task.FromResult(0), new SessionUsageReader(Paths));
+        await cleanup.ScheduleAsync(project.Id, conversation.Id, ProjectTargets.All(project)[0]);
+        await repository.DeleteConversationAsync(project.Id, conversation.Id);
+        Assert.IsNull(await cleanup.RunPendingAsync());
+        Assert.IsFalse(File.Exists(Paths.GetSessionFile(project.Id, conversation.Id)));
+        Assert.AreEqual(1, (await new SessionUsageReader(Paths).ReadAsync([])).Samples.Count);
+    }
+
+    [TestMethod]
+    public async Task ConcurrentReadersMergeWithoutDroppingUsage()
+    {
+        var first = Conversation("First"); var second = Conversation("Second");
+        var project = Project(first, second);
+        await WriteAsync(project, first, Entry("first"));
+        await WriteAsync(project, second, Entry("second"));
+        await Task.WhenAll(new SessionUsageReader(Paths).ReadAsync([project with { Conversations = [first] }]),
+            new SessionUsageReader(Paths).ReadAsync([project with { Conversations = [second] }]));
+        Assert.AreEqual(2, (await new SessionUsageReader(Paths).ReadAsync([])).Samples.Count);
+    }
+
+    [TestMethod]
+    public void ResetRejectsOldSamplesButKeepsNewUsage()
+    {
+        var cutoff = DateTimeOffset.UtcNow;
+        var store = new LocalUsageStore(Paths.UsageArchiveFile);
+        var old = new UsageSample("old", Guid.NewGuid(), Guid.NewGuid(), cutoff.AddSeconds(-1), "provider", "model", 10);
+        var fresh = old with { Key = "fresh", At = cutoff.AddSeconds(1), Tokens = 20 };
+        store.Merge([old], null, default);
+        store.Merge([], cutoff, default);
+        var samples = store.Merge([old, fresh], null, default);
+        Assert.AreEqual("fresh", samples.Single().Key);
+        Assert.AreEqual(20L, samples.Single().Tokens);
+    }
+
+    [TestMethod]
+    public async Task FailedUsagePreservationLeavesSessionForCleanupRetry()
+    {
+        var conversation = Conversation("Retry"); var project = Project(conversation);
+        await WriteAsync(project, conversation, Entry());
+        await File.WriteAllTextAsync(Paths.UsageArchiveFile, "invalid json");
+        var repository = new InMemoryProjectRepository(project);
+        var cleanup = new Services.Conversations.ConversationDataCleanup(Paths, repository, (_, _) => Task.FromResult(0), new SessionUsageReader(Paths));
+        await cleanup.ScheduleAsync(project.Id, conversation.Id, ProjectTargets.All(project)[0]);
+        await repository.DeleteConversationAsync(project.Id, conversation.Id);
+        Assert.IsNotNull(await cleanup.RunPendingAsync());
+        Assert.IsTrue(File.Exists(Paths.GetSessionFile(project.Id, conversation.Id)));
+        Assert.AreEqual("invalid json", await File.ReadAllTextAsync(Paths.UsageArchiveFile));
     }
 
     [TestMethod]

@@ -55,6 +55,8 @@ public partial class App : Application
         var storage = new ProjectStorageOptions();
         var repository = new JsonProjectRepository(storage);
         var paths = new PiSessionPaths(storage);
+        var usageReader = new Services.Home.SessionUsageReader(paths);
+        var defaultHistory = new ConversationDefaultsReader(repository, usageReader);
         var startInfo = new PiProcessStartInfoFactory(locator);
         var researchDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "research");
         var researchStore = new ResearchStore(researchDirectory);
@@ -68,6 +70,7 @@ public partial class App : Application
                 Target: ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id)),
                 () => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout))
             {
+                ReadDefaultHistory = defaultHistory.ReadAsync,
                 ResearchRequested = async payload => await research.DispatchAsync(new Models.Conversations.ResearchTask(Guid.NewGuid(), conversation.Id, project.Path,
                     PiJson.Text(payload, "title"), PiJson.Text(payload, "question"), PiJson.Text(payload, "provider"), PiJson.Text(payload, "model"),
                     PiJson.Text(payload, "effort"), "Queued", "", DateTimeOffset.UtcNow))
@@ -75,7 +78,7 @@ public partial class App : Application
             new DispatcherQueueUiDispatcher(window.DispatcherQueue), modelFavorites: new ModelFavoritesStore(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "model-favorites.json")));
         var projectService = new ProjectService(repository);
-        workspaces.ViewedRunCompleted += () => { if (!closing && !windowClosed) CompletionSound.Play(); };
+        workspaces.ViewedRunCompleted += () => { if (!closing && !windowClosed && Controls.ReadingPreferences.Current.CompletionAudio) CompletionSound.Play(); };
         var checkpointData = new CheckpointDataService(repository);
         var dockerClient = new Services.Docker.DockerCliClient();
         var docker = new ViewModels.Docker.DockerPanelViewModel(
@@ -85,7 +88,7 @@ public partial class App : Application
         window.Closed += (_, _) => docker.Dispose();
         var extensions = new ViewModels.Extensions.ExtensionsViewModel(ViewModels.Extensions.SupportedExtensions.All
             .Append(ViewModels.Extensions.SupportedExtensions.Research(research)).Append(ViewModels.Extensions.SupportedExtensions.Docker(docker)));
-        var shell = new ShellViewModel(repository, workspaces, paths, new ConversationDataCleanup(paths, repository, checkpointData.ForgetAsync), extensions);
+        var shell = new ShellViewModel(repository, workspaces, paths, new ConversationDataCleanup(paths, repository, checkpointData.ForgetAsync, usageReader), extensions);
         providers = new ProviderService(() => new PiRpcClient(new ProcessPiTransport(startInfo), runtime.RequestTimeout),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "management"));
         var ollamaHttp = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
@@ -108,10 +111,17 @@ public partial class App : Application
         var openIn = new ViewModels.Applications.OpenInViewModel(new Services.Applications.InstalledApplicationLocator(),
             new Services.Applications.OpenInPreferenceStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "open-in.json")),
             new Services.Applications.ProjectApplicationLauncher());
+        var fileEditor = new Services.Applications.WorkspaceEditorLauncher(new Services.Applications.InstalledApplicationLocator(),
+            new Services.Applications.OpenInPreferenceStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "open-in.json")));
+        workspaces.FileLinkFactory = target => new Services.Files.WorkspaceFileLinks(target, fileEditor.OpenAsync);
+        workspaces.ArtifactFactory = (project, conversation) => new(
+            new Services.Conversations.ArtifactStore(Services.Conversations.ArtifactStore.ForSession(paths.GetSessionFile(project.Id, conversation.Id))),
+            ProjectTargets.Resolve(project, conversation.TargetId ?? project.Id));
         var githubOptions = GitHubOptions.Load();
         var githubApi = new Services.GitHub.GitHubApi(githubHttp);
         var github = new ViewModels.GitHub.GitHubViewModel(new Services.GitHub.GitHubAuthentication(githubOptions, githubApi,
             new Services.GitHub.WindowsGitHubCredentialStore(githubOptions.ClientId)), githubApi, new Services.GitHub.GitBranchReader());
+        workspaces.GitHub = github;
         terminals = new(directory => new Services.Terminal.ConPtySession(directory),
             (directory, command) => new Services.Terminal.ConPtySession(directory, command));
         terminals.CreateTargetSession = (target, command) => new Services.Terminal.ConPtySession(target.Path, command, target);
@@ -134,13 +144,40 @@ public partial class App : Application
         try { await settingsStore.LoadAsync(); }
         catch (Exception error) { settingsError = "Saved preferences could not be read; defaults are shown. " + error.Message; }
         shell.ResumeConversationOnStartup = settingsStore.Current.ResumeConversation;
-        var settings = new ViewModels.Settings.SettingsViewModel(settingsStore) { Message = settingsError };
-        var home = new ViewModels.Home.HomeViewModel(shell, new Services.Home.SessionUsageReader(paths), settingsStore);
+        var settings = new ViewModels.Settings.SettingsViewModel(settingsStore, usageReader)
+        {
+            Message = settingsError,
+            StorageService = new Services.Settings.StorageOverviewService(Path.GetDirectoryName(storage.CatalogPath)!,
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".pi-desktop-checkpoints")),
+            ClearCompletedResearch = research.ClearCompletedAsync
+        };
+        var sidebarStore = new Services.Settings.SidebarPreferencesStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "sidebar.json"));
+        try
+        {
+            var savedSidebar = await sidebarStore.LoadAsync();
+            shell.Sidebar.Restore(savedSidebar.Width, savedSidebar.IsOpen);
+        }
+        catch (Exception error) { settings.Message = "Saved sidebar layout could not be read. " + error.Message; }
+        async Task SaveSidebarAsync()
+        {
+            try { await sidebarStore.SaveAsync(new(shell.Sidebar.PreferredWidth, shell.Sidebar.PreferredOpen)); }
+            catch (Exception error) { settings.Message = "Sidebar layout could not be saved. " + error.Message; }
+        }
+        void SidebarPreferenceChanged(object? sender, EventArgs args) => sidebarSaveTask = SaveSidebarAsync();
+        shell.Sidebar.PreferenceChanged += SidebarPreferenceChanged;
+        window.Closed += (_, _) => shell.Sidebar.PreferenceChanged -= SidebarPreferenceChanged;
+        if (settingsStore.Current.UsageResetAt is { } usageCutoff)
+        {
+            try { await usageReader.ResetAsync(usageCutoff); }
+            catch (Exception error) { settings.Message = "Could not apply the saved usage reset. " + error.Message; }
+        }
+        var home = new ViewModels.Home.HomeViewModel(shell, usageReader, settingsStore);
         Controls.ReadingPreferences.Apply(settingsStore.Current);
         window.Content = new MainPage(shell, () => new CreateProjectViewModel(projectService), picker, openIn, github, githubOptions, githubLifetime.Token, terminals, researchPanel, files, processes, sourceControl, scripts, imports, repository, wslDistributions, docker, home, settings);
         void ApplyPreferences(object? sender, EventArgs args)
         {
             Controls.ReadingPreferences.Apply(settingsStore.Current);
+            Controls.TerminalPreferences.Apply(settingsStore.Current);
             if (window.Content is FrameworkElement root) root.RequestedTheme = (ElementTheme)settingsStore.Current.Theme;
             window.AppWindow.TitleBar.PreferredTheme = settingsStore.Current.Theme switch
             {
@@ -155,6 +192,7 @@ public partial class App : Application
         window.Closed += (_, _) => settingsStore.Changed -= ApplyPreferences;
     }
 
+    private Task sidebarSaveTask = Task.CompletedTask;
     private async void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
     {
         if (canClose) return;
@@ -209,6 +247,7 @@ public partial class App : Application
             try { if (await dialog.ShowAsync() != ContentDialogResult.Primary) { closing = false; return; } }
             catch (Exception) { closing = false; return; }
         }
+        await sidebarSaveTask;
         canClose = true;
         window?.Close();
     }

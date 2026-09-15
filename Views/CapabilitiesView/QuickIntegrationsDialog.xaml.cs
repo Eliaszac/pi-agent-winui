@@ -13,12 +13,7 @@ public sealed partial class QuickIntegrationsDialog : Controls.ActionContentDial
     }
     public IReadOnlyList<QuickIntegration> Integrations { get; } =
     [
-        new("Obsidian", "Search and update notes in a local vault. No API key required.", "Community · StevenStavrakis/obsidian-mcp", "obsidian", "https://github.com/StevenStavrakis/obsidian-mcp"),
-        new("Atlassian", "Work with Jira issues and Confluence documentation.", "By Atlassian", "atlassian", "https://atlassian.github.io/atlassian-mcp-server/"),
-        new("GitHub", "Explore repositories, issues, and pull requests.", "By GitHub", "github", "https://github.com/github/github-mcp-server"),
-        new("Linear", "Keep issues, projects, and milestones close to your code.", "By Linear", "linear", "https://linear.app/docs/mcp"),
-        new("Notion", "Find and work with your workspace pages.", "By Notion", "notion", "https://developers.notion.com/guides/mcp/overview"),
-        new("Supabase", "Explore your projects and database structure.", "By Supabase", "supabase", "https://supabase.com/docs/guides/ai-tools/mcp")
+        new("Obsidian", "Search and update notes in a local vault. No API key required.", "Community · StevenStavrakis/obsidian-mcp", "obsidian", "https://github.com/StevenStavrakis/obsidian-mcp")
     ];
 
     public QuickIntegrationsDialog(IEnumerable<string>? configured = null)
@@ -36,6 +31,6 @@ public sealed partial class QuickIntegrationsDialog : Controls.ActionContentDial
     private void Resize()
     {
         Body.Width = Math.Max(180, Math.Min(520, XamlRoot.Size.Width - 96));
-        Body.Height = Math.Max(160, Math.Min(610, XamlRoot.Size.Height - 190));
+        Body.MaxHeight = Math.Max(160, XamlRoot.Size.Height - 190);
     }
 }

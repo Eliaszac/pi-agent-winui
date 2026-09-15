@@ -31,6 +31,12 @@ The user can register a named folder, reopen it after restarting, and work in mu
 
 ## Learned constraints
 
+- User-message screenshots sit outside and above the text bubble as small, right-aligned thumbnails. Clicking opens a screenshot overlay with a top-right close icon, previous/next icons, and a position counter. Left/Right arrow keys navigate the conversation's screenshots; Escape, clicking outside, or clicking the image dismisses it. Image-only messages have no empty text bubble.
+
+- Process cards need generous internal padding and clear spacing between text lines. Keep Stop inside the main card header beside the process information, not outside the card boundary.
+
+- Sidebar conversation hovercards show PR number and Open/Draft status, title, author/opened age, and updated age. Keep metadata quiet and text-only; omit unavailable author/timestamps. Relative ages refresh when the tooltip opens without a new network request. Sidebar rows remain compact; reviewers, CI, avatars, and descriptions are outside this pass.
+
 - 2026-09-12: Approved: the expanded sidebar uses a compact outlined folder-plus at the right of the Projects heading to open the existing New project dialog. It replaces the separate New project button and stays visually distinct from the plain plus used for new conversations. This supersedes the earlier preference against a heading-level add control.
 
 - 2026-09-12: Home has no introductory “Pick up where you left off” sentence. Place the app version below About local usage. Center the complete content vertically when it fits the viewport; preserve scrolling and equal top/bottom padding when it does not.
@@ -116,6 +122,8 @@ The user can register a named folder, reopen it after restarting, and work in mu
 - MCP inventory includes saved global definitions before runtime loading and while disconnected. Show configured/disabled/live states truthfully and make available error details selectable. Obsidian quick setup chooses a vault for a local stdio server.
 
 ## Response Markdown and tables
+
+- File references include bare filenames in ordinary prose (for example, “I changed foo.js”), not only backticked or qualified paths. Confirm against the conversation's workspace before offering an editor action. Duplicate names open a path picker; unresolved mentions stay subtly highlighted. Preserve source-line references and keep web links separate. File context actions are Open in editor and Copy path.
 
 - Keep response typography native: 15px body text with 24px line spacing, distinct headings, and quieter inline code. Preserve surrounding response buttons, summaries, and tool-call controls.
 - Conversation responses use 70% of available transcript width, with a 680px reading width where space permits and available width below that. Other Markdown previews retain their existing width.

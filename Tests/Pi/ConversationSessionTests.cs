@@ -160,6 +160,24 @@ public sealed class ConversationSessionTests
     }
 
     [TestMethod]
+    public async Task ArtifactRequestsRouteToHostWithoutOpeningAnInputDialog()
+    {
+        var transport = new FakePiTransport { AutoReply = true };
+        await using var session = new ConversationSession(new PiLaunchRequest(Path.GetTempPath(), Path.Combine(Path.GetTempPath(), "artifact-test.jsonl")),
+            () => new PiRpcClient(transport, TimeSpan.FromSeconds(3)));
+        var request = new TaskCompletionSource<System.Text.Json.JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var prompted = false;
+        session.Updated += update => { if (update.ArtifactRequest is { } packet) request.TrySetResult(packet); if (update.Prompt is not null) prompted = true; };
+        await session.ConnectAsync();
+        transport.Push("""{"type":"extension_ui_request","id":"artifact-1","method":"input","title":"pi-gui-artifacts-v1","placeholder":"{\"action\":\"list\"}"}""");
+        var packet = await request.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.AreEqual("artifact-1", packet.GetProperty("id").GetString());
+        Assert.IsFalse(prompted);
+        await session.ReplyAsync("artifact-1", new() { ["value"] = "{\"artifacts\":[]}" });
+        Assert.AreEqual("extension_ui_response", transport.Commands.Last());
+    }
+
+    [TestMethod]
     public async Task AcceptedExtensionCommandWithoutAgentTurnDoesNotStayBusy()
     {
         var transport = new FakePiTransport { AutoReply = true, StartTurnOnPrompt = false };

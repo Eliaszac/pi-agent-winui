@@ -1,0 +1,26 @@
+<UserControl x:Class="PiAgentGui.Views.ArtifactsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls">
+    <Grid Padding="12" RowSpacing="12">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel Spacing="4" Margin="4,4,0,0">
+                <TextBlock Text="Artifacts" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock Text="Files saved with this conversation, outside your project." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+            <controls:ActionButton Grid.Column="1" Click="OnRefresh" Style="{StaticResource ShellIconButtonStyle}" ToolTipService.ToolTip="Refresh artifacts" AutomationProperties.Name="Refresh artifacts"><FontIcon Glyph="&#xE72C;" FontSize="14"/></controls:ActionButton>
+        </Grid>
+        <InfoBar Grid.Row="1" IsOpen="{Binding HasError}" Severity="Error" Message="{Binding Error}" IsClosable="False"/>
+        <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="300" Spacing="12" Margin="16" Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibility}}">
+            <FontIcon Glyph="&#xE8A5;" FontSize="28" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock Text="No artifacts yet" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Ask the agent to save a report, document, or other file as an artifact. Conversation screenshots appear here too." TextWrapping="Wrap" TextAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+        <ListView Grid.Row="2" ItemsSource="{Binding Items}" SelectionMode="None" IsItemClickEnabled="False">
+            <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,0,8"/></Style></ListView.ItemContainerStyle>
+            <ListView.ItemTemplate><DataTemplate><controls:ArtifactCard/></DataTemplate></ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</UserControl>

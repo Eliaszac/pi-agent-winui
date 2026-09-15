@@ -4,4 +4,5 @@ namespace PiAgentGui.Services.Conversations;
 public interface IUiDispatcher
 {
     bool Post(Action action);
+    bool PostBackground(Action action) => Post(action);
 }

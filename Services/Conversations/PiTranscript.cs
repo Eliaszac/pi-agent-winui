@@ -56,6 +56,8 @@ public sealed class PiTranscript
                 FileChange: type == "tool_execution_end" && !PiJson.Flag(packet, "isError")
                     ? FileChangeParser.Parse(PiJson.Text(packet, "toolName"), args, PiJson.Field(result, "details")) : null,
                 ToolTokens: type == "tool_execution_end" ? PiTokenUsage.Read(PiJson.Field(result, "usage")) ?? previous?.ToolTokens : null,
+                Images: ComputerUseSupport.IsTool(PiJson.Text(packet, "toolName")) || PiJson.Text(packet, "toolName").StartsWith("embedded_browser_", StringComparison.Ordinal) ? PiImageContent.Read(PiJson.Field(result, "content")) : null,
+                ArtifactId: ArtifactResult.Read(PiJson.Text(packet, "toolName"), type == "tool_execution_end" && !PiJson.Flag(packet, "isError"), PiJson.Field(result, "details")),
                 Diagnostics: type == "tool_execution_end" && !PiJson.Flag(packet, "isError")
                     ? LspDiagnosticsParser.Parse(PiJson.Text(packet, "toolName"), args, PiJson.Field(result, "details")) : null);
             entries[id] = entry;
@@ -104,7 +106,9 @@ public sealed class PiTranscript
             FileChange: role == "toolResult" && !PiJson.Flag(message, "isError")
                 ? FileChangeParser.Parse(PiJson.Text(message, "toolName"), toolInput, PiJson.Field(message, "details")) ?? previous?.FileChange : null,
             ToolTokens: role == "toolResult" ? PiTokenUsage.Read(PiJson.Field(message, "usage")) ?? previous?.ToolTokens : null,
-            Images: role == "user" ? PiImageContent.Read(PiJson.Field(message, "content")) : null,
+            Images: role == "user" || (role == "toolResult" && (ComputerUseSupport.IsTool(PiJson.Text(message, "toolName")) || PiJson.Text(message, "toolName").StartsWith("embedded_browser_", StringComparison.Ordinal)))
+                ? PiImageContent.Read(PiJson.Field(message, "content")) : null,
+            ArtifactId: ArtifactResult.Read(PiJson.Text(message, "toolName"), role == "toolResult" && !PiJson.Flag(message, "isError"), PiJson.Field(message, "details")),
             Diagnostics: role == "toolResult" && !PiJson.Flag(message, "isError")
                 ? LspDiagnosticsParser.Parse(PiJson.Text(message, "toolName"), toolInput, PiJson.Field(message, "details")) : null);
         entries[id] = entry;

@@ -26,8 +26,22 @@ public sealed partial class ConversationView : UserControl
         nameof(ViewModel), typeof(ConversationViewModel), typeof(ConversationView), new PropertyMetadata(null, OnViewModelChanged));
     private ConversationViewModel? observed;
     private ScrollViewer? scroller;
-    private bool followTail = true;
+    private bool followingTail = true;
+    private bool followTail
+    {
+        get => followingTail;
+        set
+        {
+            followingTail = value;
+            UpdateTranscriptAnchoring();
+        }
+    }
     private bool tailScrollPending;
+    private bool tailScrollInProgress;
+    private bool initialTailPending = true;
+    private object? realizingTail;
+    private bool transcriptScrollInputPending;
+    private double previousTranscriptOffset;
     private bool composing;
     private bool synchronizingThinking;
     private bool synchronizingApproval;
@@ -74,12 +88,12 @@ public sealed partial class ConversationView : UserControl
     public ConversationView()
     {
         InitializeComponent();
+        Transcript.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(OnTranscriptScrollInput), true);
+        Transcript.AddHandler(PointerPressedEvent, new PointerEventHandler(OnTranscriptPointerPressed), true);
+        Transcript.AddHandler(KeyDownEvent, new KeyEventHandler(OnTranscriptScrollKey), true);
         PromptRail.PromptSelected += entry =>
         {
-            restoringViewport = null;
-            followTail = false;
-            tailScrollPending = false;
-            Transcript.ScrollIntoView(entry, ScrollIntoViewAlignment.Leading);
+            JumpToPrompt(entry);
         };
     }
 
@@ -90,6 +104,9 @@ public sealed partial class ConversationView : UserControl
         view.Root.DataContext = args.NewValue;
         view.RestoreViewport(args.NewValue as ConversationViewModel);
         view.tailScrollPending = false;
+        view.tailScrollInProgress = false;
+        view.realizingTail = null;
+        view.transcriptScrollInputPending = false;
         view.PromptRail.Reset();
         view.ResetCommands();
         view.Observe();
@@ -120,16 +137,13 @@ public sealed partial class ConversationView : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs args)
     {
-        Controls.ReadingPreferences.Changed += OnReadingPreferencesChanged;
-        OnReadingPreferencesChanged(null, EventArgs.Empty);
-        scroller = Controls.VisualTreeSearch.FindDescendant<ScrollViewer>(Transcript);
-        if (scroller is not null) scroller.ViewChanged += OnScrollChanged;
+        AttachTranscriptScroller();
+        previousTranscriptOffset = scroller?.VerticalOffset ?? 0;
         Observe();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
     {
-        Controls.ReadingPreferences.Changed -= OnReadingPreferencesChanged;
         SaveViewport(observed);
         if (observed is not null)
         {
@@ -142,11 +156,25 @@ public sealed partial class ConversationView : UserControl
         ResetCommands();
         if (scroller is not null) scroller.ViewChanged -= OnScrollChanged;
         scroller = null;
+        tailScrollInProgress = false;
     }
 
     private void OnScrollChanged(object? sender, ScrollViewerViewChangedEventArgs args)
     {
-        if (scroller is not null && !tailScrollPending && restoringViewport is null) followTail = scroller.ScrollableHeight - scroller.VerticalOffset < 48;
+        if (scroller is null || restoringViewport is not null) return;
+        // Layout, virtualization and ChangeView also raise ViewChanged. Only explicit
+        // input may detach a follower; reaching the bottom reattaches a reader.
+        var offset = scroller.VerticalOffset;
+        if (!followTail && Utilities.TranscriptScrollPolicy.ShouldResumeFollowing(
+                transcriptScrollInputPending, previousTranscriptOffset, offset, offset + TranscriptTailDistance()))
+            followTail = true;
+        previousTranscriptOffset = offset;
+        if (!args.IsIntermediate)
+        {
+            transcriptScrollInputPending = false;
+            tailScrollInProgress = false;
+            if (followTail && tailScrollPending) Transcript.InvalidateArrange();
+        }
     }
 
     private void OnTranscriptChanged()
@@ -154,31 +182,147 @@ public sealed partial class ConversationView : UserControl
         PromptRail.Update(ViewModel?.Entries ?? []);
         if (!followTail || ViewModel?.DisplayEntries.Count is not > 0) return;
         tailScrollPending = true;
-        // Do not first jump to the message's top; the next layout scrolls directly to the tail.
-        Transcript.InvalidateMeasure();
+        // Collection changes already schedule layout. Do not invalidate the virtualized
+        // history's measurement on every streamed token.
+        Transcript.InvalidateArrange();
     }
 
     private void OnMarkdownContentRendered(object? sender, EventArgs args)
     {
         // Follow coalesced content changes, never local layout changes such as sorting a table.
         if (followTail && sender is FrameworkElement { DataContext: ChatEntryViewModel entry }
-            && ViewModel?.DisplayEntries.LastOrDefault(item => item.IsLeftAligned) == entry) tailScrollPending = true;
+            && ViewModel?.DisplayEntries.LastOrDefault(item => item.IsLeftAligned) == entry)
+        {
+            tailScrollPending = true;
+            Transcript.InvalidateArrange();
+        }
     }
 
     private void OnTranscriptLayoutUpdated(object? sender, object args)
     {
-        scroller ??= Controls.VisualTreeSearch.FindDescendant<ScrollViewer>(Transcript);
-        if (TryRestoreViewport() || !tailScrollPending) return;
-        // Realize the destination before using the extent: offscreen row heights are estimates.
-        if (ViewModel?.DisplayEntries.LastOrDefault() is { } last && Transcript.ContainerFromItem(last) is null)
+        AttachTranscriptScroller();
+        UpdateTranscriptAnchoring();
+        if (TryRestoreViewport() || !followTail || ViewModel?.DisplayEntries.Count is not > 0) return;
+        if (!tailScrollPending || tailScrollInProgress) return;
+        // Only initial navigation may request a distant item. Streaming uses native
+        // bottom anchoring, never a queued ScrollIntoView on each appended row.
+        var last = ViewModel.DisplayEntries.LastOrDefault();
+        if (last is null || scroller is null) return;
+        if (Transcript.ContainerFromItem(last) is not FrameworkElement container)
         {
-            Transcript.ScrollIntoView(last);
+            if (initialTailPending && !ReferenceEquals(realizingTail, last))
+            {
+                realizingTail = last;
+                Transcript.ScrollIntoView(last);
+            }
             return;
         }
-        scroller?.ChangeView(null, scroller.ScrollableHeight, null, disableAnimation: true);
+        realizingTail = null;
+        if (!container.IsLoaded || container.ActualHeight <= 0) return;
+        var initialNavigation = initialTailPending;
+        initialTailPending = false;
         tailScrollPending = false;
+        // Use the realized row, not the estimated extent of virtualized history.
+        var bottom = container.TransformToVisual(scroller).TransformPoint(new()).Y + container.ActualHeight;
+        var correction = bottom - scroller.ViewportHeight;
+        if (correction < 1) return;
+        var offset = Utilities.TranscriptScrollPolicy.TailOffset(scroller.VerticalOffset, bottom, scroller.ViewportHeight, scroller.ScrollableHeight);
+        if (Math.Abs(offset - scroller.VerticalOffset) < 1) return;
+        var animate = Utilities.TranscriptScrollPolicy.ShouldAnimateTail(initialNavigation,
+            new Windows.UI.ViewManagement.UISettings().AnimationsEnabled,
+            offset - scroller.VerticalOffset, scroller.ViewportHeight);
+        // Let one correction finish before consuming newer streamed geometry. Repeated
+        // ChangeView calls otherwise interrupt each other and make line growth stutter.
+        tailScrollInProgress = animate;
+        if (!scroller.ChangeView(null, offset, null, disableAnimation: !animate)) tailScrollInProgress = false;
     }
 
+    private void UpdateTranscriptAnchoring()
+    {
+        if (Transcript?.ItemsPanelRoot is ItemsStackPanel panel)
+        {
+            var mode = followTail ? ItemsUpdatingScrollMode.KeepLastItemInView : ItemsUpdatingScrollMode.KeepItemsInView;
+            if (panel.ItemsUpdatingScrollMode != mode) panel.ItemsUpdatingScrollMode = mode;
+        }
+    }
+
+    private void AttachTranscriptScroller()
+    {
+        if (scroller is not null) return;
+        scroller = Controls.VisualTreeSearch.FindDescendant<ScrollViewer>(Transcript);
+        if (scroller is null) return;
+        scroller.BringIntoViewOnFocusChange = false;
+        scroller.ViewChanged += OnScrollChanged;
+    }
+
+    private double TranscriptTailDistance()
+    {
+        var last = ViewModel?.DisplayEntries.LastOrDefault();
+        if (scroller is null || last is null || Transcript.ContainerFromItem(last) is not FrameworkElement { IsLoaded: true } container)
+            return double.PositiveInfinity;
+        return container.TransformToVisual(scroller).TransformPoint(new()).Y + container.ActualHeight - scroller.ViewportHeight;
+    }
+
+    private void OnTranscriptScrollInput(object sender, PointerRoutedEventArgs args)
+    {
+        if (!IsNestedTranscriptScroller(args.OriginalSource as DependencyObject))
+            BeginTranscriptScrollInput(args.GetCurrentPoint(Transcript).Properties.MouseWheelDelta < 0);
+    }
+
+    private bool IsNestedTranscriptScroller(DependencyObject? source)
+    {
+        for (var element = source; element is not null && element != Transcript;
+             element = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(element))
+            if (element is ScrollViewer viewer) return viewer != scroller;
+        return false;
+    }
+
+    private void BeginTranscriptScrollInput(bool towardEnd = true)
+    {
+        DetachTranscriptTail();
+        transcriptScrollInputPending = towardEnd;
+        previousTranscriptOffset = scroller?.VerticalOffset ?? 0;
+    }
+
+    private void OnTranscriptPointerPressed(object sender, PointerRoutedEventArgs args)
+    {
+        if (IsNestedTranscriptScroller(args.OriginalSource as DependencyObject)) return;
+        // Mouse text selection is not scrolling. Touch/pen panning and scrollbar
+        // dragging must interrupt following before the ScrollViewer changes offset.
+        if (args.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Mouse)
+        {
+            BeginTranscriptScrollInput();
+            return;
+        }
+        for (var element = args.OriginalSource as DependencyObject; element is not null && element != Transcript;
+             element = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(element))
+            if (element is Microsoft.UI.Xaml.Controls.Primitives.ScrollBar)
+            {
+                BeginTranscriptScrollInput();
+                return;
+            }
+    }
+
+    private void OnTranscriptScrollKey(object sender, KeyRoutedEventArgs args)
+    {
+        if (IsNestedTranscriptScroller(args.OriginalSource as DependencyObject)) return;
+        if (args.Key is Windows.System.VirtualKey.Up or Windows.System.VirtualKey.Down
+            or Windows.System.VirtualKey.PageUp or Windows.System.VirtualKey.PageDown
+            or Windows.System.VirtualKey.Home or Windows.System.VirtualKey.End)
+            BeginTranscriptScrollInput(args.Key is Windows.System.VirtualKey.Down
+                or Windows.System.VirtualKey.PageDown or Windows.System.VirtualKey.End);
+    }
+
+    private void DetachTranscriptTail()
+    {
+        restoringViewport = null;
+        followTail = false;
+        tailScrollPending = false;
+        transcriptScrollInputPending = false;
+        tailScrollInProgress = false;
+        realizingTail = null;
+        initialTailPending = false;
+    }
     private void OnSendInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         if (composing) return;
@@ -208,10 +352,6 @@ public sealed partial class ConversationView : UserControl
         Composer.Select(caret + 1, 0);
     }
 
-    private void OnReadingPreferencesChanged(object? sender, EventArgs args)
-    {
-        SendKeyHint.Text = Utilities.ComposerEnterBehavior.Hint(Controls.ReadingPreferences.Current.ControlEnterToSend);
-    }
 
 
     private void OnPresentationChanged(object? sender, PropertyChangedEventArgs args)

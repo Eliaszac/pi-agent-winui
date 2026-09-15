@@ -17,4 +17,4 @@ Keep retained third-party artwork unchanged, secondary to this application's ide
 
 The current name is **Pi desktop**, described as an independent frontend for Pi. The supplied publisher/contact is **Eliaszac, Denmark**, **eliaszacho@gmail.com**. Confirm the publisher identity and product naming for public distribution; do not infer a legal name from the email address.
 
-Fresh builds exclude removed artwork. Upgrades must also remove the specific obsolete installed assets; see [installer guidance](Installer/README.md). Keep required dependency notices when changing packaging. User acceptance and build checks do not establish blanket trademark permission.
+Fresh builds exclude removed artwork. Upgrades must also remove the specific obsolete installed assets; see [installer guidance](../Installer/README.md). Keep required dependency notices when changing packaging. User acceptance and build checks do not establish blanket trademark permission.

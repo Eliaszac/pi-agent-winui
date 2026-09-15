@@ -31,13 +31,15 @@ export default function probe(pi: ExtensionAPI): void {
             ? (await remote.checked(`cat -- ${TargetConnection.quote(root + "/" + name)}`)).toString("utf8")
             : await readFile(path.join(root, name), "utf8");
         const remove = async (name: string) => remote ? await remote.checked(`rm -- ${TargetConnection.quote(root + "/" + name)}`) : await unlink(path.join(root, name));
+        let responseCompleted = false;
         const context = new Proxy(ctx, { get(target, property) {
             if (property === "ui") return new Proxy(ctx.ui, { get(ui, key) {
                 if (key === "setStatus") return (status: string, value: string) => { if (status === "pi-gui-checkpoints-v1") packets.push(JSON.parse(value)); ui.setStatus(status, value); };
                 return Reflect.get(ui, key);
             } });
             if (property === "sessionManager") return new Proxy(ctx.sessionManager, { get(manager, key) {
-                if (key === "getBranch") return () => [...manager.getBranch().filter(entry => entry.type === "custom"), { type: "message", message: { role: "assistant", timestamp: 123 } }];
+                if (key === "getBranch") return () => [...manager.getBranch().filter(entry => entry.type === "custom"),
+                    ...(responseCompleted ? [{ id: "probe-response", type: "message", message: { role: "assistant", timestamp: 123 } }] : [])];
                 const value = Reflect.get(manager, key);
                 return typeof value === "function" ? value.bind(manager) : value;
             } });
@@ -50,6 +52,7 @@ export default function probe(pi: ExtensionAPI): void {
         await write("modified.txt", "after\n");
         await write("created-λ.txt", "new\n");
         await remove("deleted.txt");
+        responseCompleted = true;
         await hooks.get("agent_settled")!({}, context);
         const manifest = packets.findLast(p => p.manifest)?.manifest as { id: string; files: { path: string; kind: string }[] };
         assert.ok(manifest, JSON.stringify(packets));

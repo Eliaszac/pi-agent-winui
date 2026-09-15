@@ -5,6 +5,7 @@ namespace PiAgentGui.ViewModels.Conversations;
 
 public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
 {
+    public Services.Files.WorkspaceFileLinks? FileLinks { get; init; }
     public Func<string, string, string, SnippetViewModel>? SnippetFactory { get; init; }
     private ChatEntry entry = entry;
     private RunChangesViewModel? summary;
@@ -27,10 +28,24 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
     }
     public string ExpansionGlyph => expanded ? "\uE70D" : "\uE76C";
     public IReadOnlyList<ChatEntryViewModel> Tools => tools;
-    public bool IsToolGroup => tools.Count > 3;
-    public bool IsTool => entry.IsTool;
+    public bool IsToolGroup => tools.Count > 1;
+    private ArtifactItemViewModel? artifact;
+    public ArtifactItemViewModel? Artifact
+    {
+        get => artifact;
+        internal set
+        {
+            if (!SetProperty(ref artifact, value)) return;
+            OnPropertyChanged(nameof(IsArtifact));
+            OnPropertyChanged(nameof(IsTool));
+            OnPropertyChanged(nameof(IsMessage));
+            OnPropertyChanged(nameof(IsLeftAligned));
+        }
+    }
+    public bool IsArtifact => Artifact is not null;
+    public bool IsTool => entry.IsTool && !IsArtifact;
     public bool IsProcessing { get; init; }
-    public bool IsMessage => !IsTool && !IsToolGroup && !IsProcessing;
+    public bool IsMessage => !IsTool && !IsToolGroup && !IsProcessing && !IsArtifact;
     private string ToolDescription => entry.FileChange is { } change
         ? $"{Speaker} · {ProjectPathDisplay.ForTool(change.Path)}" + (change.Patch is not null ? $" · +{change.Added} −{change.Removed}" : $" · {Status}")
         : $"{Speaker} · {Status}";
@@ -52,7 +67,25 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
     internal string Id => entry.Id;
     internal ChatEntry Source => entry;
     public string Speaker => entry.Speaker;
-    public string Text => entry.IsUser ? PromptFileReferences.Display(entry.Text) : entry.Text;
+    private string? referenceSource;
+    private string referenceDisplay = "";
+    private IReadOnlyList<Models.GitHub.GitHubReference> references = [];
+    private void RefreshReferencePresentation()
+    {
+        if (referenceSource == entry.Text) return;
+        referenceSource = entry.Text;
+        references = GitHubReferencePrompt.Read(entry.Text);
+        referenceDisplay = PromptFileReferences.Display(GitHubReferencePrompt.Display(entry.Text));
+    }
+    public string Text { get { if (!entry.IsUser) return entry.Text; RefreshReferencePresentation(); return referenceDisplay; } }
+    public IReadOnlyList<Models.GitHub.GitHubReference> GitHubReferences { get { if (!entry.IsUser) return []; RefreshReferencePresentation(); return references; } }
+    private IReadOnlyList<ArtifactItemViewModel> attachedFiles = [];
+    public IReadOnlyList<ArtifactItemViewModel> AttachedFiles
+    {
+        get => attachedFiles;
+        internal set { if (SetProperty(ref attachedFiles, value)) OnPropertyChanged(nameof(HasAttachedFiles)); }
+    }
+    public bool HasAttachedFiles => AttachedFiles.Count > 0;
     public string Details => entry.Details;
     public string Status => entry.Status;
     public bool HasDetails => Details.Length > 0;
@@ -87,6 +120,7 @@ public sealed class ChatEntryViewModel(ChatEntry entry) : ObservableObject
         entry = next;
         OnPropertyChanged(nameof(Speaker));
         OnPropertyChanged(nameof(Text));
+        OnPropertyChanged(nameof(GitHubReferences));
         OnPropertyChanged(nameof(Details));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasDetails));

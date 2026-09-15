@@ -11,15 +11,20 @@ public sealed partial class ConversationViewModel
     public string CheckpointStatus { get; private set; } = "Enable Workspace checkpoints in Extensions to capture future changes.";
     public string? CheckpointRecoveryId { get; private set; }
     public bool HasCheckpointRecovery => CheckpointRecoveryId is not null;
+    public bool HasCheckpointError { get; private set; }
+    private bool checkpointsInitializing;
 
     private void ObserveCheckpoint(JsonElement packet)
     {
         var state = PiJson.Text(packet, "status");
         if (state.Length > 0)
         {
+            checkpointsInitializing = state == "initializing";
+            HasCheckpointError = state == "error";
             CheckpointStatus = state switch
             {
                 "ready" => "Workspace checkpoints ready",
+                "initializing" => "Preparing checkpoints…",
                 "capturing" => "Capturing workspace changes…",
                 "disabled" => "Enable Workspace checkpoints in Extensions to capture future changes.",
                 "recovery" => "An interrupted checkpoint needs inspection. Stop any remote commands before inspecting recovery.",
@@ -28,6 +33,7 @@ public sealed partial class ConversationViewModel
             if (state == "error") warning = CheckpointStatus;
             if (state == "recovery") CheckpointRecoveryId = PiJson.Text(packet, "recoveryId");
             OnPropertyChanged(nameof(CheckpointStatus));
+            OnPropertyChanged(nameof(HasCheckpointError));
             OnPropertyChanged(nameof(CheckpointRecoveryId));
             OnPropertyChanged(nameof(HasCheckpointRecovery));
         }
@@ -45,7 +51,7 @@ public sealed partial class ConversationViewModel
             var summary = new RunChangesViewModel(manifest.Files, manifest.Applied.Count == 0 ? current?.VerificationLabels : [],
                 manifest.Applied.Count == 0 ? current?.DiagnosticsLabel : null, IsRemoteTarget)
             {
-                CheckpointId = manifest.State == "expired" ? null : manifest.Id,
+                CheckpointId = checkpointsInitializing || manifest.State == "expired" ? null : manifest.Id,
                 CanUndoRevert = manifest.Applied.Count > 0,
                 CaptureNotice = manifest.State == "expired" ? "Checkpoint expired. File restoration is unavailable." : manifest.Overlap ? "Overlapping work detected. Automatic revert is unavailable." : manifest.Omitted > 0
                     ? $"{manifest.Omitted} paths could not be captured. Automatic revert is unavailable." : manifest.Applied.Count > 0
@@ -62,6 +68,7 @@ public sealed partial class ConversationViewModel
         bool undo = false, IReadOnlyList<string>? paths = null)
     {
         if (!IsReady || running || busy || operationInFlight) throw new InvalidOperationException("Finish current work before using checkpoints.");
+        if (checkpointsInitializing) throw new InvalidOperationException("Checkpoints are still preparing. Try again shortly.");
         var id = action == "recover" ? CheckpointRecoveryId : summary?.CheckpointId;
         if (action != "refresh" && id is null)
             throw new InvalidOperationException("This request has no checkpoint. Enable Workspace checkpoints in Extensions before making future changes.");

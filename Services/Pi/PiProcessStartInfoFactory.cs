@@ -95,6 +95,12 @@ public sealed class PiProcessStartInfoFactory(PiInstallationLocator locator, Fun
             info.ArgumentList.Add("--extension"); info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "PiExtensions", "research-dispatch.ts"));
         }
         var writeDiffExtension = Path.Combine(AppContext.BaseDirectory, "PiExtensions", "write-diff.ts");
+        if (PiBrowserSupport.FindPackage() is { } browserPackage)
+        {
+            info.Environment["PI_GUI_BROWSER_PACKAGE"] = browserPackage;
+            info.ArgumentList.Add("--extension");
+            info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "PiExtensions", "embedded-browser.ts"));
+        }
         info.Environment["PI_GUI_CHECKPOINT_SETTINGS"] = Utilities.CheckpointSettings.FilePath;
         info.Environment["PI_GUI_ACTIVITY_DIRECTORY"] = Utilities.WorkspaceActivityLease.DirectoryPath;
         if (!File.Exists(writeDiffExtension)) throw new FileNotFoundException("The bundled write-diff extension is missing. Rebuild or reinstall Pi desktop.", writeDiffExtension);

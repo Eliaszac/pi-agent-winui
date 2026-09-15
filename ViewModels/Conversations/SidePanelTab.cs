@@ -8,5 +8,5 @@ public sealed class SidePanelTab(string kind, string title, TerminalTabViewModel
     private string title = title;
     public string Kind { get; } = kind;
     public TerminalTabViewModel? Terminal { get; } = terminal;
-    public string Title { get => title; set { if (Terminal is not null && !string.IsNullOrWhiteSpace(value)) SetProperty(ref title, value.Trim()); } }
+    public string Title { get => title; set { if ((Terminal is not null || Kind == "browser") && !string.IsNullOrWhiteSpace(value)) SetProperty(ref title, value.Trim()); } }
 }

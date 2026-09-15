@@ -94,6 +94,22 @@ public sealed class ResearchCoordinator(ResearchStore store, IResearchRunner run
         }
         finally { gate.Release(); }
     }
+    public async Task<int> ClearCompletedAsync()
+    {
+        await gate.WaitAsync();
+        try
+        {
+            if (!initialized || disposed) throw new InvalidOperationException("Research storage is unavailable in this window.");
+            var completed = tasks.Where(task => task.Status == "Completed" && !active.ContainsKey(task.Id)).ToArray();
+            foreach (var task in completed) await store.DeleteSessionAsync(task.Id);
+            var retained = tasks.Except(completed).ToArray();
+            await store.SaveAsync(retained);
+            tasks.Clear(); tasks.AddRange(retained);
+            Changed?.Invoke(tasks.ToArray());
+            return completed.Length;
+        }
+        finally { gate.Release(); }
+    }
     private void Pump()
     {
         if (disposed || !Enabled) return;

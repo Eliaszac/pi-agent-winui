@@ -24,6 +24,8 @@ public sealed class ConversationDataCleanupTests
             Directory.CreateDirectory(Path.GetDirectoryName(session)!);
             await File.WriteAllTextAsync(session, "saved messages and embedded screenshot bytes");
             await File.WriteAllTextAsync(session + ".settings.json", "{}");
+            var artifacts = new ArtifactStore(ArtifactStore.ForSession(session));
+            await artifacts.SaveAsync("document.txt", [1, 2, 3], "text/plain", "Agent");
             var copy = paths.GetSessionFile(project.Id, Guid.NewGuid());
             File.Copy(session, copy);
             var calls = 0;
@@ -40,6 +42,7 @@ public sealed class ConversationDataCleanupTests
             Assert.IsNotNull(await cleanup.RunPendingAsync());
             Assert.IsFalse(File.Exists(session));
             Assert.IsFalse(File.Exists(session + ".settings.json"));
+            Assert.IsFalse(Directory.Exists(artifacts.DirectoryPath));
             Assert.IsTrue(File.Exists(copy));
             Assert.AreEqual(1, Directory.GetFiles(paths.CleanupDirectory, "*.json").Length);
             Assert.IsNull(await cleanup.RunPendingAsync());

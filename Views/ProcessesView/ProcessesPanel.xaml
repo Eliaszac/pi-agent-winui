@@ -3,8 +3,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:PiAgentGui.Models.Pi"
     xmlns:controls="using:PiAgentGui.Controls">
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="12,0,0,0" RowSpacing="12">
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="12,0,12,12" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         <Grid Height="36">
             <TextBlock Text="Processes" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
             <controls:ActionButton HorizontalAlignment="Right" Click="OnClose" Padding="6" MinWidth="28" MinHeight="28"
@@ -12,32 +15,53 @@
                 <FontIcon Glyph="&#xE711;" FontSize="11"/>
             </controls:ActionButton>
         </Grid>
-        <InfoBar Grid.Row="1" IsOpen="{Binding HasError}" Message="{Binding Error}" Severity="Error" IsClosable="False"/>
-        <ListView Grid.Row="2" ItemsSource="{Binding Items}" SelectionMode="None" IsItemClickEnabled="False">
+        <StackPanel Grid.Row="1" Spacing="4">
+            <TextBlock Text="Local subprocesses for this conversation" FontSize="12" TextWrapping="Wrap"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock Text="{Binding Summary}" FontSize="12" FontWeight="SemiBold"/>
+        </StackPanel>
+        <InfoBar Grid.Row="2" IsOpen="{Binding HasError}" Message="{Binding Error}" Severity="Error" IsClosable="False"/>
+        <ListView Grid.Row="3" ItemsSource="{Binding Items}" SelectionMode="None" IsItemClickEnabled="False"
+            AutomationProperties.Name="Conversation subprocesses">
             <ListView.ItemContainerStyle><Style TargetType="ListViewItem">
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Margin" Value="0,0,0,8"/>
             </Style></ListView.ItemContainerStyle>
             <ListView.ItemContainerTransitions><TransitionCollection/></ListView.ItemContainerTransitions>
             <ListView.ItemTemplate><DataTemplate x:DataType="models:AgentProcess">
-                <Grid Margin="0,5" ColumnSpacing="8" Background="Transparent" PointerEntered="OnRowEntered" PointerExited="OnRowExited" GotFocus="OnRowFocused" LostFocus="OnRowUnfocused">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <Grid.ContextFlyout><MenuFlyout>
-                        <controls:ActionMenuFlyoutItem Text="Stop process" Tag="{x:Bind}" Click="OnStop">
-                            <controls:ActionMenuFlyoutItem.Icon><FontIcon Glyph="&#xE71A;"/></controls:ActionMenuFlyoutItem.Icon>
-                        </controls:ActionMenuFlyoutItem>
-                    </MenuFlyout></Grid.ContextFlyout>
-                <StackPanel Spacing="3">
-                    <TextBlock Text="{x:Bind Name}" FontSize="12" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{x:Bind Details, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                </StackPanel>
-                    <controls:ActionButton Grid.Column="1" Tag="{x:Bind}" Click="OnStop" Opacity="0" Padding="6" MinWidth="28" MinHeight="28"
-                        Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Stop process" AutomationProperties.Name="Stop process">
-                        <FontIcon Glyph="&#xE71A;" FontSize="11"/>
-                    </controls:ActionButton>
-                </Grid>
+                    <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                        IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}" AutomationProperties.Name="{x:Bind Presentation.Title}">
+                        <Expander.Header>
+                            <Grid ColumnSpacing="16" Margin="12,16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <FontIcon Glyph="{x:Bind Presentation.Glyph}" FontSize="20" VerticalAlignment="Top" Margin="0,4,0,0"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <StackPanel Grid.Column="1" Spacing="8">
+                                    <TextBlock Text="{x:Bind Presentation.Title}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{x:Bind Presentation.Category}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{x:Bind Presentation.Description}" FontSize="12" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{x:Bind Details, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <controls:ActionButton Grid.Column="2" Tag="{x:Bind}" Click="OnStop" VerticalAlignment="Center"
+                                    Padding="8" MinWidth="32" MinHeight="32" Background="Transparent" BorderThickness="0"
+                                    ToolTipService.ToolTip="{x:Bind StopLabel}" AutomationProperties.Name="{x:Bind StopLabel}">
+                                    <FontIcon Glyph="&#xE71A;" FontSize="12"/>
+                                </controls:ActionButton>
+                            </Grid>
+                        </Expander.Header>
+                        <StackPanel Spacing="8" Margin="12,8,12,16">
+                            <TextBlock Text="{x:Bind Name}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                            <TextBlock Text="{x:Bind ProcessId}" FontSize="12" IsTextSelectionEnabled="True"/>
+                            <TextBlock Text="{x:Bind ParentProcessId}" FontSize="12" IsTextSelectionEnabled="True"/>
+                            <TextBlock Text="{x:Bind Started}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                            <TextBlock Text="Role is based on the executable name. The command and its output are not available here."
+                                FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Expander>
             </DataTemplate></ListView.ItemTemplate>
         </ListView>
-        <TextBlock Grid.Row="2" Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" Margin="0,8,12,0"
+        <TextBlock Grid.Row="3" Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"
             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
             Visibility="{Binding ShowMessage, Converter={StaticResource BooleanToVisibility}}"/>
     </Grid>

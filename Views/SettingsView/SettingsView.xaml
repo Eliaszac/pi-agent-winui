@@ -14,7 +14,11 @@
                         <ComboBoxItem Content="System"/><ComboBoxItem Content="Light"/><ComboBoxItem Content="Dark"/>
                     </ComboBox>
                     <NumberBox Header="Conversation text size" Value="{Binding ConversationTextSize, Mode=OneWay}" Minimum="12" Maximum="22" SmallChange="1" SpinButtonPlacementMode="Compact" ValueChanged="OnBodySizeChanged" AutomationProperties.Name="Conversation text size" Width="220" HorizontalAlignment="Left"/>
-                    <TextBlock Text="A little more room to read." FontSize="{Binding ConversationTextSize}" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="BodyPreview" Text="A little more room to read." FontSize="{Binding ConversationTextSize}" TextWrapping="Wrap"/>
+                    <ComboBox x:Name="TextWeightChoice" Header="Response text weight" SelectedIndex="{Binding TextWeightIndex, Mode=OneWay}" SelectionChanged="OnTextWeightChanged" AutomationProperties.Name="Response text weight">
+                        <ComboBoxItem Content="Regular"/><ComboBoxItem Content="Medium"/><ComboBoxItem Content="Semibold"/>
+                    </ComboBox>
+                    <TextBlock Text="Changes letter thickness without changing the font. Bold text and headings stay emphasized." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     <NumberBox Header="Code text size" Value="{Binding CodeTextSize, Mode=OneWay}" Minimum="10" Maximum="20" SmallChange="1" SpinButtonPlacementMode="Compact" ValueChanged="OnCodeSizeChanged" AutomationProperties.Name="Code text size" Width="220" HorizontalAlignment="Left"/>
                     <TextBlock Text="print('Hello, world!')" FontFamily="Consolas" FontSize="{Binding CodeTextSize}" TextWrapping="Wrap"/>
                     <controls:ActionButton Content="Reset text sizes" Click="OnResetTextSizes" HorizontalAlignment="Left"/>
@@ -26,6 +30,16 @@
                         <ComboBoxItem Content="Enter"/><ComboBoxItem Content="Ctrl + Enter"/>
                     </ComboBox>
                     <TextBlock Text="The other shortcut inserts a new line. Enter still selects suggestions when a picker is open." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <ToggleSwitch Header="Completion sound" IsOn="{Binding CompletionAudio, Mode=OneWay}" Toggled="OnCompletionAudioChanged"/>
+                    <TextBlock Text="Play the existing audio cue when a viewed agent run finishes." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Expander>
+            <Expander IsEnabled="{Binding CanEdit}" Header="Terminal" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Terminal.Expanded, Mode=TwoWay}" Visibility="{Binding Terminal.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="10">
+                    <NumberBox Header="Terminal text size" Value="{Binding TerminalTextSize, Mode=OneWay}" Minimum="10" Maximum="24" SmallChange="1" SpinButtonPlacementMode="Compact" ValueChanged="OnTerminalSizeChanged" Width="220" HorizontalAlignment="Left" AutomationProperties.Name="Terminal text size"/>
+                    <NumberBox Header="Scrollback lines" Value="{Binding TerminalScrollback, Mode=OneWay}" Minimum="0" Maximum="50000" SmallChange="1000" SpinButtonPlacementMode="Compact" ValueChanged="OnTerminalScrollbackChanged" Width="220" HorizontalAlignment="Left" AutomationProperties.Name="Scrollback lines"/>
+                    <TextBlock Text="Applies to open and new terminals on Windows, WSL, and SSH. Reducing scrollback discards the oldest terminal history; 0 keeps only the visible screen." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <controls:ActionButton Content="Reset terminal settings" Click="OnResetTerminal" HorizontalAlignment="Left"/>
                 </StackPanel>
             </Expander>
             <Expander IsEnabled="{Binding CanEdit}" Header="General" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding General.Expanded, Mode=TwoWay}" Visibility="{Binding General.Visible, Converter={StaticResource BooleanToVisibility}}">
@@ -48,9 +62,45 @@
             <Expander IsEnabled="{Binding CanEdit}" Header="Local usage" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Usage.Expanded, Mode=TwoWay}" Visibility="{Binding Usage.Visible, Converter={StaticResource BooleanToVisibility}}">
                 <StackPanel Spacing="12">
                     <ToggleSwitch x:Name="UsageToggle" Header="Show local usage on Home" IsOn="{Binding ShowLocalUsage, Mode=OneWay}" Toggled="OnUsageChanged"/>
-                    <TextBlock Text="Calculated on this computer from saved Pi sessions. Turning this off stops the Home usage reader; Pi still records token counts in its sessions. Nothing is sent to the publisher." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="Usage metadata is stored locally and survives conversation deletion. Turning this off hides Home analytics; it does not stop local usage retention. Reset usage totals to clear retained history without deleting chats. Nothing is sent to the publisher." TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     <TextBlock Text="{Binding UsageResetLabel}" FontSize="12"/>
                     <controls:ActionButton Content="Reset usage totals…" Click="OnResetUsage" HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Expander>
+            <Expander IsEnabled="{Binding CanEdit}" Header="Storage" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Storage.Expanded, Mode=TwoWay}" Visibility="{Binding Storage.Visible, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Stored on this PC" FontWeight="SemiBold"/>
+                    <TextBlock Text="File sizes for conversations, artifacts, research, checkpoints and diagnostics. Remote WSL/SSH copies, browser data and other app files are not included. Sizes may change while work is running." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <ProgressBar IsIndeterminate="True" Visibility="{Binding Scanning, Converter={StaticResource BooleanToVisibility}}"/>
+                    <ItemsControl ItemsSource="{Binding StorageItems}" HorizontalContentAlignment="Stretch">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Grid Padding="0,5" ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Name}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Size}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </Grid>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="‘At least’ means some files could not be measured. Conversations include screenshots stored in message history; Artifacts counts separate managed copies." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <controls:ActionButton HorizontalAlignment="Left" AutomationProperties.Name="Storage actions">
+                        <controls:ActionButton.Flyout>
+                            <MenuFlyout>
+                                <controls:ActionMenuFlyoutItem Text="Refresh sizes" Tag="storage-refresh" Click="OnDataAction" IsEnabled="{Binding CanRefreshStorage}"><controls:ActionMenuFlyoutItem.Icon><SymbolIcon Symbol="Refresh"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <controls:ActionMenuFlyoutItem Text="Open app data folder" Tag="storage-folder" Click="OnDataAction"><controls:ActionMenuFlyoutItem.Icon><SymbolIcon Symbol="Folder"/></controls:ActionMenuFlyoutItem.Icon></controls:ActionMenuFlyoutItem>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Manage checkpoint storage" Tag="extensions" Click="OnDataAction" ToolTipService.ToolTip="Open Workspace checkpoints → Manage in Extensions to choose a Windows, WSL or SSH target."/>
+                                <controls:ActionMenuFlyoutItem Text="Retry pending cleanup" Tag="storage-retry" Click="OnDataAction" ToolTipService.ToolTip="Retry cleanup for deleted conversations. Unavailable targets and protected restores may remain pending."/>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Clear diagnostics…" Tag="storage-diagnostics" Click="OnDataAction"/>
+                                <controls:ActionMenuFlyoutItem Text="Clear completed research…" Tag="storage-research" Click="OnDataAction"/>
+                            </MenuFlyout>
+                        </controls:ActionButton.Flyout>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Storage actions"/>
+                            <FontIcon Glyph="&#xE70D;" FontSize="10"/>
+                        </StackPanel>
+                    </controls:ActionButton>
+                    <TextBlock Text="Manage individual files in each conversation’s Artifacts panel. Cleanup preserves project files and Pi credentials." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
             </Expander>
             <Expander IsEnabled="{Binding CanEdit}" Header="Data management" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{Binding Data.Expanded, Mode=TwoWay}" Visibility="{Binding Data.Visible, Converter={StaticResource BooleanToVisibility}}">

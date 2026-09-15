@@ -1,0 +1,39 @@
+<UserControl x:Class="PiAgentGui.Views.IntegrationsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PiAgentGui.Controls">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch">
+        <StackPanel MaxWidth="900" HorizontalAlignment="Stretch" Spacing="16" Margin="8,16,8,32">
+            <TextBlock Text="Integrations" FontSize="28" FontWeight="SemiBold"/>
+            <TextBlock Text="Connect the services you use alongside your projects." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <controls:IntegrationCardGrid>
+            <Border VerticalAlignment="Stretch" Padding="20" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="32"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <controls:IntegrationLogo Integration="github" Width="28" Height="28" VerticalAlignment="Top" AutomationProperties.AccessibilityView="Raw"/>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock Text="GitHub" FontSize="17" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding ConnectionStatus}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="Attach project issues and pull requests to conversations. The agent can propose issue edits and PR comments for your approval. Writing requires Read and write permissions on the GitHub App installation." TextWrapping="Wrap" FontSize="13"/>
+                    <InfoBar IsOpen="{Binding HasError}" Message="{Binding Error}" Severity="Warning" IsClosable="False"/>
+                    <StackPanel Spacing="8" HorizontalAlignment="Left">
+                        <controls:ActionButton Content="Connect to GitHub" Tag="connect" Click="OnAction" IsEnabled="{Binding CanConnect}" Visibility="{Binding CanConnect, Converter={StaticResource BooleanToVisibility}}"/>
+                        <ProgressRing IsActive="{Binding IsConnecting}" Width="20" Height="20" Visibility="{Binding IsConnecting, Converter={StaticResource BooleanToVisibility}}"/>
+                        <controls:ActionButton Content="Disconnect" Tag="disconnect" Click="OnAction" IsEnabled="{Binding CanDisconnect}" Visibility="{Binding IsConnected, Converter={StaticResource BooleanToVisibility}}"/>
+                        <HyperlinkButton Content="Manage repository access" Tag="access" Click="OnAction" Padding="0"/>
+                    </StackPanel>
+                    <TextBlock Text="Disconnect removes the saved login from this PC. To revoke access on GitHub, manage your authorized GitHub Apps in GitHub settings." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{Binding IsConnected, Converter={StaticResource BooleanToVisibility}}"/>
+                </StackPanel>
+            </Border>
+                <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Jira" Integration="jira" Description="Bring issue details and project context into your conversations."/>
+                <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Confluence" Integration="confluence" Description="Reference team documentation and pages while working on your projects."/>
+                <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Linear" Integration="linear" Description="Connect issues and project plans to the work you do with the agent."/>
+                <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Notion" Integration="notion" Description="Bring notes, pages, and shared knowledge into your conversations."/>
+                <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Supabase" Integration="supabase" Description="Reference project and database context while building your application."/>
+            </controls:IntegrationCardGrid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

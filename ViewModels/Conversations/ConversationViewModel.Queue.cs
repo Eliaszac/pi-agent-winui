@@ -17,6 +17,7 @@ public sealed partial class ConversationViewModel
     {
         if (running || text.TrimStart().StartsWith('/')) return;
         submittedPreview = new(new ChatEntry("presentation:submitted", "You", text, IsUser: true, Images: images));
+        BindUserArtifacts(submittedPreview);
         SynchronizeProcessingTime();
         RefreshTranscript();
     }
@@ -53,7 +54,7 @@ public sealed partial class ConversationViewModel
         {
             if (!CanSteerQueue || queued is not { } item) return;
             queueHeld = true;
-            await ExecuteAsync(() => session.SteerAsync(item.Message, item.Images));
+            await ExecuteAsync(async () => { await ShareMessageArtifactsAsync(item.Message); await session.SteerAsync(item.Message, item.Images); });
             if (ReferenceEquals(queued, item)) queued = null;
             NotifyQueue();
         }, ReportError);
@@ -66,10 +67,12 @@ public sealed partial class ConversationViewModel
 
     private void RestorePrompt(PendingPrompt item)
     {
-        if (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages)
+        if (!string.IsNullOrWhiteSpace(Draft) || HasPendingImages || HasPendingFiles || HasPendingGitHub)
             throw new InvalidOperationException("Clear the composer before restoring this message. Your pending message has been kept.");
         Draft = item.Text;
         foreach (var image in item.Images) PendingImages.Add(image);
+        RestoreFiles(item.Message);
+        foreach (var reference in GitHubReferencePrompt.Read(item.Message)) AttachGitHub(reference);
         RefreshAttachments();
     }
 
@@ -78,11 +81,11 @@ public sealed partial class ConversationViewModel
         if (SteeringCommand.Matches(submitted))
         {
             var message = submitted.TrimStart()[6..].TrimStart();
-            if (string.IsNullOrWhiteSpace(message) && images.Length == 0)
+            if (string.IsNullOrWhiteSpace(message) && images.Length == 0 && !HasPendingFiles && !HasPendingGitHub)
                 throw new InvalidOperationException("Add a message after /steer.");
             if (message.StartsWith('/')) throw new InvalidOperationException("Use /steer with a message, rather than another slash command.");
             var steer = running;
-            var expanded = FileReferences.Expand(message);
+            var expanded = await ExpandAttachmentsAsync(message);
             await SendSubmittedAsync(submitted, expanded, images, () => steer
                 ? session.SteerAsync(expanded, images)
                 : session.SendAsync(expanded, images));
@@ -93,34 +96,38 @@ public sealed partial class ConversationViewModel
             throw new InvalidOperationException("While running, use /steer for a correction or send a message to queue a follow-up. Other commands are available when the run finishes.");
         if (queued is not null)
             throw new InvalidOperationException("One follow-up is already queued. Edit or remove it first, or use /steer for a correction. Your draft has been kept.");
-        queued = new(submitted, FileReferences.Expand(submitted), images);
+        queued = new(submitted, await ExpandAttachmentsAsync(submitted), images);
         queueHeld = false;
         queueReady = false;
         SetError("");
-        ClearSubmitted(submitted, images);
+        ClearSubmitted(submitted, images, queued.Message);
         NotifyQueue();
         return true;
     }
 
-    private void ClearSubmitted(string submitted, IReadOnlyList<ChatImage> images)
+    private void ClearSubmitted(string submitted, IReadOnlyList<ChatImage> images, string expanded)
     {
         if (Draft == submitted) Draft = "";
+        var references = GitHubReferencePrompt.Read(expanded).Select(item => item.Url).ToHashSet();
+        foreach (var reference in PendingGitHub.Where(item => references.Contains(item.Url)).ToArray()) PendingGitHub.Remove(reference);
         foreach (var image in images) PendingImages.Remove(image);
+        var fileIds = ArtifactPrompt.Read(expanded);
+        foreach (var file in PendingFiles.Where(file => fileIds.Contains(file.Id)).ToArray()) PendingFiles.Remove(file);
         RefreshAttachments();
     }
 
     private async Task SendSubmittedAsync(string submitted, string expanded, ChatImage[] images, Func<Task> send)
     {
         if (busy || disposed) return;
-        ClearSubmitted(submitted, images);
+        ClearSubmitted(submitted, images, expanded);
         ShowSubmittedPreview(expanded, images);
-        try { await ExecuteAsync(send); }
+        try { await ExecuteAsync(async () => { await ShareMessageArtifactsAsync(expanded); await send(); }); }
         catch
         {
             submittedPreview = null;
             RefreshTranscript();
             var prompt = new PendingPrompt(submitted, expanded, images);
-            if (string.IsNullOrWhiteSpace(Draft) && !HasPendingImages) RestorePrompt(prompt);
+            if (string.IsNullOrWhiteSpace(Draft) && !HasPendingImages && !HasPendingFiles && !HasPendingGitHub) RestorePrompt(prompt);
             else RecoveredPrompts.Add(prompt);
             throw;
         }
@@ -139,7 +146,7 @@ public sealed partial class ConversationViewModel
         ShowSubmittedPreview(item.Message, item.Images);
         try
         {
-            await ExecuteAsync(() => session.SendAsync(item.Message, item.Images));
+            await ExecuteAsync(async () => { await ShareMessageArtifactsAsync(item.Message); await session.SendAsync(item.Message, item.Images); });
             if (ReferenceEquals(queued, item)) queued = null;
         }
         catch (Exception exception) { submittedPreview = null; RefreshTranscript(); queueHeld = true; ReportError(exception); }
