@@ -22,6 +22,8 @@ See [EXECUTION-TARGETS.md](docs/EXECUTION-TARGETS.md) for prerequisites, authent
 
 ## Persistence and data lifecycle
 
+Checkpoint history initializes in the background after session startup, allowing conversation history to load without waiting for checkpoint inventory. The existing serialized checkpoint queue keeps pre-run capture and management requests behind initialization. The conversation displays a preparation state and withholds restore actions while loading; initialization errors remain in checkpoint status. This applies to local, WSL, and SSH checkpoint transports.
+
 Application data lives under `%LOCALAPPDATA%\PiAgentGui`, separate from source folders and the installation directory.
 
 | Data | Location / ownership |
