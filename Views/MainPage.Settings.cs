@@ -6,6 +6,11 @@ namespace PiAgentGui.Views;
 public sealed partial class MainPage
 {
     private void OnSettingsClicked(object sender, RoutedEventArgs args) => ViewModel.OpenSettings();
+    private void OnUpdatesClicked(object sender, RoutedEventArgs args)
+    {
+        if (SettingsPane.DataContext is SettingsViewModel settings) settings.Query = "Updates";
+        ViewModel.OpenSettings();
+    }
     private void OnIntegrationsClicked(object sender, RoutedEventArgs args) => ViewModel.OpenIntegrations();
     private void InitializeSettings(SettingsViewModel settings)
     {
@@ -22,6 +27,15 @@ public sealed partial class MainPage
                 await GitHub.RefreshAccountAsync(githubCancellation);
         };
         SettingsPane.DataContext = settings;
+        void RefreshUpdateIndicator()
+        {
+            var visibility = settings.AppUpdates?.HasUpdate == true ? Visibility.Visible : Visibility.Collapsed;
+            SidebarUpdateDot.Visibility = CompactUpdateDot.Visibility = visibility;
+            SidebarUpdateItem.Visibility = CompactUpdateItem.Visibility = visibility;
+        }
+        if (settings.AppUpdates is { } updates)
+            updates.PropertyChanged += (_, change) => { if (change.PropertyName == nameof(updates.HasUpdate)) RefreshUpdateIndicator(); };
+        RefreshUpdateIndicator();
         SettingsPane.Loaded += async (_, _) => await settings.RefreshStorageAsync();
         SettingsPane.Loaded += async (_, _) => await OpenIn.RefreshEditorsAsync();
         OpenIn.PropertyChanged += (_, change) =>

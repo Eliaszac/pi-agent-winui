@@ -29,6 +29,8 @@ Settings can hide Home analytics; this does not stop local usage retention. Dele
 
 ## What can leave your system
 
+Automatic update checks are enabled by default and can be disabled in Settings → Updates. They contact this application's public GitHub release endpoint without using your GitHub login or sending conversation content. GitHub receives normal connection information such as your IP address and an updater user-agent. Installer downloads contact GitHub's release asset hosts; automatic downloads are off by default. Downloaded installers are stored locally under `%LOCALAPPDATA%\PiAgentGui\updates`. Failed partial downloads are removed, and older installers are cleaned up when another version is downloaded. Installation and restart require your action.
+
 Configured providers receive requests needed to generate responses, which can include prompts, conversation context, selected images and files, tool results and relevant workspace content. Agent tools, extensions and MCP servers may communicate with further destinations. Remote execution sends commands and relevant data to the selected host. Local execution can also make network requests.
 
 Provider/model discovery, sign-in, GitHub features, package installation, MCP connections and integration status checks can contact their respective services. Some refreshes happen automatically after those features are configured. Installing Pi or extensions uses their distribution services. Requests expose ordinary connection information, such as the source IP address, to the destination. This app does not route those requests through a publisher backend.

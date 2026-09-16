@@ -32,7 +32,6 @@
                 <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Confluence" Integration="confluence" Description="Reference team documentation and pages while working on your projects."/>
                 <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Linear" Integration="linear" Description="Connect issues and project plans to the work you do with the agent."/>
                 <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Notion" Integration="notion" Description="Bring notes, pages, and shared knowledge into your conversations."/>
-                <controls:PendingIntegrationCard VerticalAlignment="Stretch" Title="Supabase" Integration="supabase" Description="Reference project and database context while building your application."/>
             </controls:IntegrationCardGrid>
         </StackPanel>
     </ScrollViewer>

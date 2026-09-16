@@ -2,7 +2,8 @@ namespace PiAgentGui.Models.Settings;
 
 public sealed record AppPreferences(bool ResumeConversation = false, bool ShowLocalUsage = true, DateTimeOffset? UsageResetAt = null,
     int Theme = 0, double ConversationTextSize = 15, double CodeTextSize = 12, bool ControlEnterToSend = false, int ConversationTextWeight = 600,
-    double TerminalTextSize = 12, int TerminalScrollback = 5000, bool CompletionAudio = true)
+    double TerminalTextSize = 12, int TerminalScrollback = 5000, bool CompletionAudio = true,
+    bool AutomaticUpdateChecks = true, bool AutomaticUpdateDownloads = false)
 {
     public AppPreferences Normalize() => this with
     {

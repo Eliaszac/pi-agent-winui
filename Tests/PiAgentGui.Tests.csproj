@@ -15,6 +15,10 @@
   </ItemGroup>
   <!-- Compile the UI-independent production files directly; no WinUI runtime is needed. -->
   <ItemGroup>
+    <Compile Include="../Models/Updates/*.cs" />
+    <Compile Include="../Services/Updates/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="../Models/Settings/*.cs" />
     <Compile Include="../Services/Settings/*.cs" />
   </ItemGroup>

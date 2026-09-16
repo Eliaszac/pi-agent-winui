@@ -53,18 +53,50 @@ Name: "{userdesktop}\Pi desktop"; Filename: "{app}\PiAgentGui.exe"; WorkingDir: 
 
 [Run]
 Filename: "{app}\PiAgentGui.exe"; Description: "Launch Pi desktop"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\PiAgentGui.exe"; Flags: nowait; Check: IsAutomaticUpdate
 
 [Code]
 const
   UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppIdentity}_is1';
   WebViewKey = 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
 
+function OpenProcess(Access: LongWord; Inherit: Boolean; ProcessId: LongWord): LongWord;
+  external 'OpenProcess@kernel32.dll stdcall';
+function WaitForSingleObject(Handle: LongWord; Milliseconds: LongWord): LongWord;
+  external 'WaitForSingleObject@kernel32.dll stdcall';
+function CloseHandle(Handle: LongWord): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+function IsAutomaticUpdate(): Boolean;
+begin
+  Result := ExpandConstant('{param:PIUPDATE|0}') = '1';
+end;
+
 function InitializeSetup(): Boolean;
 var
   Installed: String;
   InstalledVersion, NewVersion: Int64;
+  ParentId: Integer;
+  ParentHandle, WaitResult: LongWord;
 begin
   Result := True;
+  if IsAutomaticUpdate() then begin
+    ParentId := StrToIntDef(ExpandConstant('{param:PIPARENT|0}'), 0);
+    if ParentId <= 0 then begin
+      Result := False;
+      exit;
+    end;
+    ParentHandle := OpenProcess($00100000, False, ParentId);
+    if ParentHandle <> 0 then begin
+      WaitResult := WaitForSingleObject(ParentHandle, 60000);
+      CloseHandle(ParentHandle);
+      if WaitResult <> 0 then begin
+        MsgBox('Pi desktop did not close in time. The update was cancelled. Close the app and try again.', mbError, MB_OK);
+        Result := False;
+        exit;
+      end;
+    end;
+  end;
   if RegQueryStringValue(HKCU64, UninstallKey, 'DisplayVersion', Installed) then
     if StrToVersion(Installed, InstalledVersion) and StrToVersion('{#AppVersion}', NewVersion) then
       if ComparePackedVersion(InstalledVersion, NewVersion) > 0 then begin

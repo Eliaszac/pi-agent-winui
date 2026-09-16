@@ -29,7 +29,7 @@ The resulting file is `artifacts/installer/PiDesktop-Setup-0.1.1-x64.exe` with a
 - Run the installer normally, without administrator elevation. It installs for the current user under `%LOCALAPPDATA%\Programs\Pi Agent`.
 - A stable `AppId=PiAgentGui.Desktop` ensures subsequent installers update the same installation and Windows Installed apps entry. Do not change this identity for subsequent releases.
 - Newer versions replace application files in place. The same version can be installed again to repair its files. Older versions are rejected using the installed version registry entry.
-- Setup uses Windows Restart Manager for files in use; finish active runs and close Pi desktop before installing. It does not automatically relaunch processes after an update. Interactive setup offers an optional launch at the end; silent setup never launches the app.
+- Setup uses Windows Restart Manager for files in use; finish active runs and close Pi desktop before installing. Interactive setup offers an optional launch at the end; ordinary silent setup does not launch the app. The app's Update and restart action uses `/PIUPDATE=1 /PIPARENT=<pid>`: Setup waits up to 60 seconds for that process to exit, disables forced application closing through its command-line flags, and launches the updated app after successful installation.
 - A Start menu shortcut is installed; a desktop shortcut is optional and its selection is retained for upgrades.
 - Shortcuts and installer labels use Pi desktop. Setup removes the legacy Pi Agent Start menu and desktop shortcuts; the existing installation directory and AppId remain unchanged for upgrade compatibility.
 - Uninstall through Windows Installed apps. The uninstaller removes tracked application files and shortcuts, preserving `%LOCALAPPDATA%\PiAgentGui` and all Pi configuration, extensions, sessions and credentials in the user's Pi directory. It never uninstalls Pi or the shared WebView2 runtime.
@@ -43,7 +43,9 @@ Pi and its model/provider configuration remain separate. The app's existing Pi i
 
 ## Local testing versus public distribution
 
-This local installer is unsigned. Public distribution still needs a code-signing identity for both application and installer, release hosting, and a separately designed authenticated update-check/download flow. No automatic updater or release publishing is enabled by this work. Re-running a newer local installer is the current update mechanism.
+This local installer is unsigned. Settings → Updates checks the public GitHub latest stable release without a token. Upload `PiDesktop-Setup-X.Y.Z-x64.exe` and its matching `.sha256` asset to each `vX.Y.Z` release. The updater validates asset origin, size and SHA-256, including GitHub's asset digest when supplied. This trusts GitHub release ownership and HTTPS; checksums are not publisher signatures. Code signing remains a separate distribution improvement.
+
+Automatic checks default on and automatic downloads default off. Installation always requires Update and restart, an installed Windows build, no active conversations/research/terminal tabs, and no other Pi desktop processes. Downloaded installers are cached under `%LOCALAPPDATA%\PiAgentGui\updates`; failed partial downloads are removed, and older installers are removed when downloading another version. The GUI closes its owned resources before launching setup. Updates are full installers, with no automatic rollback or release publishing. The end-to-end shutdown/install/relaunch path requires installed-build verification; unit tests and installer compilation do not prove it.
 
 Verify fresh installation, same-version repair, upgrade, rejected downgrade, launch from the installed directory, uninstall and reinstall. Confirm user data is unchanged. A machine without .NET/Windows App SDK/WebView2 is needed to fully test first-time prerequisite installation; a developer machine cannot prove that scenario.
 
