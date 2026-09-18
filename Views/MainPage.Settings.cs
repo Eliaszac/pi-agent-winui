@@ -49,18 +49,36 @@ public sealed partial class MainPage
             if (action == "legal") { ViewModel.OpenSettings(legal: true); return; }
             if (action == "extensions") { ViewModel.OpenExtensions(); return; }
             if (dialogOpen || settings.Busy) return;
+            if (action == "diagnostics") { await PreviewSettingsDiagnosticsAsync(settings); return; }
+            if (action.StartsWith("defaults:", StringComparison.Ordinal)) { await RestoreSettingsDefaultsAsync(settings, action[9..]); return; }
             if (action.StartsWith("storage-", StringComparison.Ordinal)) { await HandleStorageActionAsync(settings, action); return; }
             if (action is "palette" or "editors" || action.StartsWith("editor:", StringComparison.Ordinal))
             {
                 settings.Busy = true;
+                settings.SetFeedback("");
+                var discoveryFailed = false;
+                void OnDiscoveryFailed(string message)
+                {
+                    discoveryFailed = true;
+                    settings.SetFeedback(message, SettingsFeedbackKind.Error);
+                }
+                OpenIn.Failed += OnDiscoveryFailed;
                 try
                 {
-                    if (action == "palette") { await paletteUsage.ClearAsync(); settings.Message = "Command ranking has been reset."; }
+                    if (action == "palette") await paletteUsage.ClearAsync();
                     else if (action == "editors") await OpenIn.RefreshEditorsAsync();
                     else await OpenIn.SetPreferredEditorAsync(action.Length == 7 ? null : action[7..]);
+                    if (!discoveryFailed)
+                        settings.SetFeedback(action == "palette" ? "Command ranking has been reset."
+                            : action == "editors" ? "Available editors refreshed." : "Preferred editor saved.", SettingsFeedbackKind.Success);
                 }
-                catch (Exception error) { settings.Message = "The preference could not be updated. " + error.Message; }
-                finally { settings.Busy = false; SettingsPane.SetEditors(OpenIn.EditorOptions, OpenIn.PreferredEditor); }
+                catch (Exception error) { settings.SetFeedback("The preference could not be updated. " + error.Message, SettingsFeedbackKind.Error); }
+                finally
+                {
+                    OpenIn.Failed -= OnDiscoveryFailed;
+                    settings.Busy = false;
+                    SettingsPane.SetEditors(OpenIn.EditorOptions, OpenIn.PreferredEditor);
+                }
                 return;
             }
             if (action is not ("usage" or "projects" or "conversations")) return;
@@ -68,7 +86,7 @@ public sealed partial class MainPage
             var projects = action == "projects";
             if (!usage && (!ViewModel.CanManageSidebar || ViewModel.HasActiveWork || Research.HasActiveTasks || Terminals.Tabs.Any(tab => !tab.IsFinished)))
             {
-                settings.Message = "Finish or cancel active conversations and research, and close running terminal tabs before deleting data.";
+                settings.SetFeedback("Finish or cancel active conversations and research, and close running terminal tabs before deleting data.", SettingsFeedbackKind.Warning);
                 return;
             }
             dialogOpen = true;
@@ -93,10 +111,12 @@ public sealed partial class MainPage
                 if (ViewModel.HasActiveWork || Research.HasActiveTasks || Terminals.Tabs.Any(tab => !tab.IsFinished))
                     throw new InvalidOperationException("Work started while confirmation was open. Finish it before deleting data.");
                 settings.Busy = true;
+                settings.SetFeedback("");
                 await ViewModel.ClearCatalogAsync(projects);
-                settings.Message = ViewModel.HasError ? ViewModel.ErrorMessage : "The selected records were deleted. Your project files were preserved.";
+                settings.SetFeedback(ViewModel.HasError ? ViewModel.ErrorMessage : "The selected records were deleted. Your project files were preserved.",
+                    ViewModel.HasError ? SettingsFeedbackKind.Warning : SettingsFeedbackKind.Success);
             }
-            catch (Exception error) { settings.Message = "The action could not be completed. " + error.Message; }
+            catch (Exception error) { settings.SetFeedback("The action could not be completed. " + error.Message, SettingsFeedbackKind.Error); }
             finally { settings.Busy = false; dialogOpen = false; ViewModel.OpenSettings(); }
         };
     }

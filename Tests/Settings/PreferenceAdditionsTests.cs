@@ -44,7 +44,7 @@ public sealed class PreferenceAdditionsTests
         Assert.AreEqual(0, model.TerminalScrollback);
         await model.SetTerminalScrollbackAsync(int.MaxValue);
         Assert.AreEqual(50000, model.TerminalScrollback);
-        await model.ResetTerminalAsync();
+        await model.RestoreDefaultsAsync(SettingsDefaultsCategory.Terminal);
         Assert.AreEqual(12d, model.TerminalTextSize);
         Assert.AreEqual(5000, model.TerminalScrollback);
         Assert.IsFalse(model.CompletionAudio);

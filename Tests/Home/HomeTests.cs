@@ -144,7 +144,7 @@ public sealed class HomeTests
         var settings = new Services.Settings.AppSettingsStore(Path.Combine(directory, "settings.json"));
         var model = new ViewModels.Settings.SettingsViewModel(settings, reader);
         await model.ResetUsageAsync();
-        Assert.IsFalse(model.HasMessage);
+        Assert.AreEqual(ViewModels.Settings.SettingsFeedbackKind.Success, model.FeedbackKind);
         var archive = JsonSerializer.Deserialize<UsageArchive>(await File.ReadAllTextAsync(Paths.UsageArchiveFile))!;
         Assert.AreEqual(0, archive.Samples.Count);
         Assert.IsNotNull(archive.ResetAt);

@@ -168,22 +168,23 @@ public partial class App : Application
         var settings = new ViewModels.Settings.SettingsViewModel(settingsStore, usageReader)
         {
             AppUpdates = appUpdates,
-            Message = settingsError,
+            RestoreDefaultEditor = () => openIn.SetPreferredEditorAsync(null),
             StorageService = new Services.Settings.StorageOverviewService(Path.GetDirectoryName(storage.CatalogPath)!,
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".pi-desktop-checkpoints")),
             ClearCompletedResearch = research.ClearCompletedAsync
         };
+        if (!string.IsNullOrEmpty(settingsError)) settings.SetFeedback(settingsError, ViewModels.Settings.SettingsFeedbackKind.Error);
         var sidebarStore = new Services.Settings.SidebarPreferencesStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "sidebar.json"));
         try
         {
             var savedSidebar = await sidebarStore.LoadAsync();
             shell.Sidebar.Restore(savedSidebar.Width, savedSidebar.IsOpen);
         }
-        catch (Exception error) { settings.Message = "Saved sidebar layout could not be read. " + error.Message; }
+        catch (Exception error) { settings.SetFeedback("Saved sidebar layout could not be read. " + error.Message, ViewModels.Settings.SettingsFeedbackKind.Error); }
         async Task SaveSidebarAsync()
         {
             try { await sidebarStore.SaveAsync(new(shell.Sidebar.PreferredWidth, shell.Sidebar.PreferredOpen)); }
-            catch (Exception error) { settings.Message = "Sidebar layout could not be saved. " + error.Message; }
+            catch (Exception error) { settings.SetFeedback("Sidebar layout could not be saved. " + error.Message, ViewModels.Settings.SettingsFeedbackKind.Error); }
         }
         void SidebarPreferenceChanged(object? sender, EventArgs args) => sidebarSaveTask = SaveSidebarAsync();
         shell.Sidebar.PreferenceChanged += SidebarPreferenceChanged;
@@ -191,7 +192,7 @@ public partial class App : Application
         if (settingsStore.Current.UsageResetAt is { } usageCutoff)
         {
             try { await usageReader.ResetAsync(usageCutoff); }
-            catch (Exception error) { settings.Message = "Could not apply the saved usage reset. " + error.Message; }
+            catch (Exception error) { settings.SetFeedback("Could not apply the saved usage reset. " + error.Message, ViewModels.Settings.SettingsFeedbackKind.Error); }
         }
         var home = new ViewModels.Home.HomeViewModel(shell, usageReader, settingsStore);
         Controls.ReadingPreferences.Apply(settingsStore.Current);

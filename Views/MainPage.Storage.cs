@@ -8,7 +8,7 @@ public sealed partial class MainPage
     private async Task HandleStorageActionAsync(SettingsViewModel settings, string action)
     {
         if (settings.StorageService is not { } storage) return;
-        if (action == "storage-refresh") { await settings.RefreshStorageAsync(); return; }
+        if (action == "storage-refresh") { await settings.RefreshStorageAsync(reportSuccess: true); return; }
         dialogOpen = true;
         try
         {
@@ -16,6 +16,7 @@ public sealed partial class MainPage
             {
                 var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(storage.AppDirectory);
                 if (!await Windows.System.Launcher.LaunchFolderAsync(folder)) throw new IOException("The folder could not be opened.");
+                settings.SetFeedback("App data folder opened.", SettingsFeedbackKind.Success);
                 return;
             }
             if (action is "storage-diagnostics" or "storage-research")
@@ -31,22 +32,23 @@ public sealed partial class MainPage
                 if (await confirmation.ShowAsync() != ContentDialogResult.Primary) return;
             }
             settings.Busy = true;
-            settings.Message = "Cleaning up…";
+            settings.SetFeedback("Cleaning up…");
             switch (action)
             {
                 case "storage-diagnostics":
-                    await storage.ClearDiagnosticsAsync(); settings.Message = "Saved crash diagnostics cleared."; break;
+                    await storage.ClearDiagnosticsAsync(); settings.SetFeedback("Saved crash diagnostics cleared.", SettingsFeedbackKind.Success); break;
                 case "storage-research":
                     if (settings.ClearCompletedResearch is not { } clear) throw new IOException("Research storage is unavailable.");
-                    settings.Message = $"Cleared {await clear()} completed research tasks."; break;
+                    settings.SetFeedback($"Cleared {await clear()} completed research tasks.", SettingsFeedbackKind.Success); break;
                 case "storage-retry":
                     if (ViewModel.HasActiveWork || Research.HasActiveTasks || Terminals.Tabs.Any(tab => !tab.IsFinished))
                         throw new IOException("Finish active work and close running terminals before retrying cleanup.");
-                    settings.Message = await ViewModel.RetryCleanupAsync(); break;
+                    var result = await ViewModel.RetryCleanupAsync();
+                    settings.SetFeedback(result, ViewModel.HasError ? SettingsFeedbackKind.Warning : SettingsFeedbackKind.Success); break;
             }
             await settings.RefreshStorageAsync();
         }
-        catch (Exception error) { settings.Message = "Storage action could not finish. " + error.Message; }
+        catch (Exception error) { settings.SetFeedback("Storage action could not finish. " + error.Message, SettingsFeedbackKind.Error); }
         finally { settings.Busy = false; dialogOpen = false; }
     }
 }
