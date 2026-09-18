@@ -10,7 +10,7 @@ Remaining work and optional ideas. Listing an item does not authorize implementa
 
 ### Public-release identity and packaging
 
-Confirm the publisher identity and whether to retain “Pi desktop” or choose an independent product name. Check upgrade cleanup for removed artwork; a fresh build excludes it, but ordinary installer replacement can leave old files behind. See [branding](BRANDING.md) and [installer guidance](../Installer/README.md). This is nonessential and not a current priority.
+Public identity is confirmed as Pi desktop, published by Eliaszac, Denmark. Publisher metadata and exact-path obsolete-artwork cleanup are implemented. Installed verification of fresh installation, same-version repair and upgrades remains outstanding; headless inventory tests and installer compilation do not establish this. See [branding](BRANDING.md) and [installer guidance](../Installer/README.md). Code signing remains a separate optional improvement.
 
 ### Optional Settings improvements
 

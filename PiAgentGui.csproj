@@ -32,6 +32,7 @@
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(PlatformTarget)' == 'ARM64'">win-arm64</RuntimeIdentifier>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationIcon>Assets\Pi.ico</ApplicationIcon>
+        <Company>Eliaszac</Company>
         <Product>Pi desktop</Product>
         <Title>Pi desktop</Title>
         <Version>1.2.0</Version>

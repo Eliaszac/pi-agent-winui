@@ -13,6 +13,13 @@
     <PackageReference Include="MSTest.TestAdapter" Version="3.6.4" />
     <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="../Installer/*.iss" Link="Packaging/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../PiAgentGui.csproj" Link="Packaging/AppProject.xml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../Assets/OpenIn/**/*" Link="Packaging/Assets/OpenIn/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../Assets/Providers/**/*" Link="Packaging/Assets/Providers/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../Assets/Integrations/**/*" Link="Packaging/Assets/Integrations/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
   <!-- Compile the UI-independent production files directly; no WinUI runtime is needed. -->
   <ItemGroup>
     <Compile Include="../Models/Updates/*.cs" />
