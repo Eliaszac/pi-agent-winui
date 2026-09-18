@@ -18,11 +18,12 @@ internal sealed class InMemoryProjectRepository(params Project[] projects) : IPr
         Projects[i] = Projects[i] with { DefaultTargetId = targetId };
         return Task.CompletedTask;
     }
-    public Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default, Guid? targetId = null)
+    public Task? ScriptWriteBarrier { get; set; }
+    public async Task UpdateScriptsAsync(Guid projectId, ProjectScriptSettings settings, CancellationToken cancellationToken = default, Guid? targetId = null)
     {
+        if (ScriptWriteBarrier is not null) await ScriptWriteBarrier;
         var index = Projects.FindIndex(item => item.Id == projectId);
         Projects[index] = Projects[index] with { Metadata = Utilities.ProjectScripts.Write(Projects[index].Metadata, settings, targetId) };
-        return Task.CompletedTask;
     }
     public Task TouchConversationAsync(Guid projectId, Guid conversationId, DateTimeOffset usedAt, CancellationToken cancellationToken = default)
     {

@@ -85,14 +85,47 @@ public sealed class ProjectScriptsViewModel(IProjectRepository repository, Termi
         await PersistAsync(owner, new() { Scripts = next, SelectedId = selectedId == id ? next.FirstOrDefault()?.Id : selectedId });
     }
 
+    public IReadOnlyList<ProjectScript> Search(string query)
+    {
+        if (!CanUse) throw new InvalidOperationException(HasError ? Error : "Wait for the project's scripts to load.");
+        var terms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return Scripts.Where(script => terms.All(term => script.Name.Contains(term, StringComparison.OrdinalIgnoreCase)))
+            .Take(20).ToArray();
+    }
+
+    public ProjectScriptRunRequest PrepareRun(ProjectScript script)
+    {
+        if (!CanUse || !Scripts.Contains(script)) throw new InvalidOperationException("The script changed or is unavailable. Search again before running it.");
+        return new(script, ProjectScripts.ResolveTargetDirectory(target, projectDirectory, script.WorkingDirectory),
+            target?.Label ?? "Local Windows", revision, terminals.ConversationId);
+    }
+
+    public async Task RunReviewedAsync(ProjectScriptRunRequest request)
+    {
+        ValidateReview(request);
+        await RunAsync(request.Script.Id);
+    }
+
+    private void ValidateReview(ProjectScriptRunRequest request)
+    {
+        if (!CanUse || request.Revision != revision || request.ConversationId != terminals.ConversationId
+            || !Scripts.Contains(request.Script)
+            || request.Directory != ProjectScripts.ResolveTargetDirectory(target, projectDirectory, request.Script.WorkingDirectory))
+            throw new InvalidOperationException("The script, target, or conversation changed. Review the script again before running it.");
+    }
+
     public async Task RunAsync(Guid? id = null)
     {
         if (!CanUse || projectId is not { } owner) return;
         var script = Scripts.FirstOrDefault(item => item.Id == (id ?? selectedId)) ?? (id is null ? Scripts.FirstOrDefault() : null);
         if (script is null) throw new InvalidOperationException("Choose a saved script first.");
         var savedTarget = target;
+        var version = revision;
+        var conversation = terminals.ConversationId;
         var directory = ProjectScripts.ResolveTargetDirectory(savedTarget, projectDirectory, script.WorkingDirectory);
         await PersistAsync(owner, new() { Scripts = Scripts.ToArray(), SelectedId = script.Id });
+        if (version != revision || conversation != terminals.ConversationId)
+            throw new InvalidOperationException("The target or conversation changed. Run the script again from its original conversation.");
         terminals.RunScript(owner, script.Id, script.Name, directory, script.Command, savedTarget);
     }
 

@@ -463,9 +463,11 @@
                     <controls:ActionButton HorizontalAlignment="Left" Margin="4" Padding="8,4" MinHeight="28" Background="Transparent" BorderThickness="0" AutomationProperties.Name="Choose reference source">
                         <controls:ActionButton.Flyout>
                             <MenuFlyout>
-                                <controls:ActionMenuFlyoutItem Text="Files" Tag="files" Click="OnReferenceKindChanged"/>
-                                <controls:ActionMenuFlyoutItem Text="Pull requests" Tag="prs" Click="OnReferenceKindChanged"/>
-                                <controls:ActionMenuFlyoutItem Text="Issues" Tag="issues" Click="OnReferenceKindChanged"/>
+                                <controls:ActionMenuFlyoutItem Text="Files (@f: / @files:)" Tag="files" Click="OnReferenceKindChanged"/>
+                                <controls:ActionMenuFlyoutItem Text="Pull requests (@p: / @prs:)" Tag="prs" Click="OnReferenceKindChanged"/>
+                                <controls:ActionMenuFlyoutItem Text="Issues (@i: / @issues:)" Tag="issues" Click="OnReferenceKindChanged"/>
+                                <MenuFlyoutSeparator/>
+                                <controls:ActionMenuFlyoutItem Text="Run script… (@s: / @scripts:)" Tag="scripts" Click="OnReferenceKindChanged"/>
                             </MenuFlyout>
                         </controls:ActionButton.Flyout>
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -475,8 +477,8 @@
                     </controls:ActionButton>
                     <TextBlock x:Name="ReferenceHint" Text="Project files" TextWrapping="Wrap" FontSize="11" Margin="8,4" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <controls:CommandListView x:Name="FileReferenceList" MaxHeight="200" IsItemClickEnabled="True"
-                        ItemClick="OnFileReferenceClicked" KeyDown="OnFileReferenceKeyDown" SelectionMode="Single" DisplayMemberPath="Label" AutomationProperties.Name="File and GitHub references" />
-                    <controls:ActionButton Content="Browse…" Click="OnBrowseReference" HorizontalAlignment="Stretch"
+                        ItemClick="OnFileReferenceClicked" KeyDown="OnFileReferenceKeyDown" SelectionMode="Single" DisplayMemberPath="Label" AutomationProperties.Name="Context references and script actions" />
+                    <controls:ActionButton x:Name="BrowseReferenceButton" Content="Browse…" Click="OnBrowseReference" HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Choose a file inside or outside the project" />
                 </StackPanel>
             </Border>
