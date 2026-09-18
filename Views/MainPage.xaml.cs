@@ -94,6 +94,8 @@ public sealed partial class MainPage : Page
         };
         Unloaded += (_, _) => sidebarRows.Dispose();
         InitializeCommandPalette();
+        ConversationPane.SearchScripts = Scripts.Search;
+        ConversationPane.ReviewScript = ReviewComposerScriptAsync;
         CapabilitiesPane.DataContext = Capabilities;
         GettingStartedPane.DataContext = GettingStarted;
         GettingStartedPane.ProvidersRequested += (_, _) => ViewModel.OpenProviders();

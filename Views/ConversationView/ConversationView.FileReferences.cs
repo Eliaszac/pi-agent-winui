@@ -14,11 +14,18 @@ public sealed partial class ConversationView
     private FileReferenceToken? fileToken;
     private string? dismissedFileToken;
     private string referenceKind = "files";
+    private bool reviewingScript;
+    public Func<string, IReadOnlyList<Models.Projects.ProjectScript>>? SearchScripts { get; set; }
+    public Func<Models.Projects.ProjectScript, Task<bool>>? ReviewScript { get; set; }
+    private static string ReferenceSourceName(string kind) => kind switch
+    {
+        "prs" => "Pull requests", "issues" => "Issues", "scripts" => "Run script", _ => "Files"
+    };
     private void OnReferenceKindChanged(object sender, RoutedEventArgs args)
     {
         if (sender is not FrameworkElement { Tag: string kind }) return;
         referenceKind = kind;
-        ReferenceSourceLabel.Text = kind == "files" ? "Files" : kind == "prs" ? "Pull requests" : "Issues";
+        ReferenceSourceLabel.Text = ReferenceSourceName(kind);
         if (fileToken is { Kind: not null } scoped)
         {
             var caret = Composer.SelectionStart;
@@ -39,7 +46,7 @@ public sealed partial class ConversationView
         if (nextToken?.Kind is { } kind)
         {
             referenceKind = kind;
-            ReferenceSourceLabel.Text = kind == "files" ? "Files" : kind == "prs" ? "Pull requests" : "Issues";
+            ReferenceSourceLabel.Text = ReferenceSourceName(kind);
         }
         if (nextToken is null && Composer.SelectionLength == 0)
         {
@@ -61,18 +68,35 @@ public sealed partial class ConversationView
         }
         if (dismissedFileToken == $"{token.Start}:{token.Query}") return;
         FileReferencePanel.Visibility = Visibility.Visible;
+        BrowseReferenceButton.Visibility = referenceKind == "files" ? Visibility.Visible : Visibility.Collapsed;
         FileReferenceList.ItemsSource = null;
-        ReferenceHint.Text = referenceKind == "files" ? "Project files" : "Searching this project's GitHub repository…";
+        ReferenceHint.Text = referenceKind switch
+        {
+            "files" => "Project files", "scripts" => "Finding saved project scripts…",
+            _ => "Searching this project's GitHub repository…"
+        };
         var request = new CancellationTokenSource();
         fileSearchLifetime = request;
         try
         {
-            await Task.Delay(referenceKind == "files" ? 120 : 400, request.Token);
-            if (referenceKind != "files" || Models.GitHub.GitHubReference.FromUrl(token.Query) is not null)
+            var source = referenceKind;
+            await Task.Delay(source is "files" or "scripts" ? 120 : 400, request.Token);
+            if (request.IsCancellationRequested || !ReferenceEquals(owner, ViewModel)) return;
+            if (source == "scripts" && Models.GitHub.GitHubReference.FromUrl(token.Query) is null)
+            {
+                var scripts = SearchScripts?.Invoke(token.Query) ?? throw new InvalidOperationException("Project scripts are unavailable.");
+                FileReferenceList.ItemsSource = scripts;
+                FileReferenceList.SelectedIndex = scripts.Count > 0 ? 0 : -1;
+                ReferenceHint.Text = scripts.Count == 0
+                    ? "No matching scripts. Add or refresh scripts from Run scripts."
+                    : "Action, not context · Select to review, then choose Run · Up to 20 matches";
+                return;
+            }
+            if (source != "files" || Models.GitHub.GitHubReference.FromUrl(token.Query) is not null)
             {
                 if (owner.GitHub is null) throw new IOException("Connect GitHub from Settings → Integrations.");
                 var repository = await owner.GetGitHubRepositoryAsync(request.Token);
-                var references = await owner.GitHub.SearchReferencesAsync(token.Query, referenceKind == "prs", repository, request.Token);
+                var references = await owner.GitHub.SearchReferencesAsync(token.Query, source == "prs", repository, request.Token);
                 if (request.IsCancellationRequested || !ReferenceEquals(owner, ViewModel)) return;
                 FileReferenceList.ItemsSource = references;
                 FileReferenceList.SelectedIndex = references.Count > 0 ? 0 : -1;
@@ -92,7 +116,7 @@ public sealed partial class ConversationView
             if (!request.IsCancellationRequested && ReferenceEquals(owner, ViewModel))
                 ReferenceHint.Text = error switch
                 {
-                    IOException or UnauthorizedAccessException => error.Message,
+                    IOException or UnauthorizedAccessException or InvalidOperationException => error.Message,
                     System.ComponentModel.Win32Exception => "Couldn't start Git or the execution target. Check its installation and connection.",
                     System.Net.Http.HttpRequestException => "Couldn't reach GitHub. Check your connection and try again.",
                     _ => "Reference lookup failed (" + error.GetType().Name + "). Try again."
@@ -129,7 +153,8 @@ public sealed partial class ConversationView
 
     private void OnFileReferenceClicked(object sender, ItemClickEventArgs args)
     {
-        if (args.ClickedItem is FileReference file) InsertFileReference(file.Path);
+        if (args.ClickedItem is Models.Projects.ProjectScript script) ReviewScriptSelection(script);
+        else if (args.ClickedItem is FileReference file) InsertFileReference(file.Path);
         else if (args.ClickedItem is Models.GitHub.GitHubReference reference) InsertGitHubReference(reference);
     }
     private void OnFileReferenceKeyDown(object sender, KeyRoutedEventArgs args)
@@ -139,9 +164,31 @@ public sealed partial class ConversationView
     }
     private void AcceptFileReference()
     {
-        if (FileReferenceList.SelectedItem is FileReference file) InsertFileReference(file.Path);
+        if (FileReferenceList.SelectedItem is Models.Projects.ProjectScript script) ReviewScriptSelection(script);
+        else if (FileReferenceList.SelectedItem is FileReference file) InsertFileReference(file.Path);
         else if (FileReferenceList.SelectedItem is Models.GitHub.GitHubReference reference) InsertGitHubReference(reference);
     }
+    private async void ReviewScriptSelection(Models.Projects.ProjectScript script)
+    {
+        if (reviewingScript || fileToken is not { } token || ViewModel is not { } owner || ReviewScript is null) return;
+        reviewingScript = true;
+        var draft = Composer.Text;
+        DismissFileReferences();
+        try
+        {
+            var ran = await ReviewScript(script);
+            if (!ReferenceEquals(owner, ViewModel)) return;
+            if (ran && Composer.Text == draft)
+            {
+                Composer.Text = draft.Remove(token.Start, token.Length);
+                Composer.Select(token.Start, 0);
+            }
+            Composer.Focus(FocusState.Programmatic);
+        }
+        catch (Exception error) { owner.ReportAttachmentError(error.Message); }
+        finally { reviewingScript = false; }
+    }
+
     private void InsertGitHubReference(Models.GitHub.GitHubReference reference)
     {
         if (fileToken is not { } token || ViewModel is not { } owner) return;

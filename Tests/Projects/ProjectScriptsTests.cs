@@ -44,6 +44,38 @@ public sealed class ProjectScriptsTests
     }
 
     [TestMethod]
+    public async Task DiscoveryAndReviewDoNotRunAndChangedReviewsAreRejected()
+    {
+        var project = new Project { Id = Guid.NewGuid(), Name = "Example", Path = Path.GetTempPath() };
+        var repository = new InMemoryProjectRepository(project);
+        var launches = new List<string>();
+        await using var terminals = new TerminalPanelViewModel(_ => new FakeTerminalSession(), (_, command) =>
+        { launches.Add(command); return new FakeTerminalSession(); });
+        terminals.ConversationId = Guid.NewGuid();
+        var model = new ProjectScriptsViewModel(repository, terminals);
+        await model.SelectAsync(project.Id, project.Path);
+        await model.SaveAsync(null, "Unit tests", "dotnet test", "");
+        var script = model.Search("TEST unit").Single();
+        Assert.AreEqual("Run script: Unit tests", script.Label);
+        Assert.AreEqual(0, model.Search("missing").Count);
+        var request = model.PrepareRun(script);
+        Assert.AreEqual(project.Path, request.Directory);
+        Assert.AreEqual(0, launches.Count, "Discovery and review never execute a command.");
+        terminals.ConversationId = Guid.NewGuid();
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => model.RunReviewedAsync(request));
+        request = model.PrepareRun(script);
+        await model.SaveAsync(script.Id, script.Name, "different command", "");
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => model.RunReviewedAsync(request));
+        Assert.ThrowsException<InvalidOperationException>(() => model.PrepareRun(script));
+        request = model.PrepareRun(model.Scripts.Single());
+        await model.SelectAsync(project.Id, project.Path);
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => model.RunReviewedAsync(request));
+        Assert.AreEqual(0, launches.Count);
+        await model.RunReviewedAsync(model.PrepareRun(model.Scripts.Single()));
+        Assert.AreEqual("different command", launches.Single());
+    }
+
+    [TestMethod]
     public async Task ActiveRunIsFocusedButFinishedOrClosedRunCanBeStartedAgain()
     {
         var sessions = new List<FakeTerminalSession>();
@@ -77,6 +109,30 @@ public sealed class ProjectScriptsTests
         Assert.ThrowsException<InvalidDataException>(() => ProjectScripts.Write(metadata, new() { Scripts = [script], SelectedId = Guid.NewGuid() }));
         Assert.AreEqual(Path.GetTempPath(), ProjectScripts.ResolveDirectory(Path.GetTempPath(), ""));
         Assert.ThrowsException<DirectoryNotFoundException>(() => ProjectScripts.ResolveDirectory(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+    }
+
+    [TestMethod]
+    public async Task SwitchingConversationDuringRunPersistencePreventsLaunch()
+    {
+        var project = new Project { Id = Guid.NewGuid(), Name = "Example", Path = Path.GetTempPath() };
+        var repository = new InMemoryProjectRepository(project);
+        var launches = 0;
+        await using var terminals = new TerminalPanelViewModel(_ => new FakeTerminalSession(), (_, _) =>
+        { launches++; return new FakeTerminalSession(); });
+        terminals.ConversationId = Guid.NewGuid();
+        var model = new ProjectScriptsViewModel(repository, terminals);
+        await model.SelectAsync(project.Id, project.Path);
+        await model.SaveAsync(null, "Tests", "dotnet test", "");
+        var request = model.PrepareRun(model.Scripts.Single());
+        var barrier = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        repository.ScriptWriteBarrier = barrier.Task;
+        var run = model.RunReviewedAsync(request);
+        Assert.IsFalse(run.IsCompleted);
+        terminals.ConversationId = Guid.NewGuid();
+        barrier.SetResult();
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => run);
+        Assert.AreEqual(0, launches);
+        Assert.AreEqual(0, terminals.Tabs.Count);
     }
 
     [TestMethod]

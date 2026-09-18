@@ -76,6 +76,16 @@ public sealed class AttachmentTests
     [DataRow("@prs:fix login", "prs", "fix login")]
     [DataRow("@files:My Folder", "files", "My Folder")]
     [DataRow("@ISSUES: login", "issues", "login")]
+    [DataRow("@f:My Folder", "files", "My Folder")]
+    [DataRow("@file:src", "files", "src")]
+    [DataRow("@p:fix login", "prs", "fix login")]
+    [DataRow("@pr:42", "prs", "42")]
+    [DataRow("@i:42", "issues", "42")]
+    [DataRow("@issue:bug", "issues", "bug")]
+    [DataRow("@s:", "scripts", "")]
+    [DataRow("@S: unit tests", "scripts", "unit tests")]
+    [DataRow("@script:build", "scripts", "build")]
+    [DataRow("@scripts:build", "scripts", "build")]
     public void ScopedReferencesSelectSourceAndAllowSpaces(string input, string kind, string query)
     {
         var text = "Review " + input;
@@ -98,6 +108,17 @@ public sealed class AttachmentTests
         const string middle = "Review @prs:fix login later";
         var scoped = FileReferenceToken.Find(middle, middle.IndexOf("login") + 2)!;
         Assert.AreEqual("Review  later", middle.Remove(scoped.Start, scoped.Length));
+    }
+
+    [TestMethod]
+    [DataRow("@src/file.cs")]
+    [DataRow("@something:build")]
+    [DataRow("@scripture:build")]
+    public void CategoryAliasesRequireAnExactPrefixAndColon(string text)
+    {
+        var token = FileReferenceToken.Find(text, text.Length)!;
+        Assert.IsNull(token.Kind);
+        Assert.AreEqual(text[1..], token.Query);
     }
 
     [TestMethod]
