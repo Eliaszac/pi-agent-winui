@@ -54,6 +54,7 @@ public sealed class SettingsTests
         var model = new SettingsViewModel(store);
         await model.SetUsageAsync(false);
         Assert.IsTrue(model.HasMessage);
+        Assert.AreEqual(SettingsFeedbackKind.Error, model.FeedbackKind);
         Assert.IsTrue(model.ShowLocalUsage);
         Assert.IsTrue(model.CanEdit);
     }
@@ -71,6 +72,86 @@ public sealed class SettingsTests
         model.Query = "";
         Assert.IsFalse(model.Data.Expanded);
         Assert.IsTrue(model.Categories.All(category => category.Visible));
+    }
+
+    [TestMethod]
+    public void SearchFiltersIndividualRowsAndKeepsCategoryContext()
+    {
+        var model = new SettingsViewModel(new AppSettingsStore(Path.Combine(directory, "settings.json")));
+        model.Query = "  APPEARANCE\ttext\nweight  ";
+        Assert.IsTrue(model.Appearance["Weight"].Visible);
+        Assert.IsFalse(model.Appearance["Theme"].Visible);
+        Assert.IsFalse(model.Appearance["BodySize"].Visible);
+        Assert.AreEqual(1, model.Categories.Count(category => category.Visible));
+
+        model.Query = "appearance";
+        Assert.IsTrue(model.Appearance.Entries.All(entry => entry.Visible));
+        model.Query = "theme semibold";
+        Assert.IsTrue(model.NoResults, "Terms from unrelated settings must not combine into a match.");
+        model.Query = " \t\n";
+        Assert.IsTrue(model.Categories.SelectMany(category => category.Entries).All(entry => entry.Visible));
+    }
+
+    [TestMethod]
+    [DataRow("completion mute", "Conversation", "Sound")]
+    [DataRow("terminal history", "Terminal", "Scrollback")]
+    [DataRow("preferred editor", "General", "Editor")]
+    [DataRow("delete screenshots", "Data management", "Conversations")]
+    [DataRow("check automatically", "Updates", "Checks")]
+    [DataRow("download automatically", "Updates", "Downloads")]
+    [DataRow("legal privacy", "About", "Legal")]
+    public void SearchFindsSettingLabelsAndAliases(string query, string categoryTitle, string key)
+    {
+        var model = new SettingsViewModel(new AppSettingsStore(Path.Combine(directory, "settings.json")));
+        model.Query = query;
+        var category = model.Categories.Single(item => item.Title == categoryTitle);
+        Assert.IsTrue(category.Visible);
+        Assert.IsTrue(category[key].Visible);
+        Assert.AreEqual(1, category.Entries.Count(entry => entry.Visible));
+    }
+
+    [TestMethod]
+    public void SearchRestoresExpansionAfterChangingMatches()
+    {
+        var model = new SettingsViewModel(new AppSettingsStore(Path.Combine(directory, "settings.json")));
+        model.Appearance.Expanded = false;
+        model.Query = "theme";
+        model.Appearance.Expanded = false;
+        model.Query = "scrollback";
+        model.Terminal.Expanded = false;
+        model.Query = "";
+        Assert.IsFalse(model.Appearance.Expanded);
+        Assert.IsTrue(model.Terminal.Expanded);
+    }
+
+    [TestMethod]
+    public async Task SuccessfulSaveReplacesErrorFeedbackAndResetReportsSuccess()
+    {
+        var model = new SettingsViewModel(new AppSettingsStore(Path.Combine(directory, "settings.json")));
+        model.SetFeedback("Previous failure", SettingsFeedbackKind.Error);
+        await model.SetUsageAsync(false);
+        Assert.AreEqual(SettingsFeedbackKind.Success, model.FeedbackKind);
+        Assert.AreEqual("Settings saved.", model.Message);
+        Assert.IsFalse(model.ShowLocalUsage);
+        await model.ResetUsageAsync();
+        Assert.AreEqual(SettingsFeedbackKind.Success, model.FeedbackKind);
+        StringAssert.Contains(model.Message, "totals have been reset");
+        model.SetFeedback("");
+        Assert.IsFalse(model.HasMessage);
+        Assert.AreEqual(SettingsFeedbackKind.Information, model.FeedbackKind);
+    }
+
+    [TestMethod]
+    public void FeedbackSeverityNotifiesEvenWhenMessageDoesNotChange()
+    {
+        var model = new SettingsViewModel(new AppSettingsStore(Path.Combine(directory, "settings.json")));
+        var changes = new List<string?>();
+        model.PropertyChanged += (_, args) => changes.Add(args.PropertyName);
+        model.SetFeedback("Result", SettingsFeedbackKind.Success);
+        changes.Clear();
+        model.SetFeedback("Result", SettingsFeedbackKind.Warning);
+        CollectionAssert.Contains(changes, nameof(model.FeedbackKind));
+        Assert.IsTrue(model.HasMessage);
     }
 
     [TestMethod]

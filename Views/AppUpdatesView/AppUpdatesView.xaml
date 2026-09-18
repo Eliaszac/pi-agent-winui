@@ -1,12 +1,12 @@
-<UserControl x:Class="PiAgentGui.Views.AppUpdatesView"
+<UserControl x:Class="PiAgentGui.Views.AppUpdatesView" x:Name="UpdatesRoot"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel Spacing="20">
-        <StackPanel Spacing="4">
+        <StackPanel Spacing="4" Visibility="{Binding SearchCategory.Items[Status].Visible, ElementName=UpdatesRoot, Converter={StaticResource BooleanToVisibility}}">
             <TextBlock Text="Pi desktop" FontSize="18" FontWeight="SemiBold"/>
             <TextBlock Text="{Binding Version}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
-        <Grid ColumnSpacing="14">
+        <Grid ColumnSpacing="14" Visibility="{Binding SearchCategory.Items[Status].Visible, ElementName=UpdatesRoot, Converter={StaticResource BooleanToVisibility}}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <Border Width="36" Height="36" CornerRadius="8" VerticalAlignment="Top" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                 <FontIcon x:Name="StatusIcon" Glyph="{Binding Icon}" FontSize="17"/>
@@ -19,17 +19,18 @@
                 <TextBlock x:Name="RestartNote" Visibility="{Binding ShowRestartNote, Converter={StaticResource BooleanToVisibility}}" Text="Your conversations are kept. Finish active runs before restarting." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </Grid>
-        <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
         <StackPanel Spacing="16">
-            <StackPanel Spacing="4">
-                <ToggleSwitch x:Name="CheckToggle" Header="Check for updates automatically" IsOn="{Binding AutomaticChecks, Mode=OneWay}" Toggled="OnPreferencesChanged"/>
+            <StackPanel Spacing="4" Visibility="{Binding SearchCategory.Items[Checks].Visible, ElementName=UpdatesRoot, Converter={StaticResource BooleanToVisibility}}">
+                <ToggleSwitch x:Name="CheckToggle" IsEnabled="{Binding CanEditPreferences}" Header="Check for updates automatically" IsOn="{Binding AutomaticChecks, Mode=OneWay}" Toggled="OnPreferencesChanged"/>
                 <TextBlock Text="Check in the background when Pi desktop opens." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
-            <StackPanel Spacing="4">
-                <ToggleSwitch x:Name="DownloadToggle" Header="Download updates automatically" IsOn="{Binding AutomaticDownloads, Mode=OneWay}" Toggled="OnPreferencesChanged"/>
+            <StackPanel Spacing="4" Visibility="{Binding SearchCategory.Items[Downloads].Visible, ElementName=UpdatesRoot, Converter={StaticResource BooleanToVisibility}}">
+                <ToggleSwitch x:Name="DownloadToggle" IsEnabled="{Binding CanEditPreferences}" Header="Download updates automatically" IsOn="{Binding AutomaticDownloads, Mode=OneWay}" Toggled="OnPreferencesChanged"/>
                 <TextBlock Text="Have the update ready. You choose when to install and restart." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </StackPanel>
-
+        <Button Content="Restore Updates defaults…" Click="OnRestoreDefaults" HorizontalAlignment="Left"
+            IsEnabled="{Binding CanEditPreferences}"
+            Visibility="{Binding SearchCategory.Items[Defaults].Visible, ElementName=UpdatesRoot, Converter={StaticResource BooleanToVisibility}}"/>
     </StackPanel>
 </UserControl>

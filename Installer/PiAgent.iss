@@ -9,6 +9,10 @@
 [Setup]
 AppId={#AppIdentity}
 AppName=Pi desktop
+AppPublisher=Eliaszac
+AppPublisherURL=https://github.com/Eliaszac/pi-agent-winui
+AppSupportURL=https://github.com/Eliaszac/pi-agent-winui/issues
+AppUpdatesURL=https://github.com/Eliaszac/pi-agent-winui/releases
 AppVersion={#AppVersion}
 AppVerName=Pi desktop {#AppVersion}
 VersionInfoVersion={#AppVersion}
@@ -44,6 +48,7 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 Source: "{#Bootstrapper}"; Flags: dontcopy
 
 [InstallDelete]
+#include "ObsoleteArtwork.iss"
 Type: files; Name: "{userprograms}\Pi Agent.lnk"
 Type: files; Name: "{userdesktop}\Pi Agent.lnk"
 

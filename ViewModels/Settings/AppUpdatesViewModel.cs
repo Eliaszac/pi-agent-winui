@@ -16,6 +16,16 @@ public sealed class AppUpdatesViewModel(AppUpdateClient client, AppSettingsStore
     private CancellationTokenSource? operation;
     private string? blockReason;
     public string Version => "Version " + ApplicationIdentity.Version;
+    private bool savingPreferences;
+    public bool SavingPreferences
+    {
+        get => savingPreferences;
+        private set
+        {
+            if (SetProperty(ref savingPreferences, value)) OnPropertyChanged(nameof(CanEditPreferences));
+        }
+    }
+    public bool CanEditPreferences => !SavingPreferences;
     public bool AutomaticChecks => preferences.Current.AutomaticUpdateChecks;
     public bool AutomaticDownloads => preferences.Current.AutomaticUpdateDownloads;
     public bool HasUpdate => release is not null;
@@ -50,11 +60,18 @@ public sealed class AppUpdatesViewModel(AppUpdateClient client, AppSettingsStore
     }
     public void RefreshAvailability() { if (state != "ready") return; var reason = blocked(); if (reason != blockReason) { blockReason = reason; Refresh(); } }
     public async Task InitializeAsync() { if (AutomaticChecks) await CheckAsync(); }
+    public void RefreshPreferences()
+    {
+        OnPropertyChanged(nameof(AutomaticChecks));
+        OnPropertyChanged(nameof(AutomaticDownloads));
+    }
     public async Task SetPreferencesAsync(bool checks, bool downloads)
     {
+        if (SavingPreferences) return;
+        SavingPreferences = true;
         try { await preferences.SaveAsync(preferences.Current with { AutomaticUpdateChecks = checks, AutomaticUpdateDownloads = downloads }); }
         catch (Exception exception) { state = "error"; error = "Could not save update preferences. " + exception.Message; }
-        Refresh();
+        finally { Refresh(); SavingPreferences = false; }
     }
     public async Task ActAsync()
     {

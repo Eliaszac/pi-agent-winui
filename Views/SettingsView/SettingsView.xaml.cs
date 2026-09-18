@@ -59,10 +59,7 @@ public sealed partial class SettingsView : UserControl
         if (IsLoaded && Model is { CanEdit: true } model && sender is ToggleSwitch toggle && toggle.IsOn != model.CompletionAudio)
             await model.SetCompletionAudioAsync(toggle.IsOn);
     }
-    private async void OnResetTerminal(object sender, RoutedEventArgs args)
-    {
-        if (Model is { CanEdit: true } model) await model.ResetTerminalAsync();
-    }
+    private void OnRestoreUpdatesDefaults(object? sender, EventArgs args) => ActionRequested?.Invoke(this, "defaults:Updates");
     internal void SetEditors(IReadOnlyList<Models.Applications.EditorPreferenceOption> options, string? preferred)
     {
         updatingEditors = true;
