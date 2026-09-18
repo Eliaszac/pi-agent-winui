@@ -151,15 +151,17 @@ public partial class App : Application
             : updateInstaller.BlockReason();
         var appUpdates = new ViewModels.Settings.AppUpdatesViewModel(new Services.Updates.AppUpdateClient(updateHttp,
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PiAgentGui", "updates")), settingsStore,
-            UpdateBlockReason, path =>
+            UpdateBlockReason, async path =>
             {
                 if (UpdateBlockReason() is { } reason) throw new InvalidOperationException(reason);
                 pendingUpdateInstaller = () => updateInstaller.Launch(path);
                 pendingUpdateCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
                 var completion = pendingUpdateCompletion.Task;
                 if (window.Content is Control content) content.IsEnabled = false;
-                window.Close();
-                return completion;
+                // Window.Close destroys the window without raising AppWindow.Closing.
+                // Run the shared shutdown path explicitly so setup is launched first.
+                await CloseAsync();
+                await completion;
             }, githubLifetime.Token);
         var updateTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         updateTimer.Tick += (_, _) => appUpdates.RefreshAvailability();
@@ -230,6 +232,11 @@ public partial class App : Application
     {
         if (canClose) return;
         args.Cancel = true;
+        await CloseAsync();
+    }
+
+    private async Task CloseAsync()
+    {
         if (closing) return;
         closing = true;
         try
